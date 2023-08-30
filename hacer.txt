@@ -11,7 +11,7 @@ comments      TODO
 EMblem        TODO
 Emotes        TODO
 gallery       TODO
-history       TODOa
+history       TODO
 logros        TODO
 messages      TODO
 notification  TODO
