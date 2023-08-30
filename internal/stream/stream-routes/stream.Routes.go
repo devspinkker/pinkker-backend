@@ -1,0 +1,40 @@
+package streamroutes
+
+import (
+	streamapplication "PINKKER-BACKEND/internal/stream/stream-application"
+	streaminfrastructure "PINKKER-BACKEND/internal/stream/stream-infrastructure"
+	streaminterfaces "PINKKER-BACKEND/internal/stream/stream-interface"
+	"PINKKER-BACKEND/pkg/middleware"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Client) {
+
+	streamRepository := streaminfrastructure.NewStreamRepository(redisClient, newMongoDB)
+	streamService := streamapplication.NewStreamService(streamRepository)
+	streamHandler := streaminterfaces.NewStreamService(streamService)
+
+	App.Get("/stream/getStreamById", streamHandler.GetStreamById)
+	App.Get("/stream/getStreamByNameUser", streamHandler.GetStreamByNameUser)
+	App.Get("/stream/getStreamsByCategorie", streamHandler.GetStreamsByCategorie)
+
+	App.Post("/stream/getStreamsIdsStreamer", middleware.UseExtractor(), streamHandler.GetStreamsIdsStreamer)
+
+	App.Get("/stream/update_online", middleware.UseExtractor(), streamHandler.Update_online)
+	App.Post("/stream/closeStream", middleware.UseExtractor(), streamHandler.CloseStream)
+	App.Post("/stream/update_thumbnail", middleware.UseExtractor(), streamHandler.Update_thumbnail)
+	App.Post("/stream/update_start_date", streamHandler.UpdateStreamInfo)
+
+	App.Post("/stream/update_stream_info", middleware.UseExtractor(), streamHandler.UpdateStreamInfo)
+	// claudinary, push modificar el map, request
+	App.Post("/stream/update_Emotes", streamHandler.Update_Emotes)
+
+	// addHistoryViewers
+	// resumeStream
+
+	App.Get("/stream/get_streamings_online", streamHandler.Streamings_online)
+
+}

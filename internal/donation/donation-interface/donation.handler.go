@@ -1,0 +1,113 @@
+package donationtinterfaces
+
+import (
+	donationdomain "PINKKER-BACKEND/internal/donation/donation"
+	donationapplication "PINKKER-BACKEND/internal/donation/donation-application"
+
+	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+type DonationHandler struct {
+	VodServise *donationapplication.DonationService
+}
+
+func NewDonationService(VodServise *donationapplication.DonationService) *DonationHandler {
+	return &DonationHandler{
+		VodServise: VodServise,
+	}
+}
+
+func (d *DonationHandler) Donate(c *fiber.Ctx) error {
+	var idReq donationdomain.ReqCreateDonation
+	if err := c.BodyParser(&idReq); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	if errValidate := idReq.ValidateReqCreateDonation(); errValidate != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errValidate.Error(),
+		})
+	}
+
+	IdUserToken := c.Context().UserValue("_id").(string)
+	FromUser, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+
+	err := d.VodServise.UserHasNumberPikels(FromUser, idReq.Pixeles)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	errdonatePixels := d.VodServise.DonatePixels(FromUser, idReq.ToUser, idReq.Pixeles, idReq.Text)
+	if errdonatePixels != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": errdonatePixels.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
+func (d *DonationHandler) Mydonors(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	id, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	donations, err := d.VodServise.MyPixelesdonors(id)
+	if err != nil {
+		if err.Error() == "no documents found" {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": err.Error(),
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	errUpdateDonationsNotifiedStatus := d.VodServise.UpdateDonationsNotifiedStatus(donations)
+	if errUpdateDonationsNotifiedStatus != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": errUpdateDonationsNotifiedStatus.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    donations,
+	})
+}
+
+func (d *DonationHandler) AllMyPixelesDonors(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	id, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	donations, err := d.VodServise.AllMyPixelesDonors(id)
+	if err != nil {
+		if err.Error() == "no documents found" {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": err.Error(),
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    donations,
+	})
+}

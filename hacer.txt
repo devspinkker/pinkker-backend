@@ -1,0 +1,23 @@
+categies.jsx  cammbiar nombre de los end-points - revisado v1 14/8
+donation.jsx  cammbiar nombre de los end-points - revisado v1 14/8
+follow.jsx    cammbiar nombre de los end-points - revisado v1 14/8
+stream        cammbiar nombre de los end-points - revisado v1 14/8
+VODS          cammbiar nombre de los end-points - revisado v1 14/8
+
+subscrbise   cambiar nombre de los end-points
+donationSubscripcion TODO
+
+comments      TODO
+EMblem        TODO
+Emotes        TODO
+gallery       TODO
+history       TODOa
+logros        TODO
+messages      TODO
+notification  TODO
+Order         TODO
+purchase      TODO
+server        TODO
+user          TODO
+views         TODO
+bet         TODO

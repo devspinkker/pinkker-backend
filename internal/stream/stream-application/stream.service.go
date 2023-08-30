@@ -1,0 +1,72 @@
+package streamapplication
+
+import (
+	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
+	streaminfrastructure "PINKKER-BACKEND/internal/stream/stream-infrastructure"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+type StreamService struct {
+	StreamRepository *streaminfrastructure.StreamRepository
+}
+
+func NewStreamService(StreamRepository *streaminfrastructure.StreamRepository) *StreamService {
+	return &StreamService{
+		StreamRepository: StreamRepository,
+	}
+}
+
+// get stream by id
+func (s *StreamService) GetStreamById(id primitive.ObjectID) (*streamdomain.Stream, error) {
+	stream, err := s.StreamRepository.GetStreamById(id)
+	return stream, err
+}
+
+// get stream by name user
+func (s *StreamService) GetStreamByNameUser(nameUser string) (*streamdomain.Stream, error) {
+	stream, err := s.StreamRepository.GetStreamByNameUser(nameUser)
+	return stream, err
+}
+
+// get streams by caregories
+func (s *StreamService) GetStreamsByCategorie(Categorie string) ([]streamdomain.Stream, error) {
+	stream, err := s.StreamRepository.GetStreamsByCategorie(Categorie)
+	return stream, err
+}
+func (s *StreamService) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID) ([]streamdomain.Stream, error) {
+	stream, err := s.StreamRepository.GetStreamsIdsStreamer(idsUsersF)
+	return stream, err
+}
+
+func (s *StreamService) Update_online(idUser primitive.ObjectID) error {
+	err := s.StreamRepository.Update_online(idUser)
+	return err
+}
+
+func (s *StreamService) CloseStream(idUser primitive.ObjectID) error {
+	err := s.StreamRepository.CloseStream(idUser)
+	return err
+}
+func (s *StreamService) Update_thumbnail(idUser primitive.ObjectID, image string) error {
+	err := s.StreamRepository.Update_thumbnail(idUser, image)
+	return err
+}
+
+func (s *StreamService) Streamings_online() (int, error) {
+	online, err := s.StreamRepository.Streamings_online()
+	return online, err
+}
+
+func (s *StreamService) Update_start_date(idUser primitive.ObjectID, date int) error {
+	err := s.StreamRepository.Update_start_date(idUser, date)
+	return err
+}
+func (s *StreamService) UpdateStreamInfo(idUser primitive.ObjectID, data streamdomain.UpdateStreamInfo) error {
+	err := s.StreamRepository.UpdateStreamInfo(idUser, data)
+	return err
+}
+func (s *StreamService) Update_Emotes(idUser primitive.ObjectID, date int) error {
+	err := s.StreamRepository.Update_Emotes(idUser, date)
+	return err
+}

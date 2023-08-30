@@ -1,0 +1,197 @@
+package tweetinfrastructure
+
+import (
+	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
+	userdomain "PINKKER-BACKEND/internal/user/user-domain"
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+type TweetRepository struct {
+	redisClient *redis.Client
+	mongoClient *mongo.Client
+}
+
+func NewTweetRepository(redisClient *redis.Client, mongoClient *mongo.Client) *TweetRepository {
+	return &TweetRepository{
+		redisClient: redisClient,
+		mongoClient: mongoClient,
+	}
+}
+
+// Save
+func (t *TweetRepository) TweetSave(Tweet tweetdomain.Tweet) error {
+
+	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Tweet")
+
+	_, errInsertOne := GoMongoDBCollUsers.InsertOne(context.Background(), Tweet)
+	if errInsertOne != nil {
+		return errInsertOne
+	}
+	return nil
+}
+
+func (t *TweetRepository) FindTweetbyId(idTweet primitive.ObjectID) (tweetdomain.Tweet, error) {
+
+	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Tweet")
+	findTweet := bson.D{
+		{Key: "_id", Value: idTweet},
+	}
+	var PostDocument tweetdomain.Tweet
+	PostCollectionErr := GoMongoDBCollUsers.FindOne(context.TODO(), findTweet).Decode(&PostDocument)
+
+	if PostCollectionErr != nil {
+		return tweetdomain.Tweet{}, PostCollectionErr
+	}
+
+	return PostDocument, nil
+}
+func (t *TweetRepository) UpdateTweetbyId(tweet tweetdomain.Tweet) error {
+	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Tweet")
+
+	filter := bson.D{{Key: "_id", Value: tweet.ID}}
+
+	update := bson.D{
+		{Key: "$set", Value: bson.D{
+			{Key: "Likes", Value: tweet.Likes},
+		}},
+	}
+
+	_, err := GoMongoDBCollTweets.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Like
+func (t *TweetRepository) LikeTweet(TweetId, idValueToken primitive.ObjectID) error {
+	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Tweet")
+
+	count, err := GoMongoDBColl.CountDocuments(context.Background(), bson.D{{Key: "_id", Value: TweetId}})
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return fmt.Errorf("el TweetId no existe")
+	}
+	filter := bson.D{{Key: "_id", Value: TweetId}}
+	update := bson.D{{Key: "$addToSet", Value: bson.D{{Key: "Likes", Value: idValueToken}}}}
+
+	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+	GoMongoDBColl = t.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	filter = bson.D{{Key: "_id", Value: idValueToken}}
+	update = bson.D{{Key: "$addToSet", Value: bson.D{{Key: "Likes", Value: TweetId}}}}
+
+	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+func (t *TweetRepository) TweetDislike(TweetId, idValueToken primitive.ObjectID) error {
+	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Tweet")
+
+	count, err := GoMongoDBColl.CountDocuments(context.Background(), bson.D{{Key: "_id", Value: TweetId}})
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return fmt.Errorf("el TweetId no existe")
+	}
+	filter := bson.D{{Key: "_id", Value: TweetId}}
+	update := bson.D{{Key: "$pull", Value: bson.D{{Key: "Likes", Value: idValueToken}}}}
+
+	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+	GoMongoDBColl = t.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	filter = bson.D{{Key: "_id", Value: idValueToken}}
+	update = bson.D{{Key: "$pull", Value: bson.D{{Key: "Likes", Value: TweetId}}}}
+
+	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+// find
+func (t *TweetRepository) GetFollowedUsers(idValueObj primitive.ObjectID) (userdomain.User, error) {
+	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	filter := bson.D{{Key: "_id", Value: idValueObj}}
+	var user userdomain.User
+	err := GoMongoDBCollTweets.FindOne(context.Background(), filter).Decode(&user)
+	return user, err
+}
+func (t *TweetRepository) GetTweetsLast24Hours(userIDs []primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
+	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Tweet")
+
+	currentTime := time.Now()
+	last24Hours := currentTime.Add(-24 * time.Hour)
+
+	pipeline := []bson.D{
+		// Filtra los tweets que cumplan con el filtrooo
+		{{Key: "$match", Value: bson.D{
+			{Key: "UserID", Value: bson.D{{Key: "$in", Value: userIDs}}},
+			{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
+		}}},
+		// une los tweets con la información del usuario creador
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		{{Key: "$unwind", Value: "$UserInfo"}},
+		// campos necesaros
+		{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: "$Status"},
+			{Key: "TweetImage", Value: "$TweetImage"},
+			{Key: "TimeStamp", Value: "$TimeStamp"},
+			{Key: "UserID", Value: "$UserID"},
+			{Key: "Likes", Value: "$Likes"},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
+		}}},
+		{{Key: "$limit", Value: 10}},
+	}
+	cursor, err := GoMongoDBCollTweets.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
+	for cursor.Next(context.Background()) {
+		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
+		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
+			return nil, err
+		}
+		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
+	}
+
+	return tweetsWithUserInfo, nil
+}
