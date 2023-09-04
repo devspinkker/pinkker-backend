@@ -1,5 +1,4 @@
-// vod-routes.go (o el archivo correspondiente)
-package main
+package cliproutes
 
 import (
 	clipapplication "PINKKER-BACKEND/internal/clip/clip-application"
