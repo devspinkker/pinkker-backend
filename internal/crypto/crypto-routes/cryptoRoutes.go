@@ -15,5 +15,5 @@ func CryptoRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.C
 	cryptoService := cryptoapplication.NewryptoService(cryptoRepository)
 	cryptoHandler := cryptopinterface.NewCryptoHandler(cryptoService)
 
-	App.Post("/crypto", cryptoHandler.Prueba)
+	App.Post("/crypto/Subscription", cryptoHandler.Subscription)
 }

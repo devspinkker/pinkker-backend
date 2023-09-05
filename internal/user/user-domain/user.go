@@ -7,6 +7,16 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type Subscription struct {
+	SubscriberID      primitive.ObjectID `bson:"subscriberID"`
+	SubscriptionStart time.Time          `bson:"subscriptionStart"`
+	SubscriptionEnd   time.Time          `bson:"subscriptionEnd"`
+	MonthsSubscribed  int                `bson:"monthsSubscribed"`
+}
+type Subscriber struct {
+	SubscriberID    primitive.ObjectID `json:"subscriber_id"`
+	SubscriptionEnd time.Time          `json:"subscription_end"`
+}
 type User struct {
 	ID                primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
 	Avatar            string                 `json:"Avatar" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"Avatar,omitempty"`
@@ -14,6 +24,8 @@ type User struct {
 	NameUser          string                 `json:"NameUser" bson:"NameUser"`
 	PasswordHash      string                 `json:"passwordHash" bson:"PasswordHash"`
 	Pais              string                 `json:"Pais" bson:"Pais"`
+	Subscriptions     []Subscription         `bson:"Subscriptions"`
+	Subscribers       []Subscriber           `bson:"Subscribers"`
 	Ciudad            string                 `json:"Ciudad" bson:"Ciudad"`
 	Email             string                 `json:"Email" bson:"Email"`
 	EmailConfirmation bool                   `json:"EmailConfirmation" bson:"EmailConfirmation,default:false"`
@@ -32,10 +44,8 @@ type User struct {
 		Active bool      `json:"active,omitempty" bson:"Active,omitempty"`
 		Date   time.Time `json:"date,omitempty" bson:"Date,omitempty"`
 	} `json:"pinkkerPrime,omitempty" bson:"PinkkerPrime,omitempty"`
-	Suscribers       []string `json:"suscribers,omitempty" bson:"Suscribers,omitempty"`
-	Subscriptions    []string `json:"subscriptions,omitempty" bson:"Subscriptions,omitempty"`
-	SuscriptionPrice int      `json:"suscriptionPrice,default:300" bson:"SuscriptionPrice,default:300"`
-	SocialNetwork    struct {
+	Suscribers    []string `json:"suscribers,omitempty" bson:"Suscribers,omitempty"`
+	SocialNetwork struct {
 		Facebook  string `json:"facebook,omitempty" bson:"facebook,omitempty"`
 		Twitter   string `json:"twitter,omitempty" bson:"twitter,omitempty"`
 		Instagram string `json:"instagram,omitempty" bson:"instagram,omitempty"`
@@ -53,6 +63,7 @@ type User struct {
 	Followers                []primitive.ObjectID `json:"Followers" bson:"Followers"`
 	Timestamp                time.Time            `json:"Timestamp" bson:"Timestamp"`
 	Likes                    []primitive.ObjectID `json:"Likes" bson:"Likes"`
+	Wallet                   string               `json:"Wallet" bson:"Wallet"`
 }
 
 type UserModelValidator struct {
