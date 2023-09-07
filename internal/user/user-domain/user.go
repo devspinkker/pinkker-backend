@@ -8,14 +8,16 @@ import (
 )
 
 type Subscription struct {
-	SubscriberID      primitive.ObjectID `bson:"subscriberID"`
-	SubscriptionStart time.Time          `bson:"subscriptionStart"`
-	SubscriptionEnd   time.Time          `bson:"subscriptionEnd"`
-	MonthsSubscribed  int                `bson:"monthsSubscribed"`
+	SubscriptionNameUser string    `bson:"SubscriptionNameUser"`
+	SubscriptionStart    time.Time `bson:"SubscriptionStart"`
+	SubscriptionEnd      time.Time `bson:"SubscriptionEnd"`
+	MonthsSubscribed     int       `bson:"MonthsSubscribed"`
 }
 type Subscriber struct {
-	SubscriberID    primitive.ObjectID `json:"subscriber_id"`
-	SubscriptionEnd time.Time          `json:"subscription_end"`
+	SubscriberNameUser string    `bson:"SubscriberNameUser"`
+	SubscriptionStart  time.Time `bson:"SubscriptionStart"`
+	SubscriptionEnd    time.Time `bson:"SubscriptionEnd"`
+	MonthsSubscribed   int       `bson:"MonthsSubscribed"`
 }
 type User struct {
 	ID                primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
@@ -76,6 +78,7 @@ type UserModelValidator struct {
 	Instagram string `json:"instagram" default:""`
 	Twitter   string `json:"twitter" default:""`
 	Youtube   string `json:"youtube" default:""`
+	Wallet    string `json:"Wallet" default:""`
 }
 
 func (u *UserModelValidator) ValidateUser() error {

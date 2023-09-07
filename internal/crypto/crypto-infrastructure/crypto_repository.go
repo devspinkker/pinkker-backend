@@ -3,12 +3,13 @@ package cryptoinfrastructure
 import (
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
-	"math/big"
+	"encoding/hex"
+	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -25,116 +26,90 @@ func NewCryptoRepository(redisClient *redis.Client, mongoClient *mongo.Client) *
 		mongoClient: mongoClient,
 	}
 }
-func (r *CryptoRepository) TransferBNB(client *ethclient.Client, sourceAddress, destinationAddress string, amount *big.Int) (string, error) {
-	// Convierte las direcciones en tipos comunes
-	source := common.HexToAddress(sourceAddress)
-	destination := common.HexToAddress(destinationAddress)
-
-	// Obtiene el nonce del origen (número de transacción)
-	nonce, err := client.PendingNonceAt(context.Background(), source)
-	if err != nil {
-		return "", err
-	}
-	// Establece la gas price y la cantidad máxima de gas
-	gasPrice, err := client.SuggestGasPrice(context.Background())
+func (r *CryptoRepository) TransferToken(client *ethclient.Client, signedTx string) (string, error) {
+	// Decodificar la transacción firmada desde su representación en cadena
+	txBytes, err := hex.DecodeString(signedTx)
 	if err != nil {
 		return "", err
 	}
 
-	// Establece el límite de gas
-	gasLimit := uint64(21000) // Gas limit para transferencias
+	// Deserializar la transacción firmada
+	var tx types.Transaction
+	rlp.DecodeBytes(txBytes, &tx)
 
-	// Crea la transacción
-	tx := types.NewTransaction(nonce, destination, amount, gasLimit, gasPrice, nil)
+	// Establece el límite de gas y precio de gas
+	// gasLimit := uint64(21000)
+	// gasPrice, err := client.SuggestGasPrice(context.Background())
+	// if err != nil {
+	// 	return "", err
+	// }
 
-	// Firma la transacción
-	chainID := big.NewInt(56) // Para Binance Smart Chain (BSC)
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), nil)
+	// Enviar la transacción firmada al cliente de BSC
+	err = client.SendTransaction(context.Background(), &tx)
 	if err != nil {
 		return "", err
 	}
 
-	// Envía la transacción
-	err = client.SendTransaction(context.Background(), signedTx)
-	if err != nil {
-		return "", err
-	}
-
-	// Devuelve el hash de la transacción
-	return signedTx.Hash().Hex(), nil
+	return tx.Hash().Hex(), nil
 }
 func (r *CryptoRepository) UpdateSubscriptionState(SourceAddress string, DestinationAddress string) error {
-	// Crear una variable para el contexto con un temporizador de un mes
+	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*24*time.Hour)
 	defer cancel()
 
-	// Buscar los dos usuarios en la colección de MongoDB
-	sourceUser, destUser, err := r.findUsersByWallets(ctx, SourceAddress, DestinationAddress)
+	sourceUser, destUser, err := r.findUsersByWallets(ctx, SourceAddress, DestinationAddress, usersCollection)
 	if err != nil {
 		return err
 	}
 
-	// Verificar si el usuario que recibe ya está suscrito al usuario que da
-	alreadySubscribed := false
-	subscriptionIndex := -1
-
-	for i, subscription := range sourceUser.Subscriptions {
-		if subscription.SubscriberID == destUser.ID {
-			alreadySubscribed = true
-			subscriptionIndex = i
+	// Verificar si el usuario que recibe ya está suscrito
+	var existingSubscription *userdomain.Subscription
+	for _, subscription := range sourceUser.Subscriptions {
+		if subscription.SubscriptionNameUser == destUser.NameUser {
+			existingSubscription = &subscription
 			break
 		}
 	}
 
-	// Si el usuario que recibe no está suscrito, agregarlo como suscriptor
-	if !alreadySubscribed {
-		r.addSubscription(sourceUser, destUser)
+	subscriptionStart := time.Now()
+	subscriptionEnd := subscriptionStart.Add(30 * 24 * time.Hour)
+
+	if existingSubscription == nil {
+		// Si el usuario que recibe no está suscrito, agregarlo como suscriptor
+		r.addSubscription(sourceUser, destUser, subscriptionStart, subscriptionEnd)
+		r.addSubscriber(destUser, sourceUser, subscriptionEnd)
 	} else {
-		r.updateSubscription(sourceUser, subscriptionIndex)
+		// Si el usuario que recibe ya está suscrito, actualizar la suscripción
+		r.updateSubscription(existingSubscription, subscriptionStart, subscriptionEnd)
 	}
 
-	// Actualizar el usuario que da en MongoDB
-	if err := r.updateUser(ctx, sourceUser); err != nil {
+	if err := r.updateUserSource(ctx, sourceUser, usersCollection); err != nil {
 		return err
 	}
 
-	// Agregar al usuario que da como suscriptor en la colección de subscriptores del usuario que recibe
-	r.addSubscriber(destUser, sourceUser)
-
-	return nil
+	err = r.updateUserDest(ctx, destUser, usersCollection)
+	return err
 }
 
 // Encuentra dos usuarios por sus direcciones de wallet
-func (r *CryptoRepository) findUsersByWallets(ctx context.Context, sourceWallet, destWallet string) (*userdomain.User, *userdomain.User, error) {
-	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("tu_coleccion_de_usuarios")
-
-	filter := bson.M{
-		"wallet": bson.M{"$in": []string{sourceWallet, destWallet}},
+func (r *CryptoRepository) findUsersByWallets(ctx context.Context, sourceWallet, destWallet string, usersCollection *mongo.Collection) (*userdomain.User, *userdomain.User, error) {
+	var sourceUser userdomain.User
+	filtersourceWallet := bson.M{
+		"Wallet": sourceWallet,
 	}
-
-	cur, err := usersCollection.Find(ctx, filter)
+	err := usersCollection.FindOne(ctx, filtersourceWallet).Decode(&sourceUser)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer cur.Close(ctx)
 
-	var sourceUser userdomain.User
 	var destUser userdomain.User
-
-	for cur.Next(ctx) {
-		var user userdomain.User
-		if err := cur.Decode(&user); err != nil {
-			return nil, nil, err
-		}
-
-		if user.Wallet == sourceWallet {
-			sourceUser = user
-		} else if user.Wallet == destWallet {
-			destUser = user
-		}
+	filterdestUserWallet := bson.M{
+		"Wallet": destWallet,
 	}
 
-	if err := cur.Err(); err != nil {
+	err = usersCollection.FindOne(ctx, filterdestUserWallet).Decode(&destUser)
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -142,40 +117,57 @@ func (r *CryptoRepository) findUsersByWallets(ctx context.Context, sourceWallet,
 }
 
 // Agrega un nuevo suscriptor al usuario que da
-func (r *CryptoRepository) addSubscription(sourceUser *userdomain.User, destUser *userdomain.User) {
+func (r *CryptoRepository) addSubscription(sourceUser *userdomain.User, destUser *userdomain.User, subscriptionStart, subscriptionEnd time.Time) {
 	subscription := userdomain.Subscription{
-		SubscriberID:      destUser.ID,
-		SubscriptionStart: time.Now(),
-		SubscriptionEnd:   time.Now().Add(30 * 24 * time.Hour),
+		SubscriptionNameUser: destUser.NameUser,
+		SubscriptionStart:    subscriptionStart,
+		SubscriptionEnd:      subscriptionEnd,
+		MonthsSubscribed:     1, // Comienza en 1 mes
 	}
 	sourceUser.Subscriptions = append(sourceUser.Subscriptions, subscription)
 }
 
 // Actualiza una suscripción existente
-func (r *CryptoRepository) updateSubscription(sourceUser *userdomain.User, index int) {
-	sourceUser.Subscriptions[index].SubscriptionEnd = time.Now().Add(30 * 24 * time.Hour)
-	sourceUser.Subscriptions[index].MonthsSubscribed = int(sourceUser.Subscriptions[index].SubscriptionEnd.Sub(sourceUser.Subscriptions[index].SubscriptionStart).Hours() / 24 / 30)
+func (r *CryptoRepository) updateSubscription(subscription *userdomain.Subscription, subscriptionStart, subscriptionEnd time.Time) {
+	subscription.SubscriptionStart = subscriptionStart
+	subscription.SubscriptionEnd = subscriptionEnd
+	// No es necesario actualizar MonthsSubscribed, ya que comenzamos desde 1
 }
 
 // Actualiza el usuario que da en MongoDB
-func (r *CryptoRepository) updateUser(ctx context.Context, user *userdomain.User) error {
-	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("tu_coleccion_de_usuarios")
+func (r *CryptoRepository) updateUserSource(ctx context.Context, user *userdomain.User, usersCollection *mongo.Collection) error {
+	filter := bson.M{"Wallet": user.Wallet}
+	update := bson.M{"$set": bson.M{"Subscriptions": user.Subscriptions}}
+	valor, err := usersCollection.UpdateOne(ctx, filter, update)
+	fmt.Println(valor)
+	return err
+}
 
-	filter := bson.M{"wallet": user.Wallet}
-	update := bson.M{"$set": bson.M{"subscriptions": user.Subscriptions}}
-
-	_, err := usersCollection.UpdateOne(ctx, filter, update)
+// Actualiza el usuario que destino en MongoDB
+func (r *CryptoRepository) updateUserDest(ctx context.Context, user *userdomain.User, usersCollection *mongo.Collection) error {
+	filter := bson.M{"Wallet": user.Wallet}
+	update := bson.M{"$set": bson.M{"Subscribers": user.Subscribers}}
+	valor, err := usersCollection.UpdateOne(ctx, filter, update)
+	fmt.Println(valor)
 	return err
 }
 
 // Agrega al usuario que da como suscriptor en la colección de subscriptores del usuario que recibe
-func (r *CryptoRepository) addSubscriber(destUser *userdomain.User, sourceUser *userdomain.User) {
-	// Crear una estructura para el suscriptor
-	subscriber := userdomain.Subscriber{
-		SubscriberID:    sourceUser.ID,
-		SubscriptionEnd: sourceUser.Subscriptions[0].SubscriptionEnd, // Usar la fecha de finalización de la suscripción del usuario que da
+func (r *CryptoRepository) addSubscriber(destUser *userdomain.User, sourceUser *userdomain.User, subscriptionEnd time.Time) {
+	// Verificar si el usuario ya es un suscriptor
+	existingSubscriber := false
+	for _, subscriber := range destUser.Subscribers {
+		if subscriber.SubscriberNameUser == sourceUser.NameUser {
+			existingSubscriber = true
+			break
+		}
 	}
 
-	// Agregar al usuario que da como suscriptor en la colección de subscriptores del usuario que recibe
-	destUser.Subscribers = append(destUser.Subscribers, subscriber)
+	if !existingSubscriber {
+		subscriber := userdomain.Subscriber{
+			SubscriberNameUser: sourceUser.NameUser,
+			SubscriptionEnd:    subscriptionEnd,
+		}
+		destUser.Subscribers = append(destUser.Subscribers, subscriber)
+	}
 }

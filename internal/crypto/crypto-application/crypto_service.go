@@ -21,8 +21,8 @@ func (s *CryptoService) Subscription() {
 
 }
 
-func (s *CryptoService) UpdataSubscriptionState(SourceAddress string, DestinationAddress string) {
-	err := s.CryptoRepository.UpdataSubscriptionState(SourceAddress, DestinationAddress)
+func (s *CryptoService) UpdataSubscriptionState(SourceAddress string, DestinationAddress string) error {
+	err := s.CryptoRepository.UpdateSubscriptionState(SourceAddress, DestinationAddress)
 	return err
 }
 
@@ -40,7 +40,7 @@ func (s *CryptoService) USDToBNB(usdAmount float64) *big.Int {
 	return amount
 }
 
-func (s *CryptoService) TransferBNB(client *ethclient.Client, sourceAddress, destinationAddress string, amount *big.Int) (string, error) {
-	txHash, err := s.CryptoRepository.TransferBNB(client, sourceAddress, destinationAddress, amount)
+func (s *CryptoService) TransferToken(client *ethclient.Client, signedTx string) (string, error) {
+	txHash, err := s.CryptoRepository.TransferToken(client, signedTx)
 	return txHash, err
 }

@@ -43,6 +43,10 @@ func (u *UserService) SaveUser(newUser *domain.UserModelValidator, avatarUrl str
 	modelNewUser.Followers = []primitive.ObjectID{}
 	modelNewUser.Following = []primitive.ObjectID{}
 	modelNewUser.Verified = false
+	modelNewUser.Wallet = newUser.Wallet
+	modelNewUser.Subscribers = []domain.Subscriber{}
+	modelNewUser.Subscriptions = []domain.Subscription{}
+
 	id, err := u.roomRepository.SaveUserDB(&modelNewUser)
 	err = u.roomRepository.CreateStreamUser(&modelNewUser, id)
 	return err

@@ -20,9 +20,9 @@ func NewCryptoHandler(CryptoService *cryptoapplication.CryptoService) *CryptoHan
 
 // TransferRequest define la estructura de datos de la solicitud de transferencia
 type TransferRequest struct {
-	SourceAddress      string  `json:"sourceAddress"`
-	DestinationAddress string  `json:"destinationAddress"`
-	AmountUSD          float64 `json:"amountUSD"`
+	SourceAddress      string `json:"sourceAddress"`
+	DestinationAddress string `json:"destinationAddress"`
+	SignedTx           string `json:"signedTx"`
 }
 
 // TransferResponse define la estructura de datos de la respuesta de transferencia
@@ -49,27 +49,26 @@ func (crypto *CryptoHandler) Subscription(c *fiber.Ctx) error {
 		})
 	}
 
-	// Convierte el monto en USD a tokens BNB (ajusta esto según la tasa de cambio)
-	amountTokens := crypto.CryptoService.USDToBNB(requestData.AmountUSD)
-
-	// Realiza la transferencia de tokens
-	txHash, err := crypto.CryptoService.TransferBNB(client, requestData.SourceAddress, requestData.DestinationAddress, amountTokens)
+	txHash, err := crypto.CryptoService.TransferToken(client, requestData.SignedTx)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": fmt.Sprintf("Error al realizar la transferencia: %v", err),
+			"error": fmt.Sprintf("Error al realizar la transferencia en BSC: %v", err),
 		})
 	}
 
 	err = crypto.CryptoService.UpdataSubscriptionState(requestData.SourceAddress, requestData.DestinationAddress)
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "ok",
+			"data":    err.Error(),
+		})
+	}
 
-	// Prepara una respuesta JSON con el hash de la transacción
 	response := TransferResponse{
 		TxHash: txHash,
 	}
-	// Envía la respuesta JSON
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 		"data":    response,
 	})
-
 }
