@@ -1,8 +1,8 @@
 package cryptoroutes
 
 import (
-	cryptoinfrastructure "PINKKER-BACKEND/internal/Crypto/Crypto-infrastructure"
 	cryptoapplication "PINKKER-BACKEND/internal/crypto/crypto-application"
+	cryptoinfrastructure "PINKKER-BACKEND/internal/crypto/crypto-infrastructure"
 	cryptopinterface "PINKKER-BACKEND/internal/crypto/crypto-interface"
 
 	"github.com/gofiber/fiber/v2"

@@ -1,7 +1,7 @@
 package cryptoapplication
 
 import (
-	cryptoinfrastructure "PINKKER-BACKEND/internal/Crypto/Crypto-infrastructure"
+	cryptoinfrastructure "PINKKER-BACKEND/internal/crypto/crypto-infrastructure"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/ethclient"
