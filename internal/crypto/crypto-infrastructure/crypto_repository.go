@@ -4,9 +4,12 @@ import (
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -26,25 +29,23 @@ func NewCryptoRepository(redisClient *redis.Client, mongoClient *mongo.Client) *
 		mongoClient: mongoClient,
 	}
 }
+
 func (r *CryptoRepository) TransferToken(client *ethclient.Client, signedTx string) (string, error) {
-	// Decodificar la transacción firmada desde su representación en cadena
 	txBytes, err := hex.DecodeString(signedTx)
 	if err != nil {
 		return "", err
 	}
 
-	// Deserializar la transacción firmada
 	var tx types.Transaction
 	rlp.DecodeBytes(txBytes, &tx)
-
-	// Establece el límite de gas y precio de gas
-	// gasLimit := uint64(21000)
-	// gasPrice, err := client.SuggestGasPrice(context.Background())
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// Enviar la transacción firmada al cliente de BSC
+	contractAddress := "0x1234567890abcdefABCDEF1234567890abcdefAB" // Reemplaza esto con la dirección del contrato que deseas verificar
+	isPancakeSwap, err := contractAddressVerified(client, contractAddress)
+	if err != nil {
+		return "", err
+	}
+	if !isPancakeSwap {
+		return "", errors.New("token invalid")
+	}
 	err = client.SendTransaction(context.Background(), &tx)
 	if err != nil {
 		return "", err
@@ -52,6 +53,20 @@ func (r *CryptoRepository) TransferToken(client *ethclient.Client, signedTx stri
 
 	return tx.Hash().Hex(), nil
 }
+
+// contractAddressVerified verifica si la dirección del contrato corresponde a nuesto token
+func contractAddressVerified(client *ethclient.Client, contractAddress string) (bool, error) {
+	// Obtener el código del contrato en la dirección proporcionada.
+	code, err := client.CodeAt(context.Background(), common.HexToAddress(contractAddress), nil)
+	if err != nil {
+		return false, err
+	}
+
+	codeString := string(code)
+
+	return strings.Contains(codeString, "PancakeSwap"), nil
+}
+
 func (r *CryptoRepository) UpdateSubscriptionState(SourceAddress string, DestinationAddress string) error {
 	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
@@ -152,9 +167,7 @@ func (r *CryptoRepository) updateUserDest(ctx context.Context, user *userdomain.
 	return err
 }
 
-// Agrega al usuario que da como suscriptor en la colección de subscriptores del usuario que recibe
 func (r *CryptoRepository) addSubscriber(destUser *userdomain.User, sourceUser *userdomain.User, subscriptionEnd time.Time) {
-	// Verificar si el usuario ya es un suscriptor
 	existingSubscriber := false
 	for _, subscriber := range destUser.Subscribers {
 		if subscriber.SubscriberNameUser == sourceUser.NameUser {
@@ -166,6 +179,7 @@ func (r *CryptoRepository) addSubscriber(destUser *userdomain.User, sourceUser *
 	if !existingSubscriber {
 		subscriber := userdomain.Subscriber{
 			SubscriberNameUser: sourceUser.NameUser,
+			SubscriptionStart:  time.Now(),
 			SubscriptionEnd:    subscriptionEnd,
 		}
 		destUser.Subscribers = append(destUser.Subscribers, subscriber)

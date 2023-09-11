@@ -11,10 +11,10 @@ import (
 func CreateToken(user *userdomain.User) (string, error) {
 	TOKENPASSWORD := config.TOKENPASSWORD()
 	claims := jwt.MapClaims{
-		"_id":      user.ID,
-		"nameuser": user.NameUser,
-		"verified": user.Verified,
-		"exp":      time.Now().Add(time.Hour * 2400).Unix(),
+		"_id":          user.ID,
+		"nameuser":     user.NameUser,
+		"pinkkerPrime": user.Verified,
+		"exp":          time.Now().Add(time.Hour * 2400).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 

@@ -66,7 +66,16 @@ func (u *UserRepository) FindUserById(id primitive.ObjectID) (*domain.User, erro
 	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&FindUserById)
 	return FindUserById, errCollUsers
 }
-
+func (u *UserRepository) GetUserBykey(key string) (*domain.User, error) {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	var FindUserInDb primitive.D
+	FindUserInDb = bson.D{
+		{Key: "KeyTransmission", Value: key},
+	}
+	var FindUserById *domain.User
+	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&FindUserById)
+	return FindUserById, errCollUsers
+}
 func (u *UserRepository) SendConfirmationEmail(Email string, Token string) error {
 
 	// confirmationLink := fmt.Sprintf("https://tudominio.com/confirm?token=%s", Token)

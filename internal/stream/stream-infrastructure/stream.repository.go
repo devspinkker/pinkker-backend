@@ -129,16 +129,16 @@ func (r *StreamRepository) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID)
 	}
 	return streams, nil
 }
-func (r *StreamRepository) Update_online(idUser primitive.ObjectID) error {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+func (r *StreamRepository) Update_online(Key string, state bool) error {
+	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
 	filter := bson.D{
-		{Key: "StreamerID", Value: idUser},
+		{Key: "KeyTransmission", Value: Key},
 	}
 
 	update := bson.D{
 		{Key: "$set", Value: bson.D{
-			{Key: "Online", Value: true},
+			{Key: "Online", Value: state},
 		}},
 	}
 

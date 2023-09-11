@@ -130,16 +130,21 @@ func (s *StreamHandler) GetStreamsIdsStreamer(c *fiber.Ctx) error {
 	})
 }
 
+type ReqUpdate_online struct {
+	State bool   `json:"State"`
+	Key   string `json:"Key"`
+}
+
 func (s *StreamHandler) Update_online(c *fiber.Ctx) error {
 
-	IdUserToken := c.Context().UserValue("_id").(string)
-	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
-	if errinObjectID != nil {
+	var req ReqUpdate_online
+	err := c.BodyParser(&req)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})
 	}
-	if err := s.StreamServise.Update_online(IdUserTokenP); err != nil {
+	if err := s.StreamServise.Update_online(req.Key, req.State); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
 		})

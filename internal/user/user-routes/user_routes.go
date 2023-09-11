@@ -17,14 +17,16 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	userService := application.NewChatService(userRepository)
 	UserHandler := interfaces.NewUserHandler(userService)
 
-	App.Post("/signup", UserHandler.Signup)
-	App.Post("/login", UserHandler.Login)
+	App.Post("/user/signup", UserHandler.Signup)
+	App.Post("/user/login", UserHandler.Login)
 
-	App.Get("/getUserById", middleware.UseExtractor(), UserHandler.GetUserById)
+	App.Get("/user/getUserById", middleware.UseExtractor(), UserHandler.GetUserById)
+	App.Post("/user/get_user_by_key", UserHandler.GetUserBykey)
+
 	//Follow
-	App.Post("/follow", middleware.UseExtractor(), UserHandler.Follow)
-	App.Post("/Unfollow", middleware.UseExtractor(), UserHandler.Unfollow)
+	App.Post("/user/follow", middleware.UseExtractor(), UserHandler.Follow)
+	App.Post("/user/Unfollow", middleware.UseExtractor(), UserHandler.Unfollow)
 
-	App.Post("/buyPixeles", middleware.UseExtractor(), UserHandler.BuyPixeles)
+	App.Post("/user/buyPixeles", middleware.UseExtractor(), UserHandler.BuyPixeles)
 
 }

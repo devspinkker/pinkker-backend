@@ -77,6 +77,11 @@ func (u *UserService) FindUserById(id primitive.ObjectID) (*domain.User, error) 
 	return user, err
 }
 
+func (u *UserService) GetUserBykey(key string) (*domain.User, error) {
+	user, err := u.roomRepository.GetUserBykey(key)
+	return user, err
+}
+
 // follow
 func (u *UserService) FollowUser(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) error {
 	err := u.roomRepository.FollowUser(IdUserTokenP, IdUser)

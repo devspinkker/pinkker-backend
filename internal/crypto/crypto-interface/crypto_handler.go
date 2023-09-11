@@ -41,7 +41,7 @@ func (crypto *CryptoHandler) Subscription(c *fiber.Ctx) error {
 		})
 	}
 
-	// Crea una conexión RPC con QuickNode
+	// conexión RPC con QuickNode
 	client, err := ethclient.Dial(quickNodeURL)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -56,11 +56,11 @@ func (crypto *CryptoHandler) Subscription(c *fiber.Ctx) error {
 		})
 	}
 
-	err = crypto.CryptoService.UpdataSubscriptionState(requestData.SourceAddress, requestData.DestinationAddress)
-	if err != nil {
+	errUpdata := crypto.CryptoService.UpdataSubscriptionState(requestData.SourceAddress, requestData.DestinationAddress)
+	if errUpdata != nil {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"message": "ok",
-			"data":    err.Error(),
+			"data":    errUpdata.Error(),
 		})
 	}
 
