@@ -38,7 +38,10 @@ func main() {
 	// crypto
 	cryptoroutes.CryptoRoutes(app, redisClient, newMongoDB)
 	PORT := config.PORT()
-	log.Fatal(app.Listen(PORT))
+	if PORT == "" {
+		PORT = "8081"
+	}
+	log.Fatal(app.Listen(":" + PORT))
 }
 
 func setupRedisClient() *redis.Client {
