@@ -91,3 +91,9 @@ func (u *UserService) Unfollow(IdUserTokenP primitive.ObjectID, IdUser primitive
 	err := u.roomRepository.UnfollowUser(IdUserTokenP, IdUser)
 	return err
 }
+
+// oauth2
+func (u *UserService) FindEmailForOauth2Updata(user *domain.ReqGoogle_callback_NameUserConfirm) (*domain.User, error) {
+	userFind, err := u.roomRepository.FindEmailForOauth2Updata(user)
+	return userFind, err
+}

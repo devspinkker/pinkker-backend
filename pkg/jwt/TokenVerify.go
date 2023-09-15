@@ -39,11 +39,11 @@ func ExtractDataFromToken(tokenString string) (string, string, bool, error) {
 	if !ok {
 		return "", "", false, fmt.Errorf("Invalid _id")
 	}
-	verified, ok := claims["verified"].(bool)
+	pinkkerPrime, ok := claims["pinkkerPrime"].(bool)
 	if !ok {
 		return "", "", false, fmt.Errorf("Invalid verified")
 	}
-	return nameUser, _id, verified, nil
+	return nameUser, _id, pinkkerPrime, nil
 }
 func ExtractDataFromTokenConfirmEmail(tokenString string) (string, error) {
 	token, err := parseToken(tokenString)

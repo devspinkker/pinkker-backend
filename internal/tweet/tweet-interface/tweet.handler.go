@@ -4,6 +4,7 @@ import (
 	tweetapplication "PINKKER-BACKEND/internal/tweet/tweet-application"
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	"PINKKER-BACKEND/pkg/helpers"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -152,6 +153,98 @@ func (th *TweetHandler) TweetGetFollow(c *fiber.Ctx) error {
 	if errTweetGetFollow != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": Tweets,
+	})
+
+}
+
+func (th *TweetHandler) CommentPost(c *fiber.Ctx) error {
+
+	fileHeader, _ := c.FormFile("imgPost")
+	PostImageChanel := make(chan string)
+	errChanel := make(chan error)
+	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+
+	var TweetComment tweetdomain.TweetCommentModelValidator
+	if err := c.BodyParser(&TweetComment); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"messages": "Bad Request",
+		})
+	}
+	if err := TweetComment.ValidateUser(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request",
+			"error":   err.Error(),
+		})
+	}
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	for {
+		select {
+		case PostImage := <-PostImageChanel:
+			err := th.TweetServise.SaveComment(TweetComment.Status, TweetComment.CommentBy, PostImage, idValueObj)
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"message": err.Error(),
+				})
+			}
+			return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+				"message": "StatusCreated",
+			})
+		case <-errChanel:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "avatarUrl error",
+			})
+		}
+	}
+}
+func (th *TweetHandler) TweetGetCommentPostGetFollow(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	Tweets, errTweetGetFollow := th.TweetServise.TweetGetFollow(idValueObj)
+	if errTweetGetFollow != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": Tweets,
+	})
+
+}
+
+type reqCommentPost struct {
+	IdPost primitive.ObjectID `json:"IdPost"`
+}
+
+func (th *TweetHandler) GetCommentPost(c *fiber.Ctx) error {
+	var req reqCommentPost
+	err := c.BodyParser(&req)
+	if err != nil {
+		fmt.Println("asa")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	Tweets, errTweetGetFollow := th.TweetServise.GetCommentPost(req.IdPost)
+	if errTweetGetFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errTweetGetFollow.Error(),
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{

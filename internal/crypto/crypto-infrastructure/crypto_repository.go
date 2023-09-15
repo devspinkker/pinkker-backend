@@ -37,13 +37,16 @@ func (r *CryptoRepository) TransferToken(client *ethclient.Client, signedTx stri
 	}
 
 	var tx types.Transaction
-	rlp.DecodeBytes(txBytes, &tx)
-	contractAddress := "0x1234567890abcdefABCDEF1234567890abcdefAB" // Reemplaza esto con la dirección del contrato que deseas verificar
-	isPancakeSwap, err := contractAddressVerified(client, contractAddress)
+	errDocodeBytesTX := rlp.DecodeBytes(txBytes, &tx)
+	if errDocodeBytesTX != nil {
+		return "", err
+	}
+	contractAddress := "0x1234567890abcdefABCDEF1234567890abcdefAB"
+	contracVerified, err := contractAddressVerified(client, contractAddress)
 	if err != nil {
 		return "", err
 	}
-	if !isPancakeSwap {
+	if !contracVerified {
 		return "", errors.New("token invalid")
 	}
 	err = client.SendTransaction(context.Background(), &tx)
@@ -54,9 +57,7 @@ func (r *CryptoRepository) TransferToken(client *ethclient.Client, signedTx stri
 	return tx.Hash().Hex(), nil
 }
 
-// contractAddressVerified verifica si la dirección del contrato corresponde a nuesto token
 func contractAddressVerified(client *ethclient.Client, contractAddress string) (bool, error) {
-	// Obtener el código del contrato en la dirección proporcionada.
 	code, err := client.CodeAt(context.Background(), common.HexToAddress(contractAddress), nil)
 	if err != nil {
 		return false, err

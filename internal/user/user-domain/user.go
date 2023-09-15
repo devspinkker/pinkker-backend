@@ -86,6 +86,18 @@ func (u *UserModelValidator) ValidateUser() error {
 	return validate.Struct(u)
 }
 
+type ReqGoogle_callback_NameUserConfirm struct {
+	NameUser string `json:"NameUser" validate:"required,min=5,max=20"`
+	Pais     string `json:"Pais" validate:"required"`
+	Ciudad   string `json:"Ciudad" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
+}
+
+func (u *ReqGoogle_callback_NameUserConfirm) ValidateUser() error {
+	validate := validator.New()
+	return validate.Struct(u)
+}
+
 type LoginValidatorStruct struct {
 	NameUser string `json:"NameUser" validate:"required,max=70"`
 	Password string `json:"password" validate:"required,min=8"`
@@ -144,4 +156,10 @@ type GetUser struct {
 		UpdatedAt int64 `json:"updatedAt,omitempty" `
 	} `json:"timestamps,omitempty" `
 	Likes []primitive.ObjectID `json:"Likes"`
+}
+type UserInfoOAuth2 struct {
+	ID      string `json:"id"`
+	Email   string `json:"email"`
+	Name    string `json:"name"`
+	Picture string `json:"picture"`
 }

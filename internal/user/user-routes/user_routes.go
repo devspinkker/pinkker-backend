@@ -20,6 +20,8 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/user/signup", UserHandler.Signup)
 	App.Post("/user/login", UserHandler.Login)
 
+	// oauth2
+
 	App.Get("/user/getUserById", middleware.UseExtractor(), UserHandler.GetUserById)
 	App.Post("/user/get_user_by_key", UserHandler.GetUserBykey)
 

@@ -4,6 +4,7 @@ import (
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	domain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
+	"errors"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -171,4 +172,44 @@ func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectI
 	}
 
 	return nil
+}
+
+func (u *UserRepository) FindEmailForOauth2Updata(user *domain.ReqGoogle_callback_NameUserConfirm) (*domain.User, error) {
+	_, err := u.FindNameUser(user.NameUser, "")
+	if err != mongo.ErrNoDocuments {
+		return nil, err
+	}
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	filter := bson.M{"Email": user.Email}
+
+	var existingUser domain.User
+	err = GoMongoDBCollUsers.FindOne(context.Background(), filter).Decode(&existingUser)
+
+	if err != nil {
+		return nil, err
+	}
+	if existingUser.NameUser != "" {
+		return nil, errors.New("NameUser exists")
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"FullName":     existingUser.FullName,
+			"NameUser":     user.NameUser,
+			"PasswordHash": "",
+			"Pais":         user.Pais,
+			"Ciudad":       user.Ciudad,
+			"Email":        user.Email,
+		},
+	}
+
+	// Realizar la actualización
+	_, err = GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &existingUser, nil
 }

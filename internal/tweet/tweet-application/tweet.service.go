@@ -25,8 +25,23 @@ func (ts *TweetService) SaveTweet(status string, img string, user primitive.Obje
 	modelNewTweet.TweetImage = img
 	modelNewTweet.UserID = user
 	modelNewTweet.Likes = []primitive.ObjectID{}
+	modelNewTweet.Comments = []primitive.ObjectID{}
 	modelNewTweet.TimeStamp = time.Now()
 	err := ts.TweetRepository.TweetSave(modelNewTweet)
+
+	return err
+}
+func (ts *TweetService) SaveComment(status string, CommentBy primitive.ObjectID, img string, user primitive.ObjectID) error {
+	var modelNewTweet tweetdomain.TweetComment
+	modelNewTweet.Status = status
+	modelNewTweet.TweetImage = img
+	modelNewTweet.UserID = user
+	modelNewTweet.Likes = []primitive.ObjectID{}
+	modelNewTweet.TimeStamp = time.Now()
+	modelNewTweet.Comments = []primitive.ObjectID{}
+	modelNewTweet.CommentBy = CommentBy
+	modelNewTweet.TimeStamp = time.Now()
+	err := ts.TweetRepository.SaveComment(&modelNewTweet)
 
 	return err
 }
@@ -52,4 +67,13 @@ func (ts *TweetService) TweetGetFollow(idValueObj primitive.ObjectID) ([]tweetdo
 
 	Tweets, errGetTweetsLast24Hours := ts.TweetRepository.GetTweetsLast24Hours(followedUsers.Following)
 	return Tweets, errGetTweetsLast24Hours
+}
+
+func (ts *TweetService) GetCommentPost(IdPost primitive.ObjectID) ([]tweetdomain.TweetCommentsGetReq, error) {
+
+	followedUsers, errGetFollowedUsers := ts.TweetRepository.GetCommentPosts(IdPost)
+	if errGetFollowedUsers != nil {
+		return nil, errGetFollowedUsers
+	}
+	return followedUsers, nil
 }

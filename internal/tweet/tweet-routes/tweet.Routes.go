@@ -17,11 +17,12 @@ func TweetdRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.C
 	tweetService := tweetapplication.NewTweetService(tweetRepository)
 	tweetHandler := tweetinterfaces.NewTweetService(tweetService)
 
-	App.Post("/tweetCreate", middleware.UseExtractor(), tweetHandler.CreateTweet)
+	App.Post("/tweet/tweetCreate", middleware.UseExtractor(), tweetHandler.CreateTweet)
+	App.Post("/tweet/CommentPost", middleware.UseExtractor(), tweetHandler.CommentPost)
 
-	App.Post("/tweetLike", middleware.UseExtractor(), tweetHandler.TweetLike)
-	App.Post("/tweetDislike", middleware.UseExtractor(), tweetHandler.TweetDislike)
+	App.Post("/tweet/tweetLike", middleware.UseExtractor(), tweetHandler.TweetLike)
+	App.Post("/tweet/tweetDislike", middleware.UseExtractor(), tweetHandler.TweetDislike)
 
-	App.Get("/tweetGetFollow", middleware.UseExtractor(), tweetHandler.TweetGetFollow)
-
+	App.Get("/tweet/tweetGetFollow", middleware.UseExtractor(), tweetHandler.TweetGetFollow)
+	App.Get("/tweet/tweetGetCommentPost", middleware.UseExtractor(), tweetHandler.GetCommentPost)
 }

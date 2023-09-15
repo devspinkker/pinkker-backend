@@ -3,8 +3,12 @@ package userinterfaces
 import (
 	application "PINKKER-BACKEND/internal/user/user-application"
 	domain "PINKKER-BACKEND/internal/user/user-domain"
+	userdomain "PINKKER-BACKEND/internal/user/user-domain"
+	oauth2 "PINKKER-BACKEND/pkg/OAuth2"
+	configoauth2 "PINKKER-BACKEND/pkg/OAuth2/configOAuth2"
 	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/jwt"
+	"context"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -283,4 +287,115 @@ func (h *UserHandler) GetUserBykey(c *fiber.Ctx) error {
 		"message": "ok",
 		"data":    user,
 	})
+}
+
+// login google
+func (h *UserHandler) GoogleLogin(c *fiber.Ctx) error {
+	oauthState := helpers.GenerateStateOauthCookie(c)
+	u := configoauth2.AppConfig.GoogleLoginConfig.AuthCodeURL(oauthState)
+	return c.Redirect(u)
+}
+func (h *UserHandler) Google_callback(c *fiber.Ctx) error {
+	code := c.Query("code")
+
+	token, err := configoauth2.AppConfig.GoogleLoginConfig.Exchange(context.TODO(), code)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err,
+		})
+	}
+
+	userInfo, err := oauth2.GetUserInfoFromGoogle(token)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err,
+		})
+	}
+
+	user, existUser := h.userService.FindNameUser(userInfo.Name, userInfo.Email)
+	if existUser != nil {
+		if existUser == mongo.ErrNoDocuments {
+			newUser := &userdomain.UserModelValidator{
+				FullName: userInfo.Name,
+				NameUser: "",
+				Password: "",
+				Pais:     "",
+				Ciudad:   "",
+				Email:    userInfo.Email,
+			}
+			errSaveUser := h.userService.SaveUser(newUser, "", "")
+			if errSaveUser != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"message": "StatusInternalServerError",
+					"data":    errSaveUser.Error(),
+				})
+			}
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{
+				"message": "redirect to complete user",
+				"data":    userInfo.Email,
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    existUser.Error(),
+		})
+	}
+
+	if user.NameUser == "" {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "redirect to complete user",
+			"data":    userInfo.Email,
+		})
+	}
+
+	tokenRequest, err := jwt.CreateToken(user)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err,
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    tokenRequest,
+	})
+}
+
+func (h *UserHandler) ReqGoogle_callback_NameUserConfirm(c *fiber.Ctx) error {
+
+	var req domain.ReqGoogle_callback_NameUserConfirm
+	err := c.BodyParser(&req)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err,
+		})
+	}
+	if err = req.ValidateUser(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err,
+		})
+	}
+	user, err := h.userService.FindEmailForOauth2Updata(&req)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err,
+		})
+	}
+	tokenRequest, err := jwt.CreateToken(user)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "ok",
+			"data":    err,
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    tokenRequest,
+	})
+
 }

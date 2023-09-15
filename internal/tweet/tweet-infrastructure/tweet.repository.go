@@ -38,6 +38,26 @@ func (t *TweetRepository) TweetSave(Tweet tweetdomain.Tweet) error {
 	return nil
 }
 
+func (t *TweetRepository) SaveComment(tweetComment *tweetdomain.TweetComment) error {
+	GoMongoDBCollComments := t.mongoClient.Database("PINKKER-BACKEND").Collection("Tweet")
+
+	res, errInsertOne := GoMongoDBCollComments.InsertOne(context.Background(), tweetComment)
+	if errInsertOne != nil {
+		return errInsertOne
+	}
+
+	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Tweet")
+	filter := bson.M{"_id": tweetComment.CommentBy}
+	update := bson.M{"$push": bson.M{"Comments": res.InsertedID}}
+
+	_, err := GoMongoDBCollTweets.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (t *TweetRepository) FindTweetbyId(idTweet primitive.ObjectID) (tweetdomain.Tweet, error) {
 
 	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Tweet")
@@ -194,4 +214,64 @@ func (t *TweetRepository) GetTweetsLast24Hours(userIDs []primitive.ObjectID) ([]
 	}
 
 	return tweetsWithUserInfo, nil
+}
+
+func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID) ([]tweetdomain.TweetCommentsGetReq, error) {
+	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Tweet")
+
+	// Paso 1: Buscar el tweet por su ID
+	var tweet tweetdomain.Tweet
+	if err := GoMongoDBCollTweets.FindOne(context.Background(), bson.M{"_id": tweetID}).Decode(&tweet); err != nil {
+		return nil, err
+	}
+
+	// Paso 2: Obtener los IDs de los comentarios del tweet
+	commentIDs := tweet.Comments
+
+	// Paso 3: Buscar los comentarios completos utilizando los IDs
+	pipeline := []bson.D{
+		// Filtra los comentarios por sus IDs
+		{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: commentIDs}}}}}},
+		// Une los comentarios con la información del usuario creador
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		{{Key: "$unwind", Value: "$UserInfo"}},
+
+		// Proyecta los campos necesarios
+		{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: "$Status"},
+			{Key: "CommentBy", Value: "$CommentBy"},
+			{Key: "Comments", Value: "$Comments"},
+			{Key: "TweetImage", Value: "$TweetImage"},
+			{Key: "TimeStamp", Value: "$TimeStamp"},
+			{Key: "UserID", Value: "$UserID"},
+			{Key: "Likes", Value: "$Likes"},
+			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
+			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
+			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
+		}}},
+	}
+
+	var comments []tweetdomain.TweetCommentsGetReq
+
+	cursor, err := GoMongoDBCollTweets.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	for cursor.Next(context.Background()) {
+		var comment tweetdomain.TweetCommentsGetReq
+		if err := cursor.Decode(&comment); err != nil {
+			return nil, err
+		}
+		comments = append(comments, comment)
+	}
+
+	return comments, nil
 }

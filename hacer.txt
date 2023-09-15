@@ -1,3 +1,7 @@
+
+FindEmailForOauth2Updata --- posiblemente mejorable, reduciendo a una consulta a db, sueño op ---
+
+
 categies.jsx  cammbiar nombre de los end-points - revisado v1 14/8
 donation.jsx  cammbiar nombre de los end-points - revisado v1 14/8
 follow.jsx    cammbiar nombre de los end-points - revisado v1 14/8
