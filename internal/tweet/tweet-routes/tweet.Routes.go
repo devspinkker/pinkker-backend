@@ -17,12 +17,14 @@ func TweetdRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.C
 	tweetService := tweetapplication.NewTweetService(tweetRepository)
 	tweetHandler := tweetinterfaces.NewTweetService(tweetService)
 
-	App.Post("/tweet/tweetCreate", middleware.UseExtractor(), tweetHandler.CreateTweet)
-	App.Post("/tweet/CommentPost", middleware.UseExtractor(), tweetHandler.CommentPost)
+	App.Post("/post/postCreate", middleware.UseExtractor(), tweetHandler.CreatePost)
+	App.Post("/post/CommentPost", middleware.UseExtractor(), tweetHandler.CommentPost)
+	App.Post("/post/Repost", middleware.UseExtractor(), tweetHandler.RePost)
+	App.Post("/post/Citapost", middleware.UseExtractor(), tweetHandler.CitaPost)
 
-	App.Post("/tweet/tweetLike", middleware.UseExtractor(), tweetHandler.TweetLike)
-	App.Post("/tweet/tweetDislike", middleware.UseExtractor(), tweetHandler.TweetDislike)
+	App.Post("/post/posttLike", middleware.UseExtractor(), tweetHandler.PostLike)
+	App.Post("/post/postDislike", middleware.UseExtractor(), tweetHandler.PostDislike)
 
-	App.Get("/tweet/tweetGetFollow", middleware.UseExtractor(), tweetHandler.TweetGetFollow)
-	App.Get("/tweet/tweetGetCommentPost", middleware.UseExtractor(), tweetHandler.GetCommentPost)
+	App.Get("/post/postGetFollow", middleware.UseExtractor(), tweetHandler.TweetGetFollow)
+	App.Get("/post/postGetCommentPost", middleware.UseExtractor(), tweetHandler.GetCommentPost)
 }

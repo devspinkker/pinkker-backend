@@ -2,6 +2,7 @@ package userapplication
 
 import (
 	domain "PINKKER-BACKEND/internal/user/user-domain"
+	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	infrastructure "PINKKER-BACKEND/internal/user/user-infrastructure"
 	"PINKKER-BACKEND/pkg/helpers"
 	"strings"
@@ -21,7 +22,7 @@ func NewChatService(roomRepository *infrastructure.UserRepository) *UserService 
 }
 
 // signup
-func (u *UserService) SaveUser(newUser *domain.UserModelValidator, avatarUrl string, passwordHash string) error {
+func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avatarUrl string, passwordHash string) *userdomain.User {
 	var modelNewUser domain.User
 	KeyTransmission := helpers.KeyTransmission(45)
 	cmt := helpers.KeyTransmission(32)
@@ -46,9 +47,15 @@ func (u *UserService) SaveUser(newUser *domain.UserModelValidator, avatarUrl str
 	modelNewUser.Wallet = newUser.Wallet
 	modelNewUser.Subscribers = []domain.Subscriber{}
 	modelNewUser.Subscriptions = []domain.Subscription{}
+	return &modelNewUser
+}
 
-	id, err := u.roomRepository.SaveUserDB(&modelNewUser)
-	err = u.roomRepository.CreateStreamUser(&modelNewUser, id)
+func (u *UserService) SaveUser(newUser *domain.User) (primitive.ObjectID, error) {
+	id, err := u.roomRepository.SaveUserDB(newUser)
+	return id, err
+}
+func (u *UserService) CreateStream(newUser *domain.User, ID primitive.ObjectID) error {
+	err := u.roomRepository.CreateStreamUser(newUser, ID)
 	return err
 }
 func (u *UserService) SendConfirmationEmail(Email string, Token string) error {

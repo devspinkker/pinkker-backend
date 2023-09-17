@@ -75,9 +75,15 @@ func EnvCloudUploadFolderClip() string {
 	}
 	return os.Getenv("EnvCloudUploadFolderClip")
 }
-func ACCESS_TOKEN_PRUEBA_MERCADOPAGO() string {
+func GOOGLE_CLIENT_ID() string {
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("godotenv.Load error")
 	}
-	return os.Getenv("ACCESS_TOKEN_PRUEBA_MERCADOPAGO")
+	return os.Getenv("GOOGLE_CLIENT_ID")
+}
+func GOOGLE_CLIENT_SECRET() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("GOOGLE_CLIENT_SECRET")
 }

@@ -9,6 +9,7 @@ import (
 	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/jwt"
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -63,25 +64,19 @@ func (h *UserHandler) Signup(c *fiber.Ctx) error {
 			for {
 				select {
 				case avatarUrl := <-PostImageChanel:
-					err := h.userService.SaveUser(&newUser, avatarUrl, passwordHash)
+					userDomaion := h.userService.UserDomaionUpdata(&newUser, avatarUrl, passwordHash)
+					idInsert, err := h.userService.SaveUser(userDomaion)
 					if err != nil {
 						return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 							"message": "Internal Server Error",
 							"err":     err,
 						})
 					}
-
-					tokenEmailConfirmation, ErrtokenEmailConfirmation := jwt.CreateTokenEmailConfirmation(&newUser)
-
-					if ErrtokenEmailConfirmation != nil {
+					err = h.userService.CreateStream(userDomaion, idInsert)
+					if err != nil {
 						return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-							"message": "Err token Email Confirmation",
-						})
-					}
-					errSendConfirmationEmail := h.userService.SendConfirmationEmail(newUser.Email, tokenEmailConfirmation)
-					if errSendConfirmationEmail != nil {
-						return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-							"message": "err Send Confirmation Email",
+							"message": "Internal Server Error",
+							"err":     err,
 						})
 					}
 					return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -293,6 +288,7 @@ func (h *UserHandler) GetUserBykey(c *fiber.Ctx) error {
 func (h *UserHandler) GoogleLogin(c *fiber.Ctx) error {
 	oauthState := helpers.GenerateStateOauthCookie(c)
 	u := configoauth2.AppConfig.GoogleLoginConfig.AuthCodeURL(oauthState)
+	fmt.Println(u)
 	return c.Redirect(u)
 }
 func (h *UserHandler) Google_callback(c *fiber.Ctx) error {
@@ -325,13 +321,15 @@ func (h *UserHandler) Google_callback(c *fiber.Ctx) error {
 				Ciudad:   "",
 				Email:    userInfo.Email,
 			}
-			errSaveUser := h.userService.SaveUser(newUser, "", "")
+			userDomaion := h.userService.UserDomaionUpdata(newUser, "", "")
+			idInsert, errSaveUser := h.userService.SaveUser(userDomaion)
 			if errSaveUser != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"message": "StatusInternalServerError",
 					"data":    errSaveUser.Error(),
 				})
 			}
+			err = h.userService.CreateStream(userDomaion, idInsert)
 			return c.Status(fiber.StatusOK).JSON(fiber.Map{
 				"message": "redirect to complete user",
 				"data":    userInfo.Email,
@@ -363,7 +361,7 @@ func (h *UserHandler) Google_callback(c *fiber.Ctx) error {
 	})
 }
 
-func (h *UserHandler) ReqGoogle_callback_NameUserConfirm(c *fiber.Ctx) error {
+func (h *UserHandler) Google_callback_NameUserConfirm(c *fiber.Ctx) error {
 
 	var req domain.ReqGoogle_callback_NameUserConfirm
 	err := c.BodyParser(&req)

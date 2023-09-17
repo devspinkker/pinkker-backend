@@ -20,29 +20,30 @@ func NewTweetService(TweetRepository *tweetinfrastructure.TweetRepository) *Twee
 
 // save
 func (ts *TweetService) SaveTweet(status string, img string, user primitive.ObjectID) error {
-	var modelNewTweet tweetdomain.Tweet
+	var modelNewTweet tweetdomain.Post
 	modelNewTweet.Status = status
-	modelNewTweet.TweetImage = img
+	modelNewTweet.PostImage = img
 	modelNewTweet.UserID = user
 	modelNewTweet.Likes = []primitive.ObjectID{}
 	modelNewTweet.Comments = []primitive.ObjectID{}
 	modelNewTweet.TimeStamp = time.Now()
+	modelNewTweet.RePosts = []primitive.ObjectID{}
 	err := ts.TweetRepository.TweetSave(modelNewTweet)
 
 	return err
 }
-func (ts *TweetService) SaveComment(status string, CommentBy primitive.ObjectID, img string, user primitive.ObjectID) error {
-	var modelNewTweet tweetdomain.TweetComment
+func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID, img string, user primitive.ObjectID) error {
+	var modelNewTweet tweetdomain.PostComment
 	modelNewTweet.Status = status
-	modelNewTweet.TweetImage = img
+	modelNewTweet.PostImage = img
 	modelNewTweet.UserID = user
 	modelNewTweet.Likes = []primitive.ObjectID{}
 	modelNewTweet.TimeStamp = time.Now()
 	modelNewTweet.Comments = []primitive.ObjectID{}
-	modelNewTweet.CommentBy = CommentBy
+	modelNewTweet.CommentTo = CommentTo
 	modelNewTweet.TimeStamp = time.Now()
+	modelNewTweet.RePosts = []primitive.ObjectID{}
 	err := ts.TweetRepository.SaveComment(&modelNewTweet)
-
 	return err
 }
 
@@ -76,4 +77,25 @@ func (ts *TweetService) GetCommentPost(IdPost primitive.ObjectID) ([]tweetdomain
 		return nil, errGetFollowedUsers
 	}
 	return followedUsers, nil
+}
+func (ts *TweetService) RePost(userid primitive.ObjectID, IdPost primitive.ObjectID) error {
+
+	var Repost tweetdomain.RePost
+	Repost.UserID = userid
+	Repost.OriginalPost = IdPost
+	Repost.TimeStamp = time.Now()
+
+	err := ts.TweetRepository.RePost(&Repost)
+	return err
+}
+func (ts *TweetService) CitaPost(userid primitive.ObjectID, IdPost primitive.ObjectID, status string) error {
+
+	var Repost tweetdomain.CitaPost
+	Repost.UserID = userid
+	Repost.OriginalPost = IdPost
+	Repost.Status = status
+	Repost.TimeStamp = time.Now()
+
+	err := ts.TweetRepository.CitaPost(&Repost)
+	return err
 }

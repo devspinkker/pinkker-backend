@@ -21,7 +21,7 @@ func NewTweetService(TweetServise *tweetapplication.TweetService) *TweetHandler 
 }
 
 // Create
-func (th *TweetHandler) CreateTweet(c *fiber.Ctx) error {
+func (th *TweetHandler) CreatePost(c *fiber.Ctx) error {
 
 	fileHeader, _ := c.FormFile("imgPost")
 	PostImageChanel := make(chan string)
@@ -34,7 +34,7 @@ func (th *TweetHandler) CreateTweet(c *fiber.Ctx) error {
 			"messages": "Bad Request",
 		})
 	}
-	if err := newTweet.ValidateUser(); err != nil {
+	if err := newTweet.Validate(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad Request",
 			"error":   err.Error(),
@@ -69,11 +69,11 @@ func (th *TweetHandler) CreateTweet(c *fiber.Ctx) error {
 }
 
 type IDTweet struct {
-	IDTweet string `json:"idTweet"`
+	IDTweet string `json:"idPost"`
 }
 
 // like
-func (th *TweetHandler) TweetLike(c *fiber.Ctx) error {
+func (th *TweetHandler) PostLike(c *fiber.Ctx) error {
 	var idTweetReq IDTweet
 	if err := c.BodyParser(&idTweetReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -106,7 +106,7 @@ func (th *TweetHandler) TweetLike(c *fiber.Ctx) error {
 		"message": "Like",
 	})
 }
-func (th *TweetHandler) TweetDislike(c *fiber.Ctx) error {
+func (th *TweetHandler) PostDislike(c *fiber.Ctx) error {
 	var idTweetReq IDTweet
 	if err := c.BodyParser(&idTweetReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -174,7 +174,7 @@ func (th *TweetHandler) CommentPost(c *fiber.Ctx) error {
 			"messages": "Bad Request",
 		})
 	}
-	if err := TweetComment.ValidateUser(); err != nil {
+	if err := TweetComment.Validate(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad Request",
 			"error":   err.Error(),
@@ -191,7 +191,7 @@ func (th *TweetHandler) CommentPost(c *fiber.Ctx) error {
 	for {
 		select {
 		case PostImage := <-PostImageChanel:
-			err := th.TweetServise.SaveComment(TweetComment.Status, TweetComment.CommentBy, PostImage, idValueObj)
+			err := th.TweetServise.SaveComment(TweetComment.Status, TweetComment.CommentTo, PostImage, idValueObj)
 			if err != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"message": err.Error(),
@@ -251,4 +251,65 @@ func (th *TweetHandler) GetCommentPost(c *fiber.Ctx) error {
 		"message": Tweets,
 	})
 
+}
+
+type RePostIdPost struct {
+	IDPost primitive.ObjectID `json:"idPost"`
+}
+
+func (th *TweetHandler) RePost(c *fiber.Ctx) error {
+	var req RePostIdPost
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	errRePost := th.TweetServise.RePost(idValueObj, req.IDPost)
+	if errRePost != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errRePost.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
+func (th *TweetHandler) CitaPost(c *fiber.Ctx) error {
+	var req tweetdomain.CitaPostModelValidator
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	if err := req.Validate(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err,
+		})
+	}
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	errRePost := th.TweetServise.CitaPost(idValueObj, req.OriginalPost, req.Status)
+	if errRePost != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errRePost.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
 }
