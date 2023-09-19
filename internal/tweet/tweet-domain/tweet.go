@@ -9,6 +9,7 @@ import (
 
 type Post struct {
 	ID        primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Type      string               `json:"Type" default:"Post" bson:"Type"`
 	Status    string               `json:"Status" bson:"Status"`
 	PostImage string               `json:"PostImage" bson:"PostImage"`
 	TimeStamp time.Time            `json:"TimeStamp" bson:"TimeStamp"`
@@ -19,6 +20,7 @@ type Post struct {
 }
 type PostComment struct {
 	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Type         string               `json:"Type" default:"PostComment" bson:"Type"`
 	OriginalPost primitive.ObjectID   `json:"OriginalPost" bson:"OriginalPost"`
 	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
 	Status       string               `json:"Status" bson:"Status"`
@@ -30,12 +32,14 @@ type PostComment struct {
 }
 type RePost struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Type         string             `json:"Type" default:"RePost" bson:"Type"`
 	UserID       primitive.ObjectID `json:"UserID" bson:"UserID"`
 	OriginalPost primitive.ObjectID `json:"OriginalPost" bson:"OriginalPost"`
 	TimeStamp    time.Time          `json:"TimeStamp" bson:"TimeStamp"`
 }
 type CitaPost struct {
 	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Type         string               `json:"Type" default:"CitaPost" bson:"Type"`
 	UserID       primitive.ObjectID   `json:"UserID" bson:"UserID"`
 	OriginalPost primitive.ObjectID   `json:"OriginalPost" bson:"OriginalPost"`
 	TimeStamp    time.Time            `json:"TimeStamp" bson:"TimeStamp"`
@@ -85,6 +89,7 @@ type TweetGetFollowReq struct {
 	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 	OriginalPost primitive.ObjectID   `json:"OriginalPost"`
+	Type         string               `json:"Type" bson:"Type"`
 	UserInfo     struct {
 		FullName string `json:"FullName"`
 		Avatar   string `json:"Avatar"`

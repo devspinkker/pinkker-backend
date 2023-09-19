@@ -28,6 +28,7 @@ func (ts *TweetService) SaveTweet(status string, img string, user primitive.Obje
 	modelNewTweet.Comments = []primitive.ObjectID{}
 	modelNewTweet.TimeStamp = time.Now()
 	modelNewTweet.RePosts = []primitive.ObjectID{}
+	modelNewTweet.Type = "Post"
 	err := ts.TweetRepository.TweetSave(modelNewTweet)
 
 	return err
@@ -43,6 +44,8 @@ func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID,
 	modelNewTweet.OriginalPost = CommentTo
 	modelNewTweet.TimeStamp = time.Now()
 	modelNewTweet.RePosts = []primitive.ObjectID{}
+	modelNewTweet.Type = "PostComment"
+
 	err := ts.TweetRepository.SaveComment(&modelNewTweet)
 	return err
 }
@@ -84,22 +87,24 @@ func (ts *TweetService) RePost(userid primitive.ObjectID, IdPost primitive.Objec
 	Repost.UserID = userid
 	Repost.OriginalPost = IdPost
 	Repost.TimeStamp = time.Now()
+	Repost.Type = "RePost"
 
 	err := ts.TweetRepository.RePost(&Repost)
 	return err
 }
 func (ts *TweetService) CitaPost(userid primitive.ObjectID, IdPost primitive.ObjectID, status string, image string) error {
 
-	var Repost tweetdomain.CitaPost
-	Repost.UserID = userid
-	Repost.PostImage = image
-	Repost.OriginalPost = IdPost
-	Repost.Status = status
-	Repost.TimeStamp = time.Now()
-	Repost.Likes = []primitive.ObjectID{}
-	Repost.RePosts = []primitive.ObjectID{}
-	Repost.Comments = []primitive.ObjectID{}
+	var CitaPost tweetdomain.CitaPost
+	CitaPost.UserID = userid
+	CitaPost.PostImage = image
+	CitaPost.OriginalPost = IdPost
+	CitaPost.Status = status
+	CitaPost.TimeStamp = time.Now()
+	CitaPost.Likes = []primitive.ObjectID{}
+	CitaPost.RePosts = []primitive.ObjectID{}
+	CitaPost.Comments = []primitive.ObjectID{}
+	CitaPost.Type = "CitaPost"
 
-	err := ts.TweetRepository.CitaPost(&Repost)
+	err := ts.TweetRepository.CitaPost(&CitaPost)
 	return err
 }

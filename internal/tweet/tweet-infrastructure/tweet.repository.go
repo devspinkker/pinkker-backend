@@ -29,7 +29,6 @@ func NewTweetRepository(redisClient *redis.Client, mongoClient *mongo.Client) *T
 
 // Save
 func (t *TweetRepository) TweetSave(Tweet tweetdomain.Post) error {
-
 	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
 	_, errInsertOne := GoMongoDBCollUsers.InsertOne(context.Background(), Tweet)
@@ -186,6 +185,7 @@ func (t *TweetRepository) GetTweetsLast24Hours(userIDs []primitive.ObjectID) ([]
 			{Key: "id", Value: "$_id"},
 			{Key: "Status", Value: "$Status"},
 			{Key: "PostImage", Value: "$PostImage"},
+			{Key: "Type", Value: "$Type"},
 			{Key: "TimeStamp", Value: "$TimeStamp"},
 			{Key: "UserID", Value: "$UserID"},
 			{Key: "Likes", Value: "$Likes"},
@@ -233,6 +233,7 @@ func (t *TweetRepository) GetTweetsLast24Hours(userIDs []primitive.ObjectID) ([]
 			{{Key: "$unwind", Value: "$UserInfo"}},
 			{{Key: "$project", Value: bson.D{
 				{Key: "id", Value: "$_id"},
+				{Key: "Type", Value: "$Type"},
 				{Key: "Status", Value: "$Status"},
 				{Key: "PostImage", Value: "$PostImage"},
 				{Key: "TimeStamp", Value: "$TimeStamp"},
