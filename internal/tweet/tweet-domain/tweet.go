@@ -10,7 +10,7 @@ import (
 type Post struct {
 	ID        primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
 	Status    string               `json:"Status" bson:"Status"`
-	PostImage string               `json:"PostImage" bson:"PostImage,omitempty"`
+	PostImage string               `json:"PostImage" bson:"PostImage"`
 	TimeStamp time.Time            `json:"TimeStamp" bson:"TimeStamp"`
 	UserID    primitive.ObjectID   `json:"UserID" bson:"UserID"`
 	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
@@ -18,15 +18,15 @@ type Post struct {
 	RePosts   []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 }
 type PostComment struct {
-	ID        primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	CommentTo primitive.ObjectID   `json:"CommentTo" bson:"CommentTo"`
-	Comments  []primitive.ObjectID `json:"Comments" bson:"Comments"`
-	Status    string               `json:"Status" bson:"Status"`
-	PostImage string               `json:"PostImage" bson:"PostImage,omitempty"`
-	TimeStamp time.Time            `json:"TimeStamp" bson:"TimeStamp"`
-	UserID    primitive.ObjectID   `json:"UserID" bson:"UserID"`
-	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
-	RePosts   []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
+	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	OriginalPost primitive.ObjectID   `json:"OriginalPost" bson:"OriginalPost"`
+	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
+	Status       string               `json:"Status" bson:"Status"`
+	PostImage    string               `json:"PostImage" bson:"PostImage,omitempty"`
+	TimeStamp    time.Time            `json:"TimeStamp" bson:"TimeStamp"`
+	UserID       primitive.ObjectID   `json:"UserID" bson:"UserID"`
+	Likes        []primitive.ObjectID `json:"Likes" bson:"Likes"`
+	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 }
 type RePost struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
@@ -35,18 +35,22 @@ type RePost struct {
 	TimeStamp    time.Time          `json:"TimeStamp" bson:"TimeStamp"`
 }
 type CitaPost struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	UserID       primitive.ObjectID `json:"UserID" bson:"UserID"`
-	OriginalPost primitive.ObjectID `json:"OriginalPost" bson:"OriginalPost"`
-	TimeStamp    time.Time          `json:"TimeStamp" bson:"TimeStamp"`
-	Status       string             `json:"Status" bson:"Status"`
+	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	UserID       primitive.ObjectID   `json:"UserID" bson:"UserID"`
+	OriginalPost primitive.ObjectID   `json:"OriginalPost" bson:"OriginalPost"`
+	TimeStamp    time.Time            `json:"TimeStamp" bson:"TimeStamp"`
+	Status       string               `json:"Status" bson:"Status"`
+	Likes        []primitive.ObjectID `json:"Likes" bson:"Likes"`
+	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
+	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
+	PostImage    string               `json:"PostImage" bson:"PostImage"`
 }
 type TweetModelValidator struct {
 	Status string `json:"status" validate:"required,min=3,max=100"`
 }
 type TweetCommentModelValidator struct {
-	Status    string             `json:"status" validate:"required,min=3,max=100"`
-	CommentTo primitive.ObjectID `json:"CommentTo" validate:"required"`
+	Status       string             `json:"status" validate:"required,min=3,max=100"`
+	OriginalPost primitive.ObjectID `json:"OriginalPost" validate:"required"`
 }
 type CitaPostModelValidator struct {
 	Status       string             `json:"status" validate:"required,min=3,max=100"`
@@ -66,18 +70,27 @@ func (u *CitaPostModelValidator) Validate() error {
 	return validate.Struct(u)
 }
 
+type OriginalPostReference struct {
+	ID     primitive.ObjectID `json:"id"`
+	Status string             `json:"Status"`
+}
+
 type TweetGetFollowReq struct {
-	ID        primitive.ObjectID   `json:"id"`
-	Status    string               `json:"Status"`
-	PostImage string               `json:"PostImage,omitempty"`
-	TimeStamp time.Time            `json:"TimeStamp"`
-	UserID    primitive.ObjectID   `json:"UserID"`
-	Likes     []primitive.ObjectID `json:"Likes"`
-	UserInfo  struct {
+	ID           primitive.ObjectID   `json:"_id" bson:"_id"`
+	Status       string               `json:"Status" bson:"Status"`
+	PostImage    string               `json:"PostImage" bson:"PostImage"`
+	TimeStamp    time.Time            `json:"TimeStamp"  bson:"TimeStamp"`
+	UserID       primitive.ObjectID   `json:"UserID" bson:"UserID"`
+	Likes        []primitive.ObjectID `json:"Likes"`
+	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
+	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
+	OriginalPost primitive.ObjectID   `json:"OriginalPost"`
+	UserInfo     struct {
 		FullName string `json:"FullName"`
 		Avatar   string `json:"Avatar"`
 		NameUser string `json:"NameUser"`
 	} `json:"UserInfo"`
+	OriginalPostData *TweetGetFollowReq `json:"OriginalPostData"`
 }
 type TweetCommentsGetReq struct {
 	ID        primitive.ObjectID   `json:"id" bson:"_id,omitempty"`

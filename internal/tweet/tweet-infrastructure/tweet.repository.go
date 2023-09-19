@@ -48,7 +48,7 @@ func (t *TweetRepository) SaveComment(tweetComment *tweetdomain.PostComment) err
 	}
 
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
-	filter := bson.M{"_id": tweetComment.CommentTo}
+	filter := bson.M{"_id": tweetComment.OriginalPost}
 	update := bson.M{"$push": bson.M{"Comments": res.InsertedID}}
 
 	_, err := GoMongoDBCollTweets.UpdateOne(context.Background(), filter, update)
@@ -167,17 +167,14 @@ func (t *TweetRepository) GetFollowedUsers(idValueObj primitive.ObjectID) (userd
 }
 func (t *TweetRepository) GetTweetsLast24Hours(userIDs []primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
-
 	currentTime := time.Now()
 	last24Hours := currentTime.Add(-24 * time.Hour)
 
 	pipeline := []bson.D{
-		// Filtra los tweets que cumplan con el filtrooo
 		{{Key: "$match", Value: bson.D{
 			{Key: "UserID", Value: bson.D{{Key: "$in", Value: userIDs}}},
 			{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
 		}}},
-		// une los tweets con la información del usuario creador
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
@@ -185,7 +182,6 @@ func (t *TweetRepository) GetTweetsLast24Hours(userIDs []primitive.ObjectID) ([]
 			{Key: "as", Value: "UserInfo"},
 		}}},
 		{{Key: "$unwind", Value: "$UserInfo"}},
-		// campos necesaros
 		{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},
 			{Key: "Status", Value: "$Status"},
@@ -193,12 +189,15 @@ func (t *TweetRepository) GetTweetsLast24Hours(userIDs []primitive.ObjectID) ([]
 			{Key: "TimeStamp", Value: "$TimeStamp"},
 			{Key: "UserID", Value: "$UserID"},
 			{Key: "Likes", Value: "$Likes"},
+			{Key: "Comments", Value: "$Comments"},
+			{Key: "RePosts", Value: "$RePosts"},
+			{Key: "OriginalPost", Value: "$OriginalPost"},
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
 		}}},
-		{{Key: "$limit", Value: 10}},
 	}
+
 	cursor, err := GoMongoDBCollTweets.Aggregate(context.Background(), pipeline)
 	if err != nil {
 		return nil, err
@@ -211,12 +210,70 @@ func (t *TweetRepository) GetTweetsLast24Hours(userIDs []primitive.ObjectID) ([]
 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
 			return nil, err
 		}
+
 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
+	}
+
+	var originalPostIDs []primitive.ObjectID
+	for _, tweet := range tweetsWithUserInfo {
+		if tweet.OriginalPost != primitive.NilObjectID {
+			originalPostIDs = append(originalPostIDs, tweet.OriginalPost)
+		}
+	}
+	if len(originalPostIDs) > 0 {
+		originalPostPipeline := []bson.D{
+			{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: originalPostIDs}}}}}},
+
+			{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "Users"},
+				{Key: "localField", Value: "UserID"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "UserInfo"},
+			}}},
+			{{Key: "$unwind", Value: "$UserInfo"}},
+			{{Key: "$project", Value: bson.D{
+				{Key: "id", Value: "$_id"},
+				{Key: "Status", Value: "$Status"},
+				{Key: "PostImage", Value: "$PostImage"},
+				{Key: "TimeStamp", Value: "$TimeStamp"},
+				{Key: "UserID", Value: "$UserID"},
+				{Key: "Likes", Value: "$Likes"},
+				{Key: "Comments", Value: "$Comments"},
+				{Key: "RePosts", Value: "$RePosts"},
+				{Key: "OriginalPost", Value: "$OriginalPost"},
+				{Key: "UserInfo.FullName", Value: 1},
+				{Key: "UserInfo.Avatar", Value: 1},
+				{Key: "UserInfo.NameUser", Value: 1},
+			}}},
+		}
+
+		cursorOriginalPosts, err := GoMongoDBCollTweets.Aggregate(context.Background(), originalPostPipeline)
+		if err != nil {
+			return nil, err
+		}
+		defer cursorOriginalPosts.Close(context.Background())
+
+		var originalPostMap = make(map[primitive.ObjectID]tweetdomain.TweetGetFollowReq)
+		for cursorOriginalPosts.Next(context.Background()) {
+			var originalPost tweetdomain.TweetGetFollowReq
+			if err := cursorOriginalPosts.Decode(&originalPost); err != nil {
+				return nil, err
+			}
+			originalPostMap[originalPost.ID] = originalPost
+		}
+
+		for i, tweet := range tweetsWithUserInfo {
+			if tweet.OriginalPost != primitive.NilObjectID {
+				originalPost, found := originalPostMap[tweet.OriginalPost]
+				if found {
+					tweetsWithUserInfo[i].OriginalPostData = &originalPost
+				}
+			}
+		}
 	}
 
 	return tweetsWithUserInfo, nil
 }
-
 func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID) ([]tweetdomain.TweetCommentsGetReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 

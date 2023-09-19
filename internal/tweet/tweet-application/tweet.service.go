@@ -40,7 +40,7 @@ func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID,
 	modelNewTweet.Likes = []primitive.ObjectID{}
 	modelNewTweet.TimeStamp = time.Now()
 	modelNewTweet.Comments = []primitive.ObjectID{}
-	modelNewTweet.CommentTo = CommentTo
+	modelNewTweet.OriginalPost = CommentTo
 	modelNewTweet.TimeStamp = time.Now()
 	modelNewTweet.RePosts = []primitive.ObjectID{}
 	err := ts.TweetRepository.SaveComment(&modelNewTweet)
@@ -88,13 +88,17 @@ func (ts *TweetService) RePost(userid primitive.ObjectID, IdPost primitive.Objec
 	err := ts.TweetRepository.RePost(&Repost)
 	return err
 }
-func (ts *TweetService) CitaPost(userid primitive.ObjectID, IdPost primitive.ObjectID, status string) error {
+func (ts *TweetService) CitaPost(userid primitive.ObjectID, IdPost primitive.ObjectID, status string, image string) error {
 
 	var Repost tweetdomain.CitaPost
 	Repost.UserID = userid
+	Repost.PostImage = image
 	Repost.OriginalPost = IdPost
 	Repost.Status = status
 	Repost.TimeStamp = time.Now()
+	Repost.Likes = []primitive.ObjectID{}
+	Repost.RePosts = []primitive.ObjectID{}
+	Repost.Comments = []primitive.ObjectID{}
 
 	err := ts.TweetRepository.CitaPost(&Repost)
 	return err

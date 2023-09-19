@@ -4,7 +4,6 @@ import (
 	tweetapplication "PINKKER-BACKEND/internal/tweet/tweet-application"
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	"PINKKER-BACKEND/pkg/helpers"
-	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -191,7 +190,7 @@ func (th *TweetHandler) CommentPost(c *fiber.Ctx) error {
 	for {
 		select {
 		case PostImage := <-PostImageChanel:
-			err := th.TweetServise.SaveComment(TweetComment.Status, TweetComment.CommentTo, PostImage, idValueObj)
+			err := th.TweetServise.SaveComment(TweetComment.Status, TweetComment.OriginalPost, PostImage, idValueObj)
 			if err != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"message": err.Error(),
@@ -235,7 +234,6 @@ func (th *TweetHandler) GetCommentPost(c *fiber.Ctx) error {
 	var req reqCommentPost
 	err := c.BodyParser(&req)
 	if err != nil {
-		fmt.Println("asa")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})
@@ -283,6 +281,11 @@ func (th *TweetHandler) RePost(c *fiber.Ctx) error {
 	})
 }
 func (th *TweetHandler) CitaPost(c *fiber.Ctx) error {
+	fileHeader, _ := c.FormFile("imgPost")
+	PostImageChanel := make(chan string)
+	errChanel := make(chan error)
+	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+
 	var req tweetdomain.CitaPostModelValidator
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -302,14 +305,23 @@ func (th *TweetHandler) CitaPost(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
-	errRePost := th.TweetServise.CitaPost(idValueObj, req.OriginalPost, req.Status)
-	if errRePost != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "StatusInternalServerError",
-			"data":    errRePost.Error(),
-		})
+	for {
+		select {
+		case PostImage := <-PostImageChanel:
+			errRePost := th.TweetServise.CitaPost(idValueObj, req.OriginalPost, req.Status, PostImage)
+			if errRePost != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"message": errRePost.Error(),
+				})
+			}
+			return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+				"message": "StatusCreated",
+			})
+		case <-errChanel:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "avatarUrl error",
+			})
+		}
 	}
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "ok",
-	})
+
 }
