@@ -1,4 +1,4 @@
-# .env
-# go.sum
-# .mod
-# /tmp/
+.env
+.sum
+.mod
+/tmp/
