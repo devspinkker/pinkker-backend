@@ -13,7 +13,8 @@ import (
 
 func GetUserInfoFromGoogle(token *oauth2.Token) (*userdomain.UserInfoOAuth2, error) {
 	// Crea un cliente HTTP con el token de acceso.
-	client := configoauth2.AppConfig.GoogleLoginConfig.Client(context.Background(), token)
+	googleConfig := configoauth2.LoadConfig()
+	client := googleConfig.Client(context.Background(), token)
 
 	// Hacer una solicitud GET a la API de Google para obtener información del usuario.
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
@@ -21,11 +22,9 @@ func GetUserInfoFromGoogle(token *oauth2.Token) (*userdomain.UserInfoOAuth2, err
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("Error al obtener información del usuario de Google. Código de estado: %d", resp.StatusCode)
 	}
-
 	var userInfo userdomain.UserInfoOAuth2
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
 		return nil, err

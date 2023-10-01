@@ -100,7 +100,18 @@ func (u *UserService) Unfollow(IdUserTokenP primitive.ObjectID, IdUser primitive
 }
 
 // oauth2
-func (u *UserService) FindEmailForOauth2Updata(user *domain.ReqGoogle_callback_NameUserConfirm) (*domain.User, error) {
+func (u *UserService) FindEmailForOauth2Updata(user *domain.Google_callback_Complete_Profile_And_Username) (*domain.User, error) {
 	userFind, err := u.roomRepository.FindEmailForOauth2Updata(user)
 	return userFind, err
+}
+
+func (u *UserService) EditProfile(Profile domain.EditProfile, IdUserTokenP primitive.ObjectID) error {
+
+	err := u.roomRepository.EditProfile(Profile, IdUserTokenP)
+	return err
+}
+func (u *UserService) EditAvatar(avatarUrl string, IdUserTokenP primitive.ObjectID) error {
+
+	err := u.roomRepository.EditAvatar(avatarUrl, IdUserTokenP)
+	return err
 }
