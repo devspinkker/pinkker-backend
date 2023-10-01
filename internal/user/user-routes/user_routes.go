@@ -23,7 +23,7 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	// oauth2
 	App.Get("/user/google_login", UserHandler.GoogleLogin)
 	App.Get("/user/google_callback", UserHandler.Google_callback)
-	App.Post("/user/google_callback_NameUserConfirm", UserHandler.Google_callback_NameUserConfirm)
+	App.Post("/user/Google_callback_Complete_Profile_And_Username", UserHandler.Google_callback_Complete_Profile_And_Username)
 
 	App.Get("/user/getUserById", middleware.UseExtractor(), UserHandler.GetUserById)
 	App.Post("/user/get_user_by_key", UserHandler.GetUserBykey)
@@ -33,5 +33,9 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/user/Unfollow", middleware.UseExtractor(), UserHandler.Unfollow)
 
 	App.Post("/user/buyPixeles", middleware.UseExtractor(), UserHandler.BuyPixeles)
+
+	// edit user information
+	App.Post("/user/EditProfile", middleware.UseExtractor(), UserHandler.EditProfile)
+	App.Post("/user/EditAvatar", middleware.UseExtractor(), UserHandler.EditAvatar)
 
 }

@@ -9,7 +9,6 @@ import (
 	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/jwt"
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -286,19 +285,24 @@ func (h *UserHandler) GetUserBykey(c *fiber.Ctx) error {
 
 // login google
 func (h *UserHandler) GoogleLogin(c *fiber.Ctx) error {
-	oauthState := helpers.GenerateStateOauthCookie(c)
-	u := configoauth2.AppConfig.GoogleLoginConfig.AuthCodeURL(oauthState)
-	fmt.Println(u)
-	return c.Redirect(u)
+	randomstate := helpers.GenerateStateOauthCookie(c)
+
+	googleConfig := configoauth2.LoadConfig()
+	url := googleConfig.AuthCodeURL(randomstate)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":  "statusOk",
+		"redirect": url,
+	})
 }
+
 func (h *UserHandler) Google_callback(c *fiber.Ctx) error {
 	code := c.Query("code")
-
-	token, err := configoauth2.AppConfig.GoogleLoginConfig.Exchange(context.TODO(), code)
+	googleConfig := configoauth2.LoadConfig()
+	token, err := googleConfig.Exchange(context.TODO(), code)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
-			"data":    err,
+			"data":    err.Error(),
 		})
 	}
 
@@ -306,10 +310,9 @@ func (h *UserHandler) Google_callback(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
-			"data":    err,
+			"data":    err.Error(),
 		})
 	}
-
 	user, existUser := h.userService.FindNameUser(userInfo.Name, userInfo.Email)
 	if existUser != nil {
 		if existUser == mongo.ErrNoDocuments {
@@ -321,7 +324,8 @@ func (h *UserHandler) Google_callback(c *fiber.Ctx) error {
 				Ciudad:   "",
 				Email:    userInfo.Email,
 			}
-			userDomaion := h.userService.UserDomaionUpdata(newUser, "", "")
+
+			userDomaion := h.userService.UserDomaionUpdata(newUser, userInfo.Picture, "")
 			idInsert, errSaveUser := h.userService.SaveUser(userDomaion)
 			if errSaveUser != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -330,15 +334,13 @@ func (h *UserHandler) Google_callback(c *fiber.Ctx) error {
 				})
 			}
 			err = h.userService.CreateStream(userDomaion, idInsert)
+
 			return c.Status(fiber.StatusOK).JSON(fiber.Map{
 				"message": "redirect to complete user",
 				"data":    userInfo.Email,
 			})
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "StatusInternalServerError",
-			"data":    existUser.Error(),
-		})
+
 	}
 
 	if user.NameUser == "" {
@@ -347,53 +349,121 @@ func (h *UserHandler) Google_callback(c *fiber.Ctx) error {
 			"data":    userInfo.Email,
 		})
 	}
-
 	tokenRequest, err := jwt.CreateToken(user)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
-			"data":    err,
+			"data":    err.Error(),
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "ok",
+		"message": "token",
 		"data":    tokenRequest,
+		"_id":     user.ID,
 	})
 }
 
-func (h *UserHandler) Google_callback_NameUserConfirm(c *fiber.Ctx) error {
+func (h *UserHandler) Google_callback_Complete_Profile_And_Username(c *fiber.Ctx) error {
 
-	var req domain.ReqGoogle_callback_NameUserConfirm
+	var req domain.Google_callback_Complete_Profile_And_Username
 	err := c.BodyParser(&req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
-			"data":    err,
+			"data":    err.Error(),
 		})
 	}
 	if err = req.ValidateUser(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
-			"data":    err,
+			"data":    err.Error(),
 		})
 	}
 	user, err := h.userService.FindEmailForOauth2Updata(&req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
-			"data":    err,
+			"data":    err.Error(),
 		})
 	}
 	tokenRequest, err := jwt.CreateToken(user)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "ok",
+			"message": "token error",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "token",
+		"data":    tokenRequest,
+		"_id":     user.ID,
+	})
+
+}
+
+func (h *UserHandler) EditProfile(c *fiber.Ctx) error {
+
+	var EditProfile domain.EditProfile
+	if err := c.BodyParser(&EditProfile); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	if err := EditProfile.ValidateEditProfile(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
 			"data":    err,
+		})
+	}
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	errUpdateUserFollow := h.userService.EditProfile(EditProfile, IdUserTokenP)
+	if errUpdateUserFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
-		"data":    tokenRequest,
 	})
+}
+func (h *UserHandler) EditAvatar(c *fiber.Ctx) error {
+	fileHeader, _ := c.FormFile("avatar")
+	PostImageChanel := make(chan string)
+	errChanel := make(chan error)
+	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	for {
+		select {
+		case avatarUrl := <-PostImageChanel:
+			errUpdateUserFollow := h.userService.EditAvatar(avatarUrl, IdUserTokenP)
+			if errUpdateUserFollow != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"message": "StatusInternalServerError",
+				})
+			}
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{
+				"message": "StatusOK",
+			})
+		case <-errChanel:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "avatarUrl error",
+			})
+		}
+
+	}
 
 }

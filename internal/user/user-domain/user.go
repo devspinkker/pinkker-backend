@@ -163,3 +163,36 @@ type UserInfoOAuth2 struct {
 	Name    string `json:"name"`
 	Picture string `json:"picture"`
 }
+type EditProfile struct {
+	Pais       string    `json:"Pais" bson:"Pais"`
+	Ciudad     string    `json:"Ciudad" bson:"Ciudad"`
+	Biography  string    `json:"biography" validate:"max=600"`
+	HeadImage  string    `json:"headImage"`
+	BirthDate  time.Time `json:"birthDate"`
+	Sex        string    `json:"sex,omitempty"`
+	Situation  string    `json:"situation,omitempty"`
+	ZodiacSign string    `json:"ZodiacSign,omitempty"`
+}
+
+func (u *EditProfile) ValidateEditProfile() error {
+	validate := validator.New()
+	return validate.Struct(u)
+}
+
+type Google_callback_Complete_Profile_And_Username struct {
+	NameUser   string    `json:"NameUser" validate:"required,min=5,max=20"`
+	Email      string    `json:"Email" validate:"required,email"`
+	Pais       string    `json:"Pais" bson:"Pais"`
+	Ciudad     string    `json:"Ciudad" bson:"Ciudad"`
+	Biography  string    `json:"biography" validate:"max=600"`
+	HeadImage  string    `json:"headImage"`
+	BirthDate  time.Time `json:"birthDate"`
+	Sex        string    `json:"sex,omitempty"`
+	Situation  string    `json:"situation,omitempty"`
+	ZodiacSign string    `json:"ZodiacSign,omitempty"`
+}
+
+func (u *Google_callback_Complete_Profile_And_Username) ValidateUser() error {
+	validate := validator.New()
+	return validate.Struct(u)
+}

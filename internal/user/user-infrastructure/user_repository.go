@@ -5,6 +5,8 @@ import (
 	domain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -174,42 +176,82 @@ func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectI
 	return nil
 }
 
-func (u *UserRepository) FindEmailForOauth2Updata(user *domain.ReqGoogle_callback_NameUserConfirm) (*domain.User, error) {
-	_, err := u.FindNameUser(user.NameUser, "")
-	if err != mongo.ErrNoDocuments {
-		return nil, err
-	}
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-
-	filter := bson.M{"Email": user.Email}
-
-	var existingUser domain.User
-	err = GoMongoDBCollUsers.FindOne(context.Background(), filter).Decode(&existingUser)
-
+func (u *UserRepository) FindEmailForOauth2Updata(user *domain.Google_callback_Complete_Profile_And_Username) (*domain.User, error) {
+	NameUserLower := strings.ToLower(user.NameUser)
+	_, err := u.FindNameUser(NameUserLower, "")
 	if err != nil {
-		return nil, err
-	}
-	if existingUser.NameUser != "" {
-		return nil, errors.New("NameUser exists")
-	}
+		if err != mongo.ErrNoDocuments {
+			return nil, err
+		}
+		GoMongoDBCollUsers := u.mongoClient.Database("backend2").Collection("Users")
 
+		filter := bson.M{"Email": user.Email}
+
+		var existingUser domain.User
+		err = GoMongoDBCollUsers.FindOne(context.Background(), filter).Decode(&existingUser)
+
+		if err != nil {
+			return nil, err
+		}
+		if existingUser.NameUser != "" {
+			return nil, errors.New("NameUser exists")
+		}
+
+		update := bson.M{
+			"$set": bson.M{
+				"NameUser":     user.NameUser,
+				"PasswordHash": "",
+				"Email":        user.Email,
+				"Pais":         user.Pais,
+				"Ciudad":       user.Ciudad,
+				"Biography":    user.Biography,
+				"HeadImage":    user.HeadImage,
+				"BirthDate":    user.BirthDate,
+				"Sex":          user.Sex,
+				"Situation":    user.Situation,
+				"ZodiacSign":   user.ZodiacSign,
+			},
+		}
+
+		// Realizar la actualización
+		_, err = GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &existingUser, nil
+	}
+	return nil, errors.New("nameuser exist")
+
+}
+func (u *UserRepository) EditProfile(profile domain.EditProfile, id primitive.ObjectID) error {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	filter := bson.M{"_id": id}
 	update := bson.M{
 		"$set": bson.M{
-			"FullName":     existingUser.FullName,
-			"NameUser":     user.NameUser,
-			"PasswordHash": "",
-			"Pais":         user.Pais,
-			"Ciudad":       user.Ciudad,
-			"Email":        user.Email,
+			"Pais":       profile.Pais,
+			"Ciudad":     profile.Ciudad,
+			"Biography":  profile.Biography,
+			"HeadImage":  profile.HeadImage,
+			"BirthDate":  profile.BirthDate,
+			"Sex":        profile.Sex,
+			"Situation":  profile.Situation,
+			"ZodiacSign": profile.ZodiacSign,
 		},
 	}
-
-	// Realizar la actualización
-	_, err = GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
-
-	if err != nil {
-		return nil, err
+	_, err := GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
+	return err
+}
+func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	filter := bson.M{"_id": id}
+	update := bson.M{
+		"$set": bson.M{
+			"Avatar": avatar,
+		},
 	}
-
-	return &existingUser, nil
+	a, err := GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
+	fmt.Println(a.ModifiedCount)
+	return err
 }
