@@ -159,6 +159,20 @@ func (th *TweetHandler) TweetGetFollow(c *fiber.Ctx) error {
 	})
 
 }
+func (th *TweetHandler) PostGets(c *fiber.Ctx) error {
+	Tweets, errTweetGetFollow := th.TweetServise.GetPost()
+	if errTweetGetFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errTweetGetFollow.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Tweets,
+	})
+
+}
 
 func (th *TweetHandler) CommentPost(c *fiber.Ctx) error {
 

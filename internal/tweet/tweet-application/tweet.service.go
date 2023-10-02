@@ -72,7 +72,12 @@ func (ts *TweetService) TweetGetFollow(idValueObj primitive.ObjectID) ([]tweetdo
 	Tweets, errGetTweetsLast24Hours := ts.TweetRepository.GetTweetsLast24Hours(followedUsers.Following)
 	return Tweets, errGetTweetsLast24Hours
 }
+func (ts *TweetService) GetPost() ([]tweetdomain.TweetGetFollowReq, error) {
 
+	Tweets, errGetFollowedUsers := ts.TweetRepository.GetLatestPosts()
+
+	return Tweets, errGetFollowedUsers
+}
 func (ts *TweetService) GetCommentPost(IdPost primitive.ObjectID) ([]tweetdomain.TweetCommentsGetReq, error) {
 
 	followedUsers, errGetFollowedUsers := ts.TweetRepository.GetCommentPosts(IdPost)
@@ -81,6 +86,7 @@ func (ts *TweetService) GetCommentPost(IdPost primitive.ObjectID) ([]tweetdomain
 	}
 	return followedUsers, nil
 }
+
 func (ts *TweetService) RePost(userid primitive.ObjectID, IdPost primitive.ObjectID) error {
 
 	var Repost tweetdomain.RePost
