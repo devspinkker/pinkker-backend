@@ -207,7 +207,6 @@ func (t *TweetRepository) GetLatestPosts() ([]tweetdomain.TweetGetFollowReq, err
 
 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
 	}
-
 	var originalPostIDs []primitive.ObjectID
 	for _, tweet := range tweetsWithUserInfo {
 		if tweet.OriginalPost != primitive.NilObjectID {
@@ -269,7 +268,7 @@ func (t *TweetRepository) GetLatestPosts() ([]tweetdomain.TweetGetFollowReq, err
 
 	return tweetsWithUserInfo, nil
 }
-func (t *TweetRepository) GetTweetsLast24Hours(userIDs []primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 	currentTime := time.Now()
 	last24Hours := currentTime.Add(-24 * time.Hour)
