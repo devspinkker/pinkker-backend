@@ -176,6 +176,9 @@ func (t *TweetRepository) GetLatestPosts() ([]tweetdomain.TweetGetFollowReq, err
 			{Key: "as", Value: "UserInfo"},
 		}}},
 		{{Key: "$unwind", Value: "$UserInfo"}},
+		{{Key: "$sort", Value: bson.D{
+			{Key: "TimeStamp", Value: -1},
+		}}},
 		{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},
 			{Key: "Status", Value: "$Status"},
