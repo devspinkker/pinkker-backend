@@ -272,11 +272,11 @@ func (t *TweetRepository) GetLatestPosts() ([]tweetdomain.TweetGetFollowReq, err
 
 	return tweetsWithUserInfo, nil
 }
-func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectID, page int) ([]tweetdomain.TweetGetFollowReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 	currentTime := time.Now()
 	last24Hours := currentTime.Add(-24 * time.Hour)
-
+	skip := (page - 1) * 13
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{
 			{Key: "UserID", Value: bson.D{{Key: "$in", Value: userIDs}}},
@@ -289,6 +289,11 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 			{Key: "as", Value: "UserInfo"},
 		}}},
 		{{Key: "$unwind", Value: "$UserInfo"}},
+		{{Key: "$sort", Value: bson.D{
+			{Key: "TimeStamp", Value: -1},
+		}}},
+		{{Key: "$skip", Value: skip}},
+		{{Key: "$limit", Value: 13}},
 		{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},
 			{Key: "Status", Value: "$Status"},
