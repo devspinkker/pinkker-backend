@@ -2,6 +2,7 @@ package streaminfrastructure
 
 import (
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
+	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"errors"
 	"fmt"
@@ -130,15 +131,25 @@ func (r *StreamRepository) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID)
 	return streams, nil
 }
 func (r *StreamRepository) Update_online(Key string, state bool) error {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBColluser := GoMongoDB.Collection("Users")
 
 	filter := bson.D{
 		{Key: "KeyTransmission", Value: Key},
 	}
+	var userFind userdomain.User
+	GoMongoDBColluser.FindOne(context.Background(), filter).Decode(&userFind)
+	fmt.Println(userFind.ID)
+
+	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
+
+	filter = bson.D{
+		{Key: "StreamerID", Value: userFind.ID},
+	}
 
 	update := bson.D{
 		{Key: "$set", Value: bson.D{
-			{Key: "Online", Value: state},
+			{Key: "Online", Value: true},
 		}},
 	}
 
