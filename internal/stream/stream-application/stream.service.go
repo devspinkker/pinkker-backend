@@ -30,8 +30,8 @@ func (s *StreamService) GetStreamByNameUser(nameUser string) (*streamdomain.Stre
 }
 
 // get streams by caregories
-func (s *StreamService) GetStreamsByCategorie(Categorie string) ([]streamdomain.Stream, error) {
-	stream, err := s.StreamRepository.GetStreamsByCategorie(Categorie)
+func (s *StreamService) GetStreamsByCategorie(Categorie string, page int) ([]streamdomain.Stream, error) {
+	stream, err := s.StreamRepository.GetStreamsByCategorie(Categorie, page)
 	return stream, err
 }
 func (s *StreamService) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID) ([]streamdomain.Stream, error) {

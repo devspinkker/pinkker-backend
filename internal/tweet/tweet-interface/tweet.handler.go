@@ -167,7 +167,12 @@ func (th *TweetHandler) TweetGetFollow(c *fiber.Ctx) error {
 }
 
 func (th *TweetHandler) PostGets(c *fiber.Ctx) error {
-	Tweets, errTweetGetFollow := th.TweetServise.GetPost()
+
+	page, errpage := strconv.Atoi(c.Query("page", "1"))
+	if errpage != nil || page < 1 {
+		page = 1
+	}
+	Tweets, errTweetGetFollow := th.TweetServise.GetPost(page)
 	if errTweetGetFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -259,7 +264,11 @@ func (th *TweetHandler) GetCommentPost(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
-	Tweets, errTweetGetFollow := th.TweetServise.GetCommentPost(req.IdPost)
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	Tweets, errTweetGetFollow := th.TweetServise.GetCommentPost(req.IdPost, page)
 	if errTweetGetFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
