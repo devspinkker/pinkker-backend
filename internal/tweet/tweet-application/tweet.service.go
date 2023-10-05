@@ -72,18 +72,18 @@ func (ts *TweetService) TweetGetFollow(idValueObj primitive.ObjectID, page int) 
 	Tweets, errGetTweetsLast24Hours := ts.TweetRepository.GetTweetsLast24HoursFollow(followedUsers.Following, page)
 	return Tweets, errGetTweetsLast24Hours
 }
-func (ts *TweetService) GetPost() ([]tweetdomain.TweetGetFollowReq, error) {
+func (ts *TweetService) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, error) {
 
-	Tweets, errGetFollowedUsers := ts.TweetRepository.GetLatestPosts()
+	Tweets, errGetFollowedUsers := ts.TweetRepository.GetPost(page)
 	return Tweets, errGetFollowedUsers
 }
-func (ts *TweetService) GetCommentPost(IdPost primitive.ObjectID) ([]tweetdomain.TweetCommentsGetReq, error) {
+func (ts *TweetService) GetCommentPost(IdPost primitive.ObjectID, page int) ([]tweetdomain.TweetCommentsGetReq, error) {
 
-	followedUsers, errGetFollowedUsers := ts.TweetRepository.GetCommentPosts(IdPost)
-	if errGetFollowedUsers != nil {
-		return nil, errGetFollowedUsers
+	comments, err := ts.TweetRepository.GetCommentPosts(IdPost, page)
+	if err != nil {
+		return nil, err
 	}
-	return followedUsers, nil
+	return comments, nil
 }
 
 func (ts *TweetService) RePost(userid primitive.ObjectID, IdPost primitive.ObjectID) error {

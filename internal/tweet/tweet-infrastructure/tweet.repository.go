@@ -164,10 +164,11 @@ func (t *TweetRepository) GetFollowedUsers(idValueObj primitive.ObjectID) (userd
 	err := GoMongoDBCollTweets.FindOne(context.Background(), filter).Decode(&user)
 	return user, err
 }
-func (t *TweetRepository) GetLatestPosts() ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, error) {
 
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
+	skip := (page - 1) * 10
 	pipeline := []bson.D{
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
@@ -179,6 +180,8 @@ func (t *TweetRepository) GetLatestPosts() ([]tweetdomain.TweetGetFollowReq, err
 		{{Key: "$sort", Value: bson.D{
 			{Key: "TimeStamp", Value: -1},
 		}}},
+		{{Key: "$skip", Value: skip}},
+		{{Key: "$limit", Value: 10}},
 		{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},
 			{Key: "Status", Value: "$Status"},
@@ -389,13 +392,15 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 	return tweetsWithUserInfo, nil
 }
 
-func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID) ([]tweetdomain.TweetCommentsGetReq, error) {
+func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int) ([]tweetdomain.TweetCommentsGetReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
 	var tweet tweetdomain.Post
 	if err := GoMongoDBCollTweets.FindOne(context.Background(), bson.M{"_id": tweetID}).Decode(&tweet); err != nil {
 		return nil, err
 	}
+
+	skip := (page - 1) * 10
 
 	commentIDs := tweet.Comments
 
@@ -408,7 +413,11 @@ func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID) ([]tweetdo
 			{Key: "as", Value: "UserInfo"},
 		}}},
 		{{Key: "$unwind", Value: "$UserInfo"}},
-
+		{{Key: "$sort", Value: bson.D{
+			{Key: "TimeStamp", Value: -1},
+		}}},
+		{{Key: "$skip", Value: skip}},
+		{{Key: "$limit", Value: 10}},
 		// Proyecta los campos necesarios
 		{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},

@@ -3,6 +3,7 @@ package streaminterfaces
 import (
 	streamapplication "PINKKER-BACKEND/internal/stream/stream-application"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -90,7 +91,11 @@ func (s *StreamHandler) GetStreamsByCategorie(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
-	stream, err := s.StreamServise.GetStreamsByCategorie(CategorierReq.Categorie)
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	stream, err := s.StreamServise.GetStreamsByCategorie(CategorierReq.Categorie, page)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),

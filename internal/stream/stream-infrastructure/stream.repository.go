@@ -5,13 +5,13 @@ import (
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/redis/go-redis/v9"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type StreamRepository struct {
@@ -49,14 +49,19 @@ func (r *StreamRepository) GetStreamByNameUser(nameUser string) (*streamdomain.S
 }
 
 // get streams by Categorie
-func (r *StreamRepository) GetStreamsByCategorie(Categorie string) ([]streamdomain.Stream, error) {
+func (r *StreamRepository) GetStreamsByCategorie(Categorie string, page int) ([]streamdomain.Stream, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	skip := (page - 1) * 10
+
+	findOptions := options.Find()
+	findOptions.SetSkip(int64(skip))
+	findOptions.SetLimit(int64(10))
+
 	FindStreamsInDb := bson.D{
 		{Key: "StreamCategory", Value: Categorie},
 		{Key: "Online", Value: true},
 	}
-
-	cursor, err := GoMongoDBCollStreams.Find(context.Background(), FindStreamsInDb)
+	cursor, err := GoMongoDBCollStreams.Find(context.Background(), FindStreamsInDb, findOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +82,7 @@ func (r *StreamRepository) GetStreamsByCategorie(Categorie string) ([]streamdoma
 
 	return streams, nil
 }
+
 func (r *StreamRepository) GetAllsStreamsOnline() ([]streamdomain.Stream, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 
@@ -139,7 +145,6 @@ func (r *StreamRepository) Update_online(Key string, state bool) error {
 	}
 	var userFind userdomain.User
 	GoMongoDBColluser.FindOne(context.Background(), filter).Decode(&userFind)
-	fmt.Println(userFind.ID)
 
 	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
 
@@ -217,7 +222,7 @@ func (r *StreamRepository) UpdateStreamInfo(streamID primitive.ObjectID, updateI
 			"StreamCategory":     updateInfo.Category,
 			"StreamTag":          updateInfo.Tag,
 			"StreamIdiom":        updateInfo.Idiom,
-			// "StartDate":updateInfo.Date,
+			// "StartDate":          updateInfo.Date,
 		},
 	}
 	updata, err := GoMongoDBCollStreams.UpdateOne(context.Background(), bson.M{"StreamerID": streamID}, update)
@@ -227,7 +232,6 @@ func (r *StreamRepository) UpdateStreamInfo(streamID primitive.ObjectID, updateI
 	if updata.MatchedCount == 0 {
 		return errors.New("Not Found")
 	}
-	fmt.Println(updata.MatchedCount)
 	return nil
 }
 
