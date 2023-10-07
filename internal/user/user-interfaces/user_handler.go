@@ -381,6 +381,7 @@ func (h *UserHandler) Google_callback_Complete_Profile_And_Username(c *fiber.Ctx
 	}
 	user, err := h.userService.FindEmailForOauth2Updata(&req)
 	if err != nil {
+
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 			"data":    err.Error(),
