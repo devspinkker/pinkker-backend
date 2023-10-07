@@ -124,13 +124,13 @@ type GetUser struct {
 	LookImage         string                 `json:"lookImage" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png"`
 	HeadImage         string                 `json:"headImage" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png"`
 	Color             string                 `json:"color" `
-	BirthDate         time.Time              `json:"birthDate" `
+	BirthDate         primitive.DateTime     `json:"birthDate" `
 	Pixeles           float64                `json:"Pixeles,default:0.0" `
 	CustomAvatar      bool                   `json:"customAvatar,omitempty"`
 	CountryInfo       map[string]interface{} `json:"countryInfo,omitempty"`
 	PinkkerPrime      struct {
-		Active bool      `json:"active,omitempty`
-		Date   time.Time `json:"date,omitempty"`
+		Active bool               `json:"active,omitempty`
+		Date   primitive.DateTime `json:"date,omitempty"`
 	} `json:"pinkkerPrime,omitempty"`
 	Suscribers       []string `json:"suscribers,omitempty" `
 	Subscriptions    []string `json:"subscriptions,omitempty" `
@@ -164,14 +164,14 @@ type UserInfoOAuth2 struct {
 	Picture string `json:"picture"`
 }
 type EditProfile struct {
-	Pais       string    `json:"Pais" bson:"Pais"`
-	Ciudad     string    `json:"Ciudad" bson:"Ciudad"`
-	Biography  string    `json:"biography" validate:"max=600"`
-	HeadImage  string    `json:"headImage"`
-	BirthDate  time.Time `json:"birthDate"`
-	Sex        string    `json:"sex,omitempty"`
-	Situation  string    `json:"situation,omitempty"`
-	ZodiacSign string    `json:"ZodiacSign,omitempty"`
+	Pais       string             `json:"Pais" bson:"Pais"`
+	Ciudad     string             `json:"Ciudad" bson:"Ciudad"`
+	Biography  string             `json:"biography" validate:"max=600"`
+	HeadImage  string             `json:"headImage"`
+	BirthDate  primitive.DateTime `json:"birthDate"`
+	Sex        string             `json:"sex,omitempty"`
+	Situation  string             `json:"situation,omitempty"`
+	ZodiacSign string             `json:"ZodiacSign,omitempty"`
 }
 
 func (u *EditProfile) ValidateEditProfile() error {
@@ -180,19 +180,22 @@ func (u *EditProfile) ValidateEditProfile() error {
 }
 
 type Google_callback_Complete_Profile_And_Username struct {
-	NameUser   string    `json:"NameUser" validate:"required,min=5,max=20"`
-	Email      string    `json:"Email" validate:"required,email"`
-	Pais       string    `json:"Pais" bson:"Pais"`
-	Ciudad     string    `json:"Ciudad" bson:"Ciudad"`
+	NameUser   string    `json:"nameUser" validate:"required,min=5,max=20"`
+	Email      string    `json:"email" validate:"required,email"`
+	Pais       string    `json:"pais" bson:"Pais"`
+	Ciudad     string    `json:"ciudad" bson:"Ciudad"`
 	Biography  string    `json:"biography" validate:"max=600"`
 	HeadImage  string    `json:"headImage"`
 	BirthDate  time.Time `json:"birthDate"`
 	Sex        string    `json:"sex,omitempty"`
 	Situation  string    `json:"situation,omitempty"`
-	ZodiacSign string    `json:"ZodiacSign,omitempty"`
+	ZodiacSign string    `json:"zodiacSign,omitempty"`
 }
 
 func (u *Google_callback_Complete_Profile_And_Username) ValidateUser() error {
 	validate := validator.New()
+	if u.BirthDate.IsZero() || u.BirthDate.String() == "" {
+		u.BirthDate = time.Now()
+	}
 	return validate.Struct(u)
 }

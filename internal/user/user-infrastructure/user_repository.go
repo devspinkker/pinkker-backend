@@ -183,13 +183,12 @@ func (u *UserRepository) FindEmailForOauth2Updata(user *domain.Google_callback_C
 		if err != mongo.ErrNoDocuments {
 			return nil, err
 		}
-		GoMongoDBCollUsers := u.mongoClient.Database("backend2").Collection("Users")
+		GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
 		filter := bson.M{"Email": user.Email}
 
-		var existingUser domain.User
+		var existingUser *domain.User
 		err = GoMongoDBCollUsers.FindOne(context.Background(), filter).Decode(&existingUser)
-
 		if err != nil {
 			return nil, err
 		}
@@ -220,7 +219,7 @@ func (u *UserRepository) FindEmailForOauth2Updata(user *domain.Google_callback_C
 			return nil, err
 		}
 
-		return &existingUser, nil
+		return existingUser, nil
 	}
 	return nil, errors.New("nameuser exist")
 
