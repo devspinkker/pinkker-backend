@@ -15,7 +15,7 @@ func LoadConfig() *oauth2.Config {
 	config := oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		RedirectURL:  "http://localhost:3000/plataform/OAuth2callback",
+		RedirectURL:  "https://delicate-beignet-d2788c.netlify.app/plataform/OAuth2callback",
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.email",
 			"https://www.googleapis.com/auth/userinfo.profile",
