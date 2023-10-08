@@ -360,6 +360,7 @@ func (h *UserHandler) Google_callback(c *fiber.Ctx) error {
 		"message": "token",
 		"data":    tokenRequest,
 		"_id":     user.ID,
+		"avatar":  user.Avatar,
 	})
 }
 
@@ -398,6 +399,7 @@ func (h *UserHandler) Google_callback_Complete_Profile_And_Username(c *fiber.Ctx
 		"message": "token",
 		"data":    tokenRequest,
 		"_id":     user.ID,
+		"avatar":  user.Avatar,
 	})
 
 }
