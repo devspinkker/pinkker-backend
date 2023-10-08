@@ -28,5 +28,5 @@ func TweetdRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.C
 	App.Get("/post/postGetFollow", middleware.UseExtractor(), tweetHandler.TweetGetFollow)
 	App.Get("/post/PostGets", tweetHandler.PostGets)
 
-	App.Get("/post/postGetCommentPost", middleware.UseExtractor(), tweetHandler.GetCommentPost)
+	App.Post("/post/postGetCommentPost", middleware.UseExtractor(), tweetHandler.GetCommentPost)
 }
