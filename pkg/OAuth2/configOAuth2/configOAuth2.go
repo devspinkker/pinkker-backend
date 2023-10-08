@@ -15,7 +15,7 @@ func LoadConfig() *oauth2.Config {
 	config := oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		RedirectURL:  "https://lovely-taiyaki-ee384c.netlify.app/plataform/OAuth2callback",
+		RedirectURL:  "https://spiffy-muffin-f43463.netlify.app/plataform/OAuth2callback",
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.email",
 			"https://www.googleapis.com/auth/userinfo.profile",
