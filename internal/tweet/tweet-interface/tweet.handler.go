@@ -268,7 +268,7 @@ func (th *TweetHandler) GetCommentPost(c *fiber.Ctx) error {
 	if err != nil || page < 1 {
 		page = 1
 	}
-	Tweets, errTweetGetFollow := th.TweetServise.GetCommentPost(req.IdPost, page)
+	GetCommentPost, errTweetGetFollow := th.TweetServise.GetCommentPost(req.IdPost, page)
 	if errTweetGetFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -276,7 +276,8 @@ func (th *TweetHandler) GetCommentPost(c *fiber.Ctx) error {
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": Tweets,
+		"message": "ok",
+		"data":    GetCommentPost,
 	})
 
 }

@@ -98,15 +98,17 @@ type TweetGetFollowReq struct {
 	OriginalPostData *TweetGetFollowReq `json:"OriginalPostData"`
 }
 type TweetCommentsGetReq struct {
-	ID        primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	CommentBy primitive.ObjectID   `json:"CommentBy" bson:"CommentBy"`
-	Comments  []primitive.ObjectID `json:"Comments" bson:"Comments"`
-	Status    string               `json:"Status" bson:"Status"`
-	PostImage string               `json:"PostImage" bson:"PostImage,omitempty"`
-	TimeStamp time.Time            `json:"TimeStamp" bson:"TimeStamp"`
-	UserID    primitive.ObjectID   `json:"UserID" bson:"UserID"`
-	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
-	UserInfo  struct {
+	ID           primitive.ObjectID   `json:"_id" bson:"_id"`
+	Status       string               `json:"Status" bson:"Status"`
+	PostImage    string               `json:"PostImage" bson:"PostImage"`
+	TimeStamp    time.Time            `json:"TimeStamp"  bson:"TimeStamp"`
+	UserID       primitive.ObjectID   `json:"UserID" bson:"UserID"`
+	Likes        []primitive.ObjectID `json:"Likes"`
+	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
+	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
+	OriginalPost primitive.ObjectID   `json:"OriginalPost"`
+	Type         string               `json:"Type" bson:"Type"`
+	UserInfo     struct {
 		FullName string `json:"FullName"`
 		Avatar   string `json:"Avatar"`
 		NameUser string `json:"NameUser"`

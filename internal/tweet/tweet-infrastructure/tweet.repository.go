@@ -428,9 +428,9 @@ func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int) 
 			{Key: "TimeStamp", Value: "$TimeStamp"},
 			{Key: "UserID", Value: "$UserID"},
 			{Key: "Likes", Value: "$Likes"},
-			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
-			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
-			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
 		}}},
 	}
 
