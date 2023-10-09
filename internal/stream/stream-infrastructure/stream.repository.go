@@ -162,11 +162,11 @@ func (r *StreamRepository) Update_online(Key string, state bool) error {
 
 	return err
 }
-func (r *StreamRepository) CloseStream(idUser primitive.ObjectID) error {
+func (r *StreamRepository) CloseStream(key string) error {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 
 	filter := bson.D{
-		{Key: "StreamerID", Value: idUser},
+		{Key: "KeyTransmission", Value: key},
 	}
 
 	update := bson.D{
