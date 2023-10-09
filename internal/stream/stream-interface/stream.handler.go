@@ -158,16 +158,21 @@ func (s *StreamHandler) Update_online(c *fiber.Ctx) error {
 		"message": "ok",
 	})
 }
+
+type ReqUpdate_CloseStream struct {
+	Key string `json:"keyTransmission"`
+}
+
 func (s *StreamHandler) CloseStream(c *fiber.Ctx) error {
 
-	IdUserToken := c.Context().UserValue("_id").(string)
-	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
-	if errinObjectID != nil {
+	var req ReqUpdate_CloseStream
+	err := c.BodyParser(&req)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})
 	}
-	if err := s.StreamServise.CloseStream(IdUserTokenP); err != nil {
+	if err := s.StreamServise.CloseStream(req.Key); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
 		})

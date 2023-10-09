@@ -257,15 +257,14 @@ func (h *UserHandler) BuyPixeles(c *fiber.Ctx) error {
 }
 
 type ReqGetUserBykey struct {
-	Key string `json:"key"`
+	Key string `json:"key" query:"key"`
 }
 
 // follow
 func (h *UserHandler) GetUserBykey(c *fiber.Ctx) error {
 
 	var Req ReqGetUserBykey
-	err := c.BodyParser(&Req)
-	if err != nil {
+	if err := c.QueryParser(&Req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})

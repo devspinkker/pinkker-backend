@@ -44,8 +44,8 @@ func (s *StreamService) Update_online(Key string, state bool) error {
 	return err
 }
 
-func (s *StreamService) CloseStream(idUser primitive.ObjectID) error {
-	err := s.StreamRepository.CloseStream(idUser)
+func (s *StreamService) CloseStream(key string) error {
+	err := s.StreamRepository.CloseStream(key)
 	return err
 }
 func (s *StreamService) Update_thumbnail(idUser primitive.ObjectID, image string) error {
