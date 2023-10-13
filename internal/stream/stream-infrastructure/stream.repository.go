@@ -154,7 +154,7 @@ func (r *StreamRepository) Update_online(Key string, state bool) error {
 
 	update := bson.D{
 		{Key: "$set", Value: bson.D{
-			{Key: "Online", Value: true},
+			{Key: "Online", Value: state},
 		}},
 	}
 
@@ -196,16 +196,16 @@ func (r *StreamRepository) Update_thumbnail(idUser primitive.ObjectID, image str
 
 	return err
 }
-func (r *StreamRepository) Update_start_date(idUser primitive.ObjectID, date int) error {
+func (r *StreamRepository) Update_start_date(req streamdomain.Update_start_date) error {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 
 	filter := bson.D{
-		{Key: "StreamerID", Value: idUser},
+		{Key: "KeyTransmission", Value: req.Key},
 	}
 
 	update := bson.D{
 		{Key: "$set", Value: bson.D{
-			{Key: "StartDate", Value: date},
+			{Key: "StartDate", Value: req.Date},
 		}},
 	}
 
@@ -213,7 +213,7 @@ func (r *StreamRepository) Update_start_date(idUser primitive.ObjectID, date int
 
 	return err
 }
-func (r *StreamRepository) UpdateStreamInfo(streamID primitive.ObjectID, updateInfo streamdomain.UpdateStreamInfo) error {
+func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStreamInfo) error {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 	update := bson.M{
 		"$set": bson.M{
@@ -222,10 +222,10 @@ func (r *StreamRepository) UpdateStreamInfo(streamID primitive.ObjectID, updateI
 			"StreamCategory":     updateInfo.Category,
 			"StreamTag":          updateInfo.Tag,
 			"StreamIdiom":        updateInfo.Idiom,
-			// "StartDate":          updateInfo.Date,
+			"StartDate":          updateInfo.Date,
 		},
 	}
-	updata, err := GoMongoDBCollStreams.UpdateOne(context.Background(), bson.M{"StreamerID": streamID}, update)
+	updata, err := GoMongoDBCollStreams.UpdateOne(context.Background(), bson.M{"KeyTransmission": updateInfo.Key}, update)
 	if err != nil {
 		return err
 	}

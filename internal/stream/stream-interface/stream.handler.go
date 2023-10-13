@@ -3,6 +3,7 @@ package streaminterfaces
 import (
 	streamapplication "PINKKER-BACKEND/internal/stream/stream-application"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
+	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -226,26 +227,20 @@ func (s *StreamHandler) Streamings_online(c *fiber.Ctx) error {
 }
 
 type Update_start_date struct {
-	Date int `json:"date"`
+	Date int    `json:"date"`
+	Key  string `json:"keyTransmission"`
 }
 
 func (s *StreamHandler) Update_start_date(c *fiber.Ctx) error {
 
-	var requestBody Update_start_date
+	var requestBody streamdomain.Update_start_date
 	if err := c.BodyParser(&requestBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})
 	}
-	IdUserToken := c.Context().UserValue("_id").(string)
-	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
 
-	if errinObjectID != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "StatusBadRequest",
-		})
-	}
-	if err := s.StreamServise.Update_start_date(IdUserTokenP, requestBody.Date); err != nil {
+	if err := s.StreamServise.Update_start_date(requestBody); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
 		})
@@ -265,18 +260,13 @@ func (s *StreamHandler) UpdateStreamInfo(c *fiber.Ctx) error {
 		})
 	}
 	if err := requestBody.Validate(); err != nil {
+		fmt.Println(err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": err.Error(),
 		})
 	}
-	IdUserToken := c.Context().UserValue("_id").(string)
-	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
-	if errinObjectID != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "StatusBadRequest",
-		})
-	}
-	if err := s.StreamServise.UpdateStreamInfo(IdUserTokenP, requestBody); err != nil {
+
+	if err := s.StreamServise.UpdateStreamInfo(requestBody); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
 			"data":    err.Error(),

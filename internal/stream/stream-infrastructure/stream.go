@@ -27,14 +27,20 @@ type Stream struct {
 }
 type UpdateStreamInfo struct {
 	Date         int64    `json:"date"`
-	Title        string   `json:"title" validate:"required,min=5,max=20"`
-	Notification string   `json:"notification" validate:"required,min=5"`
-	Category     string   `json:"category" validate:"required,min=3"`
+	Title        string   `json:"title" validate:"min=5,max=20"`
+	Notification string   `json:"notification" validate:"min=5"`
+	Category     string   `json:"category" validate:"min=3"`
 	Tag          []string `json:"tag" `
 	Idiom        string   `json:"idiom"`
+	Key          string   `json:"keyTransmission"`
 }
 
 func (u *UpdateStreamInfo) Validate() error {
 	validate := validator.New()
 	return validate.Struct(u)
+}
+
+type Update_start_date struct {
+	Date int    `json:"date"`
+	Key  string `json:"keyTransmission"`
 }

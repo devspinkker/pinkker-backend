@@ -58,12 +58,12 @@ func (s *StreamService) Streamings_online() (int, error) {
 	return online, err
 }
 
-func (s *StreamService) Update_start_date(idUser primitive.ObjectID, date int) error {
-	err := s.StreamRepository.Update_start_date(idUser, date)
+func (s *StreamService) Update_start_date(req streamdomain.Update_start_date) error {
+	err := s.StreamRepository.Update_start_date(req)
 	return err
 }
-func (s *StreamService) UpdateStreamInfo(idUser primitive.ObjectID, data streamdomain.UpdateStreamInfo) error {
-	err := s.StreamRepository.UpdateStreamInfo(idUser, data)
+func (s *StreamService) UpdateStreamInfo(data streamdomain.UpdateStreamInfo) error {
+	err := s.StreamRepository.UpdateStreamInfo(data)
 	return err
 }
 func (s *StreamService) Update_Emotes(idUser primitive.ObjectID, date int) error {
