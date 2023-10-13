@@ -161,6 +161,8 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Token created",
 		"data":    token,
+		"_id":     user.ID,
+		"avatar":  user.Avatar,
 	})
 }
 
