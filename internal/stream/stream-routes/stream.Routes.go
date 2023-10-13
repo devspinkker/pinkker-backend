@@ -33,7 +33,7 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	App.Post("/stream/update_Emotes", streamHandler.Update_Emotes)
 
 	// addHistoryViewers
-	// resumeStream
+	// resumeStream falta
 
 	App.Get("/stream/get_streamings_online", streamHandler.Streamings_online)
 
