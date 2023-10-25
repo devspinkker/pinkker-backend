@@ -185,6 +185,7 @@ func (s *StreamHandler) CloseStream(c *fiber.Ctx) error {
 
 type Update_thumbnail struct {
 	Image string `json:"image"`
+	Cmt   string `json:"cmt"`
 }
 
 func (s *StreamHandler) Update_thumbnail(c *fiber.Ctx) error {
@@ -196,16 +197,10 @@ func (s *StreamHandler) Update_thumbnail(c *fiber.Ctx) error {
 		})
 	}
 
-	IdUserToken := c.Context().UserValue("_id").(string)
-	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
-	if errinObjectID != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "StatusBadRequest",
-		})
-	}
-	if err := s.StreamServise.Update_thumbnail(IdUserTokenP, requestBody.Image); err != nil {
+	if err := s.StreamServise.Update_thumbnail(requestBody.Cmt, requestBody.Image); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
+			"data":    err.Error(),
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{

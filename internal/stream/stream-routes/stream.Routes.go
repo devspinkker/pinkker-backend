@@ -25,7 +25,7 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 
 	App.Post("/stream/update_online", streamHandler.Update_online)
 	App.Post("/stream/closeStream", streamHandler.CloseStream)
-	App.Post("/stream/update_thumbnail", middleware.UseExtractor(), streamHandler.Update_thumbnail)
+	App.Post("/stream/update_thumbnail", streamHandler.Update_thumbnail)
 	App.Post("/stream/update_start_date", streamHandler.Update_start_date)
 
 	App.Post("/stream/update_stream_info", streamHandler.UpdateStreamInfo)

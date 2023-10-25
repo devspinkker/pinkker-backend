@@ -179,11 +179,22 @@ func (r *StreamRepository) CloseStream(key string) error {
 
 	return err
 }
-func (r *StreamRepository) Update_thumbnail(idUser primitive.ObjectID, image string) error {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+func (r *StreamRepository) Update_thumbnail(cmt, image string) error {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 
+	GoMongoDBCollUser := GoMongoDB.Collection("Users")
+	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
+
+	var userCmt *userdomain.User
+	filterUser := bson.D{
+		{Key: "Cmt", Value: cmt},
+	}
+	err := GoMongoDBCollUser.FindOne(context.Background(), filterUser).Decode(&userCmt)
+	if err != nil {
+		return err
+	}
 	filter := bson.D{
-		{Key: "StreamerID", Value: idUser},
+		{Key: "StreamerID", Value: userCmt.ID},
 	}
 
 	update := bson.D{
@@ -192,7 +203,7 @@ func (r *StreamRepository) Update_thumbnail(idUser primitive.ObjectID, image str
 		}},
 	}
 
-	_, err := GoMongoDBCollStreams.UpdateOne(context.Background(), filter, update)
+	_, err = GoMongoDBCollStreams.UpdateOne(context.Background(), filter, update)
 
 	return err
 }
