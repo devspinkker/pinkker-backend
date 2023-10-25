@@ -48,8 +48,8 @@ func (s *StreamService) CloseStream(key string) error {
 	err := s.StreamRepository.CloseStream(key)
 	return err
 }
-func (s *StreamService) Update_thumbnail(idUser primitive.ObjectID, image string) error {
-	err := s.StreamRepository.Update_thumbnail(idUser, image)
+func (s *StreamService) Update_thumbnail(cmt, image string) error {
+	err := s.StreamRepository.Update_thumbnail(cmt, image)
 	return err
 }
 
