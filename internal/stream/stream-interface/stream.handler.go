@@ -108,6 +108,19 @@ func (s *StreamHandler) GetStreamsByCategorie(c *fiber.Ctx) error {
 	})
 }
 
+func (s *StreamHandler) GetAllsStreamsOnline(c *fiber.Ctx) error {
+	stream, err := s.StreamServise.GetAllsStreamsOnline()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    stream,
+	})
+}
+
 type StremesIFollow struct {
 	FollowingIds []primitive.ObjectID `json:"FollowingIds"`
 }

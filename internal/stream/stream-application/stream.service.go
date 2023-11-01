@@ -34,6 +34,11 @@ func (s *StreamService) GetStreamsByCategorie(Categorie string, page int) ([]str
 	stream, err := s.StreamRepository.GetStreamsByCategorie(Categorie, page)
 	return stream, err
 }
+
+func (s *StreamService) GetAllsStreamsOnline() ([]streamdomain.Stream, error) {
+	stream, err := s.StreamRepository.GetAllsStreamsOnline()
+	return stream, err
+}
 func (s *StreamService) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID) ([]streamdomain.Stream, error) {
 	stream, err := s.StreamRepository.GetStreamsIdsStreamer(idsUsersF)
 	return stream, err
