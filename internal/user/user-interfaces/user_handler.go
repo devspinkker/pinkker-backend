@@ -262,7 +262,6 @@ type ReqGetUserBykey struct {
 	Key string `json:"key" query:"key"`
 }
 
-// follow
 func (h *UserHandler) GetUserBykey(c *fiber.Ctx) error {
 
 	var Req ReqGetUserBykey
@@ -273,6 +272,31 @@ func (h *UserHandler) GetUserBykey(c *fiber.Ctx) error {
 	}
 
 	user, errGetUserBykey := h.userService.GetUserBykey(Req.Key)
+	if errGetUserBykey != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    user,
+	})
+}
+
+type ReqGetUserByNameUser struct {
+	nameUser string `json:"NameUser"`
+}
+
+func (h *UserHandler) GetUserByNameUser(c *fiber.Ctx) error {
+
+	var Req ReqGetUserByNameUser
+	if err := c.BodyParser(&Req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	user, errGetUserBykey := h.userService.FindNameUser(Req.nameUser, "")
 	if errGetUserBykey != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",

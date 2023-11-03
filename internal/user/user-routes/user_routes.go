@@ -26,6 +26,8 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/user/Google_callback_Complete_Profile_And_Username", UserHandler.Google_callback_Complete_Profile_And_Username)
 
 	App.Get("/user/getUserById", middleware.UseExtractor(), UserHandler.GetUserById)
+	App.Get("/user/getUserByNameUser", UserHandler.GetUserByNameUser)
+
 	App.Get("/user/get_user_by_key", UserHandler.GetUserBykey)
 
 	//Follow
