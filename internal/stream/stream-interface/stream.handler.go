@@ -52,13 +52,13 @@ func (s *StreamHandler) GetStreamById(c *fiber.Ctx) error {
 }
 
 type Streamer struct {
-	Streamer string `json:"Streamer"`
+	Streamer string `json:"Streamer" query:"Streamer"`
 }
 
 // get stream by name user
 func (s *StreamHandler) GetStreamByNameUser(c *fiber.Ctx) error {
 	var StreamerReq Streamer
-	if err := c.BodyParser(&StreamerReq); err != nil {
+	if err := c.QueryParser(&StreamerReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})
