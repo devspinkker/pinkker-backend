@@ -284,19 +284,19 @@ func (h *UserHandler) GetUserBykey(c *fiber.Ctx) error {
 }
 
 type ReqGetUserByNameUser struct {
-	nameUser string `json:"NameUser"`
+	NameUser string `json:"nameUser" query:"nameUser"`
 }
 
 func (h *UserHandler) GetUserByNameUser(c *fiber.Ctx) error {
 
 	var Req ReqGetUserByNameUser
-	if err := c.BodyParser(&Req); err != nil {
+	if err := c.QueryParser(&Req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})
 	}
 
-	user, errGetUserBykey := h.userService.FindNameUser(Req.nameUser, "")
+	user, errGetUserBykey := h.userService.FindNameUser(Req.NameUser, "")
 	if errGetUserBykey != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
