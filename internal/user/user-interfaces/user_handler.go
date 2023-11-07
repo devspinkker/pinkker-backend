@@ -485,6 +485,7 @@ func (h *UserHandler) EditAvatar(c *fiber.Ctx) error {
 			}
 			return c.Status(fiber.StatusOK).JSON(fiber.Map{
 				"message": "StatusOK",
+				"avatar":  avatarUrl,
 			})
 		case <-errChanel:
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
