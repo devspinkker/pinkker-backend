@@ -5,7 +5,6 @@ import (
 	domain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -250,7 +249,6 @@ func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error 
 			"Avatar": avatar,
 		},
 	}
-	a, err := GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
-	fmt.Println(a.ModifiedCount)
+	_, err := GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
 	return err
 }
