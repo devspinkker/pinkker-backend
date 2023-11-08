@@ -164,10 +164,11 @@ type UserInfoOAuth2 struct {
 	Picture string `json:"picture"`
 }
 type EditProfile struct {
-	Pais          string    `json:"Pais" bson:"Pais"`
-	Ciudad        string    `json:"Ciudad" bson:"Ciudad"`
-	Biography     string    `json:"biography" validate:"max=600"`
-	HeadImage     string    `json:"headImage"`
+	Pais      string `json:"Pais" bson:"Pais"`
+	Ciudad    string `json:"Ciudad" bson:"Ciudad"`
+	Biography string `json:"biography" validate:"max=600"`
+	HeadImage string `json:"headImage"`
+
 	BirthDate     string    `json:"birthDate"`
 	BirthDateTime time.Time `json:"-" bson:"BirthDate"`
 	Sex           string    `json:"sex,omitempty"`
@@ -183,6 +184,7 @@ func (u *EditProfile) ValidateEditProfile() error {
 		if err != nil {
 			return err
 		}
+
 		birthDate, _ := time.Parse("2006-01-02", u.BirthDate)
 		u.BirthDateTime = birthDate
 	}

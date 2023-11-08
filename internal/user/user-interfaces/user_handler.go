@@ -465,6 +465,7 @@ func (h *UserHandler) EditAvatar(c *fiber.Ctx) error {
 	fileHeader, _ := c.FormFile("avatar")
 	PostImageChanel := make(chan string)
 	errChanel := make(chan error)
+
 	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
 
 	IdUserToken := c.Context().UserValue("_id").(string)
