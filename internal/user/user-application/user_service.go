@@ -110,6 +110,7 @@ func (u *UserService) FindEmailForOauth2Updata(user *domain.Google_callback_Comp
 func (u *UserService) EditProfile(Profile domain.EditProfile, IdUserTokenP primitive.ObjectID) error {
 	err := u.roomRepository.EditProfile(Profile, IdUserTokenP)
 	fmt.Println(err)
+	fmt.Println("")
 	return err
 }
 func (u *UserService) EditAvatar(avatarUrl string, IdUserTokenP primitive.ObjectID) error {
