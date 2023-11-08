@@ -5,6 +5,7 @@ import (
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	infrastructure "PINKKER-BACKEND/internal/user/user-infrastructure"
 	"PINKKER-BACKEND/pkg/helpers"
+	"fmt"
 	"strings"
 	"time"
 
@@ -107,8 +108,8 @@ func (u *UserService) FindEmailForOauth2Updata(user *domain.Google_callback_Comp
 }
 
 func (u *UserService) EditProfile(Profile domain.EditProfile, IdUserTokenP primitive.ObjectID) error {
-
 	err := u.roomRepository.EditProfile(Profile, IdUserTokenP)
+	fmt.Println(err)
 	return err
 }
 func (u *UserService) EditAvatar(avatarUrl string, IdUserTokenP primitive.ObjectID) error {
