@@ -242,7 +242,10 @@ func (u *UserRepository) EditProfile(profile domain.EditProfile, id primitive.Ob
 	return err
 }
 func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDB := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
+	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
+
 	filter := bson.M{"_id": id}
 	update := bson.M{
 		"$set": bson.M{
@@ -250,5 +253,14 @@ func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error 
 		},
 	}
 	_, err := GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
+	filterStream := bson.M{"_id": id}
+	updateStream := bson.M{
+		"$set": bson.M{
+			"StreamerAvatar": avatar,
+		},
+	}
+
+	_, err = GoMongoDBCollStreams.UpdateOne(context.TODO(), filterStream, updateStream)
+
 	return err
 }

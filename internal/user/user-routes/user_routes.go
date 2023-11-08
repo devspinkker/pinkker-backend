@@ -33,7 +33,6 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	//Follow
 	App.Post("/user/follow", middleware.UseExtractor(), UserHandler.Follow)
 	App.Post("/user/Unfollow", middleware.UseExtractor(), UserHandler.Unfollow)
-
 	App.Post("/user/buyPixeles", middleware.UseExtractor(), UserHandler.BuyPixeles)
 
 	// edit user information
