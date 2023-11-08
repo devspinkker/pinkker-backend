@@ -232,7 +232,7 @@ func (u *UserRepository) EditProfile(profile domain.EditProfile, id primitive.Ob
 			"Ciudad":     profile.Ciudad,
 			"Biography":  profile.Biography,
 			"HeadImage":  profile.HeadImage,
-			"BirthDate":  profile.BirthDate,
+			"BirthDate":  profile.BirthDateTime,
 			"Sex":        profile.Sex,
 			"Situation":  profile.Situation,
 			"ZodiacSign": profile.ZodiacSign,
