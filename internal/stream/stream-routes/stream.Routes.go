@@ -17,7 +17,7 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	streamService := streamapplication.NewStreamService(streamRepository)
 	streamHandler := streaminterfaces.NewStreamService(streamService)
 
-	App.Get("/stream/getStreamById", streamHandler.GetStreamById)
+	App.Post("/stream/getStreamById", streamHandler.GetStreamById)
 	App.Get("/stream/getStreamByNameUser", streamHandler.GetStreamByNameUser)
 	App.Get("/stream/getStreamsByCategorie", streamHandler.GetStreamsByCategorie)
 
