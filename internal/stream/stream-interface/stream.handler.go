@@ -22,13 +22,13 @@ func NewStreamService(StreamServise *streamapplication.StreamService) *StreamHan
 }
 
 type IDStream struct {
-	IdStream primitive.ObjectID `json:"IdStream" query:"IdStream"`
+	IdStream primitive.ObjectID `json:"IdStream" `
 }
 
 // get stream by id
 func (s *StreamHandler) GetStreamById(c *fiber.Ctx) error {
 	var idStream IDStream
-	if err := c.QueryParser(&idStream); err != nil {
+	if err := c.BodyParser(&idStream); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})
