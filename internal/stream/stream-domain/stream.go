@@ -32,7 +32,6 @@ type UpdateStreamInfo struct {
 	Category     string   `json:"category" validate:"min=3"`
 	Tag          []string `json:"tag" `
 	Idiom        string   `json:"idiom"`
-	Key          string   `json:"keyTransmission"`
 }
 
 func (u *UpdateStreamInfo) Validate() error {
