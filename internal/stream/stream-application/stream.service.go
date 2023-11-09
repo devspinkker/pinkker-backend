@@ -67,8 +67,8 @@ func (s *StreamService) Update_start_date(req streamdomain.Update_start_date) er
 	err := s.StreamRepository.Update_start_date(req)
 	return err
 }
-func (s *StreamService) UpdateStreamInfo(data streamdomain.UpdateStreamInfo) error {
-	err := s.StreamRepository.UpdateStreamInfo(data)
+func (s *StreamService) UpdateStreamInfo(data streamdomain.UpdateStreamInfo, id primitive.ObjectID) error {
+	err := s.StreamRepository.UpdateStreamInfo(data, id)
 	return err
 }
 func (s *StreamService) Update_Emotes(idUser primitive.ObjectID, date int) error {

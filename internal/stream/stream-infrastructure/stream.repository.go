@@ -224,8 +224,20 @@ func (r *StreamRepository) Update_start_date(req streamdomain.Update_start_date)
 
 	return err
 }
-func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStreamInfo) error {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStreamInfo, id primitive.ObjectID) error {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+
+	GoMongoDBCollUser := GoMongoDB.Collection("Users")
+	var userCmt *userdomain.User
+	filterUser := bson.D{
+		{Key: "_id", Value: id},
+	}
+	err := GoMongoDBCollUser.FindOne(context.Background(), filterUser).Decode(&userCmt)
+	if err != nil {
+		return err
+	}
+
+	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
 	update := bson.M{
 		"$set": bson.M{
 			"StreamTitle":        updateInfo.Title,
@@ -236,10 +248,12 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 			"StartDate":          updateInfo.Date,
 		},
 	}
-	updata, err := GoMongoDBCollStreams.UpdateOne(context.Background(), bson.M{"KeyTransmission": updateInfo.Key}, update)
+
+	updata, err := GoMongoDBCollStreams.UpdateOne(context.Background(), bson.M{"Streamer": userCmt.NameUser}, update)
 	if err != nil {
 		return err
 	}
+
 	if updata.MatchedCount == 0 {
 		return errors.New("Not Found")
 	}
