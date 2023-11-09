@@ -167,7 +167,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 }
 
 // get User By Id
-func (h *UserHandler) GetUserById(c *fiber.Ctx) error {
+func (h *UserHandler) GetUserByIdTheToken(c *fiber.Ctx) error {
 
 	IdUserToken := c.Context().UserValue("_id").(string)
 	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
