@@ -314,3 +314,50 @@ func (s *StreamHandler) Update_Emotes(c *fiber.Ctx) error {
 		"message": "ok",
 	})
 }
+
+func (s *StreamHandler) GetCategoriesWithLimit(c *fiber.Ctx) error {
+	type Categoria struct {
+		Nombre string `json:"nombre"`
+		Img    string `json:"img,omitempty"`
+	}
+
+	categorias := []Categoria{
+		{
+			Nombre: "Free Fire",
+			Img:    "https://assets.nintendo.com/image/upload/c_fill,w_1200/q_auto:best/f_auto/dpr_2.0/ncom/software/switch/70010000010192/f2aceaa07354abfa1652dbfb5acede2f4b2844db3c37780d538020f51814d510",
+		},
+		{
+			Nombre: "Fortnite",
+			Img:    "https://assets.nintendo.com/image/upload/c_fill,w_1200/q_auto:best/f_auto/dpr_2.0/ncom/software/switch/70010000010192/f2aceaa07354abfa1652dbfb5acede2f4b2844db3c37780d538020f51814d510",
+		},
+		{
+			Nombre: "League of Legends",
+			Img:    "https://fotos.perfil.com/2022/02/01/trim/720/410/conoce-todos-los-detalles-acerca-de-lol-y-enterate-como-se-juega-1306879.jpg",
+		},
+		{
+			Nombre: "Call of duty",
+			Img:    "https://i.blogs.es/9af117/cod1/840_560.jpg",
+		},
+		{
+			Nombre: "Slots",
+			Img:    "https://todosport.pe/wp-content/uploads/2022/03/aprender-conceptos-de-slots.jpg",
+		},
+		{
+			Nombre: "Gta V",
+			Img:    "https://assets.xboxservices.com/assets/0b/17/0b179504-412d-4af7-9e00-3e3d92633577.jpg?n=GTA-V_GLP-Page-Hero-1084_1920x1080.jpg",
+		},
+		{
+			Nombre: "Fifa 22",
+			Img:    "https://img.redbull.com/images/c_limit,w_1500,h_1000,f_auto,q_auto/redbullcom/2021/7/28/pmjkmhqo940brpe98wz6/fifa-22-logo-mbappe",
+		},
+		{
+			Nombre: "League of Legends",
+			Img:    "https://fotos.perfil.com/2022/02/01/trim/720/410/conoce-todos-los-detalles-acerca-de-lol-y-enterate-como-se-juega-1306879.jpg",
+		},
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    categorias,
+	})
+}
