@@ -28,7 +28,7 @@ type Stream struct {
 type UpdateStreamInfo struct {
 	Date         int64    `json:"date"`
 	Title        string   `json:"title" validate:"min=5,max=30"`
-	Notification string   `json:"notification" validate:"min=5"`
+	Notification string   `json:"notification" validate:"min=5,max=30"`
 	Category     string   `json:"category" validate:"min=3"`
 	Tag          []string `json:"tag" `
 	Idiom        string   `json:"idiom"`
