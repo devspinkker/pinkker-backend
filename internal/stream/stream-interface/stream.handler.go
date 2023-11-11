@@ -86,7 +86,7 @@ type Categorie struct {
 // get streams by caregories
 func (s *StreamHandler) GetStreamsByCategorie(c *fiber.Ctx) error {
 	var CategorierReq Categorie
-	if err := c.BodyParser(&CategorierReq); err != nil {
+	if err := c.QueryParser(&CategorierReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})
