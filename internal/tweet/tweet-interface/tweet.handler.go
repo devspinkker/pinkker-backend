@@ -183,9 +183,38 @@ func (th *TweetHandler) PostGets(c *fiber.Ctx) error {
 		"message": "ok",
 		"data":    Tweets,
 	})
-
 }
+func (th *TweetHandler) GetPostuser(c *fiber.Ctx) error {
 
+	page, errpage := strconv.Atoi(c.Query("page", "1"))
+	if errpage != nil || page < 1 {
+		page = 1
+	}
+	idStr := c.Query("id", "")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    "name error",
+		})
+	}
+	limit, errlimit := strconv.Atoi(c.Query("limit", "1"))
+	if errlimit != nil || limit < 1 {
+		limit = 1
+	}
+
+	Tweets, errTweetGetFollow := th.TweetServise.GetPostuser(page, id, limit)
+	if errTweetGetFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errTweetGetFollow.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Tweets,
+	})
+}
 func (th *TweetHandler) CommentPost(c *fiber.Ctx) error {
 
 	fileHeader, _ := c.FormFile("imgPost")
