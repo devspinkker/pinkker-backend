@@ -77,6 +77,13 @@ func (ts *TweetService) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, erro
 	Tweets, errGetFollowedUsers := ts.TweetRepository.GetPost(page)
 	return Tweets, errGetFollowedUsers
 }
+
+func (ts *TweetService) GetPostuser(page int, id primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+
+	Tweets, errGetFollowedUsers := ts.TweetRepository.GetPostuser(page, id, limit)
+	return Tweets, errGetFollowedUsers
+}
+
 func (ts *TweetService) GetCommentPost(IdPost primitive.ObjectID, page int) ([]tweetdomain.TweetCommentsGetReq, error) {
 
 	comments, err := ts.TweetRepository.GetCommentPosts(IdPost, page)
