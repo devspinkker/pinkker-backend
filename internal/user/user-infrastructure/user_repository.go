@@ -182,7 +182,10 @@ func (u *UserRepository) FindEmailForOauth2Updata(user *domain.Google_callback_C
 		if err != mongo.ErrNoDocuments {
 			return nil, err
 		}
-		GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+		GoMongoDBColl := u.mongoClient.Database("PINKKER-BACKEND")
+
+		GoMongoDBCollUsers := GoMongoDBColl.Collection("Users")
+		GoMongoDBCollStreams := GoMongoDBColl.Collection("Streams")
 
 		filter := bson.M{"Email": user.Email}
 
@@ -217,7 +220,18 @@ func (u *UserRepository) FindEmailForOauth2Updata(user *domain.Google_callback_C
 		if err != nil {
 			return nil, err
 		}
+		filterStream := bson.M{"StreamerID": existingUser.ID}
+		updateStream := bson.M{
+			"$set": bson.M{
+				"Streamer": user.NameUser,
+			},
+		}
 
+		_, err = GoMongoDBCollStreams.UpdateOne(context.Background(), filterStream, updateStream)
+
+		if err != nil {
+			return nil, err
+		}
 		return existingUser, nil
 	}
 	return nil, errors.New("nameuser exist")
