@@ -267,7 +267,7 @@ func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error 
 		},
 	}
 	_, err := GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
-	filterStream := bson.M{"_id": id}
+	filterStream := bson.M{"StreamerID": id}
 	updateStream := bson.M{
 		"$set": bson.M{
 			"StreamerAvatar": avatar,
