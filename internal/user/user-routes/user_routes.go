@@ -39,4 +39,6 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/user/EditProfile", middleware.UseExtractor(), UserHandler.EditProfile)
 	App.Post("/user/EditAvatar", middleware.UseExtractor(), UserHandler.EditAvatar)
 
+	App.Post("/user/suscribirse", middleware.UseExtractor(), UserHandler.Suscribirse)
+
 }

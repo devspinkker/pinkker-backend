@@ -115,3 +115,7 @@ func (u *UserService) EditAvatar(avatarUrl string, IdUserTokenP primitive.Object
 	err := u.roomRepository.EditAvatar(avatarUrl, IdUserTokenP)
 	return err
 }
+func (s *UserService) Subscription(FromUser, ToUser primitive.ObjectID) error {
+	err := s.roomRepository.Subscription(FromUser, ToUser)
+	return err
+}

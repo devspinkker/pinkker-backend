@@ -212,3 +212,8 @@ func (u *Google_callback_Complete_Profile_And_Username) ValidateUser() error {
 	}
 	return validate.Struct(u)
 }
+
+type ReqCreateSuscribirse struct {
+	ToUser primitive.ObjectID `json:"ToUser" validate:"required"`
+	Text   string             `json:"Text" validate:"required,min=2,max=70"`
+}
