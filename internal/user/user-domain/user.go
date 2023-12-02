@@ -217,3 +217,9 @@ type ReqCreateSuscribirse struct {
 	ToUser primitive.ObjectID `json:"ToUser" validate:"required"`
 	Text   string             `json:"Text" validate:"required,min=2,max=70"`
 }
+type InfoUserInRoom struct {
+	ID       primitive.ObjectID       `json:"id" bson:"_id,omitempty"`
+	NameUser string                   `json:"nameuser" bson:"NameUser"`
+	Color    string                   `json:"Color" bson:"Color"`
+	Rooms    []map[string]interface{} `json:"rooms" bson:"Rooms"`
+}

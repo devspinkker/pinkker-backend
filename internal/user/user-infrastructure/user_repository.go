@@ -310,7 +310,7 @@ func (r *UserRepository) Subscription(Source, Destination primitive.ObjectID) er
 		r.updateSubscription(existingSubscription, subscriptionStart, subscriptionEnd)
 	}
 
-	if err := r.updateUserSource(ctx, sourceUser, usersCollection); err != nil {
+	if err := r.updateUserSource(ctx, sourceUser, usersCollection, Destination); err != nil {
 		return err
 	}
 
@@ -361,7 +361,7 @@ func (r *UserRepository) updateSubscription(subscription *userdomain.Subscriptio
 }
 
 // Actualiza el usuario que da en MongoDB
-func (r *UserRepository) updateUserSource(ctx context.Context, user *userdomain.User, usersCollection *mongo.Collection) error {
+func (r *UserRepository) updateUserSource(ctx context.Context, user *userdomain.User, usersCollection *mongo.Collection, Destination primitive.ObjectID) error {
 	filter := bson.M{"_id": user.ID}
 	update := bson.M{
 		"$set": bson.M{
@@ -369,9 +369,39 @@ func (r *UserRepository) updateUserSource(ctx context.Context, user *userdomain.
 			"Pixeles":       user.Pixeles,
 		},
 	}
-	valor, err := usersCollection.UpdateOne(ctx, filter, update)
-	fmt.Println(valor)
-	return err
+	_, err := usersCollection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	database := r.mongoClient.Database("PINKKER-BACKEND")
+
+	// Obtén la información del stream
+	streamFilter := bson.M{"StreamerID": Destination}
+	streamSub := streamdomain.Stream{}
+	err = database.Collection("Streams").FindOne(ctx, streamFilter).Decode(&streamSub)
+	if err != nil {
+		return err
+	}
+
+	// Actualiza la colección "UserInformationInAllRooms"
+	updateRoom := bson.M{
+		"$set": bson.M{
+			"Rooms.$.Subscription":  "active",
+			"Rooms.$.SubscribedAgo": time.Now(),
+		},
+	}
+
+	_, err = database.Collection("UserInformationInAllRooms").UpdateOne(
+		ctx,
+		bson.M{"NameUser": user.NameUser, "Rooms.Room": streamSub.ID},
+		updateRoom,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Actualiza el usuario que destino en MongoDB

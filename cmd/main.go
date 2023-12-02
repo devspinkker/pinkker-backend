@@ -8,6 +8,7 @@ import (
 	tweetroutes "PINKKER-BACKEND/internal/tweet/tweet-routes"
 	userroutes "PINKKER-BACKEND/internal/user/user-routes"
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -45,21 +46,20 @@ func main() {
 }
 
 func setupRedisClient() *redis.Client {
-	// PasswordRedis := config.PASSWORDREDIS()
-	// ADDRREDIS := config.ADDRREDIS()
-	// client := redis.NewClient(&redis.Options{
-	// 	Addr:     ADDRREDIS,
-	// 	Password: PasswordRedis,
-	// 	DB:       0,
-	// })
+	PasswordRedis := config.PASSWORDREDIS()
+	ADDRREDIS := config.ADDRREDIS()
+	client := redis.NewClient(&redis.Options{
+		Addr:     ADDRREDIS,
+		Password: PasswordRedis,
+		DB:       0,
+	})
 
-	// _, err := client.Ping(context.Background()).Result()
-	// if err != nil {
-	// 	log.Fatalf("Error al conectar con Redis: %s", err.Error())
-	// }
-	// fmt.Println("Redis connect")
-	// return
-	return nil
+	_, err := client.Ping(context.Background()).Result()
+	if err != nil {
+		log.Fatalf("Error al conectar con Redis: %s", err.Error())
+	}
+	fmt.Println("Redis connect")
+	return client
 }
 func setupMongoDB() *mongo.Client {
 	URI := config.MONGODB_URI()
@@ -69,18 +69,15 @@ func setupMongoDB() *mongo.Client {
 
 	clientOptions := options.Client().ApplyURI(URI)
 
-	// Se crea el cliente de MongoDB
 	client, err := mongo.NewClient(clientOptions)
 	if err != nil {
 		log.Fatal("MONGODB ERROR", err.Error())
 	}
 
-	// Se establece la conexión a la base de datos
 	if err = client.Connect(context.Background()); err != nil {
 		log.Fatal("MONGODB ERROR", err.Error())
 	}
 
-	// Se verifica que la conexión a la base de datos sea exitosa.
 	if err = client.Ping(context.Background(), nil); err != nil {
 		log.Fatal("MONGODB ERROR", err.Error())
 	}
