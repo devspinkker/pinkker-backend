@@ -43,3 +43,9 @@ type Update_start_date struct {
 	Date int    `json:"date"`
 	Key  string `json:"keyTransmission"`
 }
+type Categoria struct {
+	Name       string   `json:"nombre"`
+	Img        string   `json:"img,omitempty"`
+	Spectators int      `json:"spectators,omitempty"`
+	Tags       []string `json:"tags,omitempty"`
+}

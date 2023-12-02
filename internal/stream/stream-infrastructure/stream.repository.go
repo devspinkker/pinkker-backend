@@ -278,8 +278,6 @@ func (r *StreamRepository) Update_Emotes(idUser primitive.ObjectID, date int) er
 	return err
 }
 
-// beta
-
 func (r *StreamRepository) Streamings_online() (int, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 	FindStreamsInDb := bson.D{
@@ -302,5 +300,28 @@ func (r *StreamRepository) Streamings_online() (int, error) {
 	}
 
 	return len(streams), nil
+
+}
+
+func (r *StreamRepository) GetCategories() (error, []streamdomain.Categoria) {
+	GoMongoDBCollCategorias := r.mongoClient.Database("PINKKER-BACKEND").Collection("Categorias")
+	FindCategoriasInDb := bson.D{}
+
+	cursor, err := GoMongoDBCollCategorias.Find(context.Background(), FindCategoriasInDb)
+	if err != nil {
+		return err, []streamdomain.Categoria{}
+	}
+	defer cursor.Close(context.Background())
+
+	var Categorias []streamdomain.Categoria
+	for cursor.Next(context.Background()) {
+		var caregorie streamdomain.Categoria
+		if err := cursor.Decode(&caregorie); err != nil {
+			return err, []streamdomain.Categoria{}
+		}
+		Categorias = append(Categorias, caregorie)
+	}
+
+	return err, Categorias
 
 }
