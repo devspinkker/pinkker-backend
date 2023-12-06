@@ -1,6 +1,8 @@
 package voddomain
 
 import (
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -14,7 +16,7 @@ type Vod struct {
 	StreamTag          []string           `json:"stream_tag,omitempty" bson:"StreamTag,omitempty"`
 	StreamIdiom        string             `json:"stream_idiom,omitempty" bson:"StreamIdiom,omitempty"`
 	StreamThumbnail    string             `json:"stream_thumbnail" bson:"StreamThumbnail"`
-	StartDate          int64              `json:"start_date" bson:"StartDate"`
+	StartDate          time.Time          `json:"start_date" bson:"StartDate"`
 	Views              int                `json:"views,omitempty" bson:"Views,omitempty"`
 	Likes              []string           `json:"likes,omitempty" bson:"Likes,omitempty"`
 	Dislikes           []string           `json:"dislikes,omitempty" bson:"Dislikes,omitempty"`

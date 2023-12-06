@@ -21,7 +21,7 @@ type Stream struct {
 	StreamLikes        []string           `json:"stream_likes" bson:"StreamLikes"`
 	StreamIdiom        string             `json:"stream_idiom" default:"Español" bson:"StreamIdiom,default:'Español'"`
 	StreamThumbnail    string             `json:"stream_thumbnail" bson:"StreamThumbnail"`
-	StartDate          int64              `json:"start_date" bson:"StartDate"`
+	StartDate          time.Time          `json:"start_date" bson:"StartDate"`
 	Timestamp          time.Time          `json:"Timestamp" bson:"Timestamp"`
 	EmotesChat         map[string]string  `json:"EmotesChat" bson:"EmotesChat"`
 }

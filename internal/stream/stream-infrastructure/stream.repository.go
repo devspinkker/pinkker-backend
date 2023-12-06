@@ -5,6 +5,7 @@ import (
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"errors"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -151,10 +152,11 @@ func (r *StreamRepository) Update_online(Key string, state bool) error {
 	filter = bson.D{
 		{Key: "StreamerID", Value: userFind.ID},
 	}
-
-	update := bson.D{
+	var update primitive.D
+	update = bson.D{
 		{Key: "$set", Value: bson.D{
 			{Key: "Online", Value: state},
+			{Key: "StartDate", Value: time.Now()},
 		}},
 	}
 
