@@ -413,6 +413,8 @@ func (h *UserHandler) Google_callback_Complete_Profile_And_Username(c *fiber.Ctx
 			"data":    err.Error(),
 		})
 	}
+	user.NameUser = req.NameUser
+
 	tokenRequest, err := jwt.CreateToken(user)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
