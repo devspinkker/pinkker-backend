@@ -2,11 +2,13 @@ package main
 
 import (
 	"PINKKER-BACKEND/config"
+	cliproutes "PINKKER-BACKEND/internal/clip/clip-routes"
 	cryptoroutes "PINKKER-BACKEND/internal/crypto/crypto-routes"
 	donationroutes "PINKKER-BACKEND/internal/donation/donation-routes"
 	streamroutes "PINKKER-BACKEND/internal/stream/stream-routes"
 	tweetroutes "PINKKER-BACKEND/internal/tweet/tweet-routes"
 	userroutes "PINKKER-BACKEND/internal/user/user-routes"
+
 	"context"
 	"fmt"
 	"log"
@@ -25,7 +27,9 @@ func main() {
 	// defer redisClient.Close()
 	defer newMongoDB.Disconnect(context.Background())
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		BodyLimit: 100 * 1024 * 1024,
+	})
 	app.Use(cors.New())
 
 	// users
@@ -38,6 +42,10 @@ func main() {
 	streamroutes.StreamsRoutes(app, redisClient, newMongoDB)
 	// crypto
 	cryptoroutes.CryptoRoutes(app, redisClient, newMongoDB)
+	// clips
+
+	cliproutes.ClipRoutes(app, redisClient, newMongoDB)
+
 	PORT := config.PORT()
 	if PORT == "" {
 		PORT = "8081"

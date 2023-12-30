@@ -4,6 +4,7 @@ import (
 	clipapplication "PINKKER-BACKEND/internal/clip/clip-application"
 	clipinfrastructure "PINKKER-BACKEND/internal/clip/clip-infrastructure"
 	clipinterface "PINKKER-BACKEND/internal/clip/clip-interface"
+	"PINKKER-BACKEND/pkg/middleware"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
@@ -15,5 +16,5 @@ func ClipRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	clipService := clipapplication.NewClipService(clipRepository)
 	clipHandler := clipinterface.NewClipHandler(clipService)
 
-	App.Post("/createClip", clipHandler.CreateClip)
+	App.Post("/create-clips", middleware.UseExtractor(), clipHandler.CreateClips)
 }
