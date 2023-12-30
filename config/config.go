@@ -87,3 +87,9 @@ func GOOGLE_CLIENT_SECRET() string {
 	}
 	return os.Getenv("GOOGLE_CLIENT_SECRET")
 }
+func FFmpegPath() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("FFMPEG_PATH")
+}

@@ -1,6 +1,9 @@
 package clipdomain
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import (
+	"github.com/go-playground/validator"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type Clip struct {
 	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
@@ -19,4 +22,17 @@ type Clip struct {
 		CreatedAt int64 `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 		UpdatedAt int64 `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
 	} `json:"timestamps,omitempty" bson:"timestamps,omitempty"`
+}
+type ClipRequest struct {
+	Video    []byte             `json:"video" validate:"required"`
+	Start    int                `json:"start" validate:"required"`
+	End      int                `json:"end" validate:"required"`
+	ClipName string             `json:"clipName" validate:"required,min=2,max=20"`
+	Streamer primitive.ObjectID `json:"streamer" validate:"required"`
+}
+
+func (u *ClipRequest) ValidateClipRequest() error {
+
+	validate := validator.New()
+	return validate.Struct(u)
 }
