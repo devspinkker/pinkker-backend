@@ -48,6 +48,7 @@ func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avat
 	modelNewUser.Subscribers = []domain.Subscriber{}
 	modelNewUser.Subscriptions = []domain.Subscription{}
 	modelNewUser.BirthDate = time.Now()
+	modelNewUser.Clips = []primitive.ObjectID{}
 	return &modelNewUser
 }
 
