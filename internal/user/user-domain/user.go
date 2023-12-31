@@ -28,6 +28,7 @@ type User struct {
 	Pais              string                 `json:"Pais" bson:"Pais"`
 	Subscriptions     []Subscription         `bson:"Subscriptions"`
 	Subscribers       []Subscriber           `bson:"Subscribers"`
+	Clips             []primitive.ObjectID   `bson:"Clips,omitempty"`
 	Ciudad            string                 `json:"Ciudad" bson:"Ciudad"`
 	Email             string                 `json:"Email" bson:"Email"`
 	EmailConfirmation bool                   `json:"EmailConfirmation" bson:"EmailConfirmation,default:false"`

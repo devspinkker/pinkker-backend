@@ -27,8 +27,10 @@ func NewClipRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Cl
 }
 
 func (c *ClipRepository) SaveClip(clip *clipdomain.Clip) (*clipdomain.Clip, error) {
+	database := c.mongoClient.Database("PINKKER-BACKEND")
+	clipCollection := database.Collection("Clips")
+	userCollection := database.Collection("Users")
 
-	clipCollection := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 	result, err := clipCollection.InsertOne(context.Background(), clip)
 	if err != nil {
 		return nil, err
@@ -38,10 +40,23 @@ func (c *ClipRepository) SaveClip(clip *clipdomain.Clip) (*clipdomain.Clip, erro
 	if !ok {
 		return nil, errors.New("no se pudo obtener el ID insertado")
 	}
-
 	clip.ID = insertedID
 
-	return clip, nil
+	filterUser := bson.M{"_id": clip.UserID}
+	update := bson.M{"$push": bson.M{"Clips": insertedID}}
+
+	opts := options.Update().SetUpsert(false)
+
+	resultuserCollection, err := userCollection.UpdateOne(context.Background(), filterUser, update, opts)
+	if err != nil {
+		return clip, err
+	}
+
+	if resultuserCollection.ModifiedCount == 0 {
+		return clip, errors.New("No se encontraron documentos para actualizar.")
+	}
+
+	return clip, err
 }
 func (c *ClipRepository) UpdateClip(clipID primitive.ObjectID, newURL string) {
 	clipCollection := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
@@ -54,6 +69,15 @@ func (c *ClipRepository) UpdateClip(clipID primitive.ObjectID, newURL string) {
 
 	clipCollection.UpdateOne(context.Background(), filter, update, opts)
 
+}
+func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Clip, error) {
+	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+	FindClipInDb := bson.D{
+		{Key: "_id", Value: IdClip},
+	}
+	var findClipInDbExist *clipdomain.Clip
+	err := GoMongoDBCollUsers.FindOne(context.Background(), FindClipInDb).Decode(&findClipInDbExist)
+	return findClipInDbExist, err
 }
 func (c *ClipRepository) FindUser(NameUser string) (*userdomain.User, error) {
 	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Users")

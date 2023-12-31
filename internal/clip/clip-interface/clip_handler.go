@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -24,6 +26,47 @@ func NewClipHandler(ClipService *clipapplication.ClipService) *ClipHandler {
 	return &ClipHandler{
 		ClipService: ClipService,
 	}
+}
+
+func (clip *ClipHandler) GetClipId(c *fiber.Ctx) error {
+	clipIDStr := c.Query("clipId")
+	clipID, err := primitive.ObjectIDFromHex(clipIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid clipId format",
+			"data":    err.Error(),
+		})
+	}
+	clipGet, err := clip.ClipService.GetClipId(clipID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	if strings.HasPrefix(clipGet.URL, "https://") {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message":  "StatusOK",
+			"dataClip": clipGet,
+			"videoURL": true,
+			"video":    false,
+		})
+	}
+	localVideoPath := clipGet.URL
+	localVideoContent, err := ioutil.ReadFile(localVideoPath)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error retrieving local video content",
+			"data":    err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":  "StatusOK",
+		"dataClip": clipGet,
+		"videoURL": false,
+		"video":    localVideoContent,
+	})
 }
 
 func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
@@ -74,21 +117,20 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 	}
 
 	FFmpegPath := config.FFmpegPath()
+	cmdSS := strconv.Itoa(clipRequest.Start)
+	cmdT := strconv.Itoa(clipRequest.End - clipRequest.Start)
+
 	cmd := exec.Command(
 		FFmpegPath,
 		"-i", videoPath,
-		"-ss", "0",
-		"-t", "6",
+		"-ss", cmdSS,
+		"-t", cmdT,
 		"-c", "copy",
 		outputFilePath,
 	)
 
-	fmt.Println(outputFilePath)
-	out, err := cmd.CombinedOutput()
+	_, err = cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error en la ejecución de FFmpeg:")
-		fmt.Println(string(out))
-		fmt.Println(err)
 		return c.Status(fiber.StatusInsufficientStorage).JSON(fiber.Map{
 			"message": "Error al recortar el video",
 			"data":    err.Error(),
@@ -102,6 +144,7 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 	}
 
 	idValue := c.Context().UserValue("_id").(string)
+	nameUser := c.Context().UserValue("nameUser").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
 	if errorID != nil {
 		return c.Status(fiber.StatusNetworkAuthenticationRequired).JSON(fiber.Map{
@@ -109,21 +152,23 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
-	clipCreated, err := clip.ClipService.CreateClip(idValueObj, streamer, ClipName, outputFilePath)
+	clipCreated, err := clip.ClipService.CreateClip(idValueObj, streamer, nameUser, ClipName, outputFilePath)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "StatusInternalServerError",
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
 		})
 	}
-	fmt.Println(outputFilePath)
 	cloudinaryResponse, err := helpers.UploadVideo(outputFilePath)
 	if err != nil {
 		fmt.Printf("Error al subir el video a Cloudinary: %v\n", err)
 	}
-	fmt.Println(cloudinaryResponse)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
 	}
 	go func() {
 
@@ -132,8 +177,6 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			err := os.RemoveAll(videoDir)
 			if err != nil {
 				fmt.Println("Error removing directory:", err.Error())
-			} else {
-				fmt.Println("Directory removed successfully.")
 			}
 		} else if !os.IsNotExist(err) {
 			fmt.Println("Error checking directory:", err.Error())
