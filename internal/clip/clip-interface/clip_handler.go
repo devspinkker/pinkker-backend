@@ -70,7 +70,6 @@ func (clip *ClipHandler) GetClipId(c *fiber.Ctx) error {
 }
 
 func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
-
 	var clipRequest clipdomain.ClipRequest
 
 	if err := c.BodyParser(&clipRequest); err != nil {
@@ -79,15 +78,16 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
+
 	if err := clipRequest.ValidateClipRequest(); err != nil {
+		fmt.Println(err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 			"data":    err.Error(),
 		})
 	}
-
-	ClipName := clipRequest.ClipName
-	streamer := clipRequest.Streamer
+	ClipTitle := clipRequest.ClipTitle
+	totalKey := clipRequest.TotalKey
 
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -152,7 +152,7 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
-	clipCreated, err := clip.ClipService.CreateClip(idValueObj, streamer, nameUser, ClipName, outputFilePath)
+	clipCreated, err := clip.ClipService.CreateClip(idValueObj, totalKey, nameUser, ClipTitle, outputFilePath)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",

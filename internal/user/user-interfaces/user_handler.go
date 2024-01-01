@@ -382,10 +382,11 @@ func (h *UserHandler) Google_callback(c *fiber.Ctx) error {
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "token",
-		"data":    tokenRequest,
-		"_id":     user.ID,
-		"avatar":  user.Avatar,
+		"message":         "token",
+		"data":            tokenRequest,
+		"_id":             user.ID,
+		"avatar":          user.Avatar,
+		"keyTransmission": user.KeyTransmission,
 	})
 }
 
@@ -423,10 +424,11 @@ func (h *UserHandler) Google_callback_Complete_Profile_And_Username(c *fiber.Ctx
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "token",
-		"data":    tokenRequest,
-		"_id":     user.ID,
-		"avatar":  user.Avatar,
+		"message":         "token",
+		"data":            tokenRequest,
+		"_id":             user.ID,
+		"avatar":          user.Avatar,
+		"keyTransmission": user.KeyTransmission,
 	})
 
 }

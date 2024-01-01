@@ -15,7 +15,7 @@ type Clip struct {
 	NameUser        string             `json:"streamerId" bson:"StreamerID"`
 	UserID          primitive.ObjectID `json:"userId" bson:"UserID"`
 	Avatar          string             `json:"Avatar" bson:"Avatar"`
-	ClipName        string             `json:"clipName" bson:"clipName"`
+	ClipTitle       string             `json:"clipTitle" bson:"ClipTitle"`
 	URL             string             `json:"url" bson:"url"`
 	Likes           []string           `json:"likes" bson:"likes"`
 	Duration        int                `json:"duration" bson:"duration"`
@@ -30,11 +30,11 @@ type Clip struct {
 	} `json:"timestamps,omitempty" bson:"timestamps,omitempty"`
 }
 type ClipRequest struct {
-	Video    []byte `json:"video" validate:"required"`
-	Start    int    `json:"start" validate:"required"`
-	End      int    `json:"end" validate:"required"`
-	ClipName string `json:"clipName" validate:"required,min=2,max=20"`
-	Streamer string `json:"streamer" validate:"required"`
+	Video     []byte `json:"video" validate:"required"`
+	Start     int    `json:"start" validate:"required"`
+	End       int    `json:"end" validate:"required"`
+	ClipTitle string `json:"clipTitle" validate:"required,min=2,max=30"`
+	TotalKey  string `json:"totalKey" validate:"required"`
 }
 
 func (u *ClipRequest) ValidateClipRequest() error {
