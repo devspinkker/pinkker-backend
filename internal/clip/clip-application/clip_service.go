@@ -23,8 +23,8 @@ func (u *ClipService) FindUser(NameUser string) (*userdomain.User, error) {
 	findUserInDbExist, errCollUsers := u.ClipRepository.FindUser(NameUser)
 	return findUserInDbExist, errCollUsers
 }
-func (u *ClipService) CreateClip(idCreator primitive.ObjectID, streamer string, nameUser string, clipName string, outputFilePath string) (*clipdomain.Clip, error) {
-	user, err := u.ClipRepository.FindUser(streamer)
+func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, nameUser string, ClipTitle string, outputFilePath string) (*clipdomain.Clip, error) {
+	user, err := u.ClipRepository.FindUser(totalKey)
 	if err != nil {
 		return &clipdomain.Clip{}, err
 	}
@@ -43,7 +43,7 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, streamer string, 
 		NameUser:        user.NameUser,
 		UserID:          user.ID,
 		Avatar:          user.Avatar,
-		ClipName:        clipName,
+		ClipTitle:       ClipTitle,
 		URL:             outputFilePath,
 		Likes:           []string{},
 		Duration:        10,

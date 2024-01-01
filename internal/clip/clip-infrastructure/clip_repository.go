@@ -79,11 +79,11 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Cli
 	err := GoMongoDBCollUsers.FindOne(context.Background(), FindClipInDb).Decode(&findClipInDbExist)
 	return findClipInDbExist, err
 }
-func (c *ClipRepository) FindUser(NameUser string) (*userdomain.User, error) {
+func (c *ClipRepository) FindUser(totalKey string) (*userdomain.User, error) {
 	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	var FindUserInDb primitive.D
 	FindUserInDb = bson.D{
-		{Key: "NameUser", Value: NameUser},
+		{Key: "KeyTransmission", Value: "live" + totalKey},
 	}
 	var findUserInDbExist *userdomain.User
 	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&findUserInDbExist)
