@@ -38,6 +38,31 @@ func Processimage(fileHeader *multipart.FileHeader, PostImageChanel chan string,
 		PostImageChanel <- ""
 	}
 }
+func UpdateClipPreviouImage(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	ctx := context.Background()
+
+	cldService, err := cloudinary.NewFromURL(config.CLOUDINARY_URL())
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := cldService.Upload.Upload(ctx, file, uploader.UploadParams{})
+	if err != nil {
+		return "", err
+	}
+
+	if !strings.HasPrefix(resp.SecureURL, "https://") {
+		return "", errors.New("Invalid secure URL format")
+	}
+
+	return resp.SecureURL, nil
+}
 func UploadVideo(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {

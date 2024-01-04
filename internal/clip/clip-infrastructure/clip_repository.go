@@ -70,6 +70,18 @@ func (c *ClipRepository) UpdateClip(clipID primitive.ObjectID, newURL string) {
 	clipCollection.UpdateOne(context.Background(), filter, update, opts)
 
 }
+func (c *ClipRepository) UpdateClipPreviouImage(clipID primitive.ObjectID, newURL string) {
+	clipCollection := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+
+	filter := bson.M{"_id": clipID}
+
+	update := bson.M{"$set": bson.M{"PreviouImage": newURL}}
+
+	opts := options.Update().SetUpsert(false)
+
+	clipCollection.UpdateOne(context.Background(), filter, update, opts)
+
+}
 func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Clip, error) {
 	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 	FindClipInDb := bson.D{
@@ -98,4 +110,26 @@ func (c *ClipRepository) FindUserId(FindUserId string) (*userdomain.User, error)
 	var findUserInDbExist *userdomain.User
 	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&findUserInDbExist)
 	return findUserInDbExist, errCollUsers
+}
+func (c *ClipRepository) GetClipsNameUser(page int, GetClipsNameUser string) ([]clipdomain.Clip, error) {
+	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+
+	options := options.Find()
+	options.SetSort(bson.D{{"TimeStamp", -1}})
+	options.SetSkip(int64((page - 1) * 10))
+	options.SetLimit(10)
+	filter := bson.D{{"NameUserCreator", GetClipsNameUser}}
+
+	cursor, err := GoMongoDBColl.Find(context.Background(), filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var clips []clipdomain.Clip
+	if err := cursor.All(context.Background(), &clips); err != nil {
+		return nil, err
+	}
+
+	return clips, nil
 }

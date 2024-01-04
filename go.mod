@@ -11,7 +11,9 @@ require (
 	github.com/gofiber/fiber/v2 v2.48.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.3.0
+	github.com/h2non/bimg v1.1.9
 	github.com/joho/godotenv v1.5.1
+	github.com/nareix/joy4 v0.0.0-20200507095837-05a4ffbb5369
 	github.com/redis/go-redis/v9 v9.0.5
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	go.mongodb.org/mongo-driver v1.12.0
@@ -55,6 +57,7 @@ require (
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
+	github.com/xfrr/goffmpeg v1.0.0 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	golang.org/x/exp v0.0.0-20230810033253-352e893a4cad // indirect
 	golang.org/x/net v0.17.0 // indirect
