@@ -60,7 +60,33 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 func (u *ClipService) UpdateClip(clipUpdate *clipdomain.Clip, ulrClip string) {
 	u.ClipRepository.UpdateClip(clipUpdate.ID, ulrClip)
 }
+func (u *ClipService) UpdateClipPreviouImage(clipUpdate *clipdomain.Clip, ulrClip string) {
+	u.ClipRepository.UpdateClip(clipUpdate.ID, ulrClip)
+}
 func (u *ClipService) GetClipId(clipId primitive.ObjectID) (*clipdomain.Clip, error) {
 	clip, err := u.ClipRepository.FindrClipId(clipId)
 	return clip, err
 }
+
+func (u *ClipService) GetClipsNameUser(page int, NameUser string) ([]clipdomain.Clip, error) {
+
+	Clips, errGetFollowedUsers := u.ClipRepository.GetClipsNameUser(page, NameUser)
+	return Clips, errGetFollowedUsers
+}
+
+// func (u *ClipService) ExtractFrameFromVideo(videoPath, outputPath, ffmpegPath string) error {
+// 	transcoder.FFmpegBin = ffmpegPath
+
+// 	trans := new(transcoder.Transcoder)
+// 	err := trans.Initialize(videoPath, outputPath, ffmpegPath)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	err = <-trans.Run(false)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	return nil
+// }
