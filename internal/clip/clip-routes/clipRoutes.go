@@ -20,4 +20,5 @@ func ClipRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Get("/GetClipId", clipHandler.GetClipId)
 
 	App.Get("/GetClipsNameUser", clipHandler.GetClipsNameUser)
+	App.Get("/GetClipsCategory", clipHandler.GetClipsCategory)
 }
