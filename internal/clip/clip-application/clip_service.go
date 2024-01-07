@@ -28,6 +28,10 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 	if err != nil {
 		return &clipdomain.Clip{}, err
 	}
+	CategorieStream, err := u.ClipRepository.FindCategorieStream(user.ID)
+	if err != nil {
+		return &clipdomain.Clip{}, err
+	}
 	timeStamps := struct {
 		CreatedAt time.Time `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 		UpdatedAt time.Time `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
@@ -35,7 +39,6 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-
 	clip := &clipdomain.Clip{
 
 		NameUserCreator: nameUser,
@@ -46,6 +49,8 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		ClipTitle:       ClipTitle,
 		URL:             outputFilePath,
 		Likes:           []string{},
+		StreamThumbnail: CategorieStream.StreamThumbnail,
+		StreamCategory:  CategorieStream.StreamCategory,
 		Duration:        10,
 		Views:           0,
 		Cover:           "",

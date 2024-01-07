@@ -3,6 +3,7 @@ package clipinfrastructure
 
 import (
 	clipdomain "PINKKER-BACKEND/internal/clip/clip-domain"
+	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"errors"
@@ -110,6 +111,16 @@ func (c *ClipRepository) FindUserId(FindUserId string) (*userdomain.User, error)
 	var findUserInDbExist *userdomain.User
 	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&findUserInDbExist)
 	return findUserInDbExist, errCollUsers
+}
+func (c *ClipRepository) FindCategorieStream(StreamerID primitive.ObjectID) (*streamdomain.Stream, error) {
+	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	var FindInDb primitive.D
+	FindInDb = bson.D{
+		{Key: "StreamerID", Value: StreamerID},
+	}
+	var findStream *streamdomain.Stream
+	errCollUsers := GoMongoDBColl.FindOne(context.Background(), FindInDb).Decode(&findStream)
+	return findStream, errCollUsers
 }
 func (c *ClipRepository) GetClipsNameUser(page int, GetClipsNameUser string) ([]clipdomain.Clip, error) {
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
