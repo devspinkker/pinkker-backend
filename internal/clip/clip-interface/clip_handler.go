@@ -207,3 +207,23 @@ func (clip *ClipHandler) GetClipsNameUser(c *fiber.Ctx) error {
 		"data":    Clips,
 	})
 }
+func (clip *ClipHandler) GetClipsCategory(c *fiber.Ctx) error {
+
+	page, errpage := strconv.Atoi(c.Query("page", "1"))
+	if errpage != nil || page < 1 {
+		page = 1
+	}
+	Category := c.Query("Category")
+
+	Clips, errClipsGetFollow := clip.ClipService.GetClipsCategory(page, Category)
+	if errClipsGetFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errClipsGetFollow.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Clips,
+	})
+}
