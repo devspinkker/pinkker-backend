@@ -84,14 +84,34 @@ func (c *ClipRepository) UpdateClipPreviouImage(clipID primitive.ObjectID, newUR
 
 }
 func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Clip, error) {
-	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 	FindClipInDb := bson.D{
 		{Key: "_id", Value: IdClip},
 	}
+
 	var findClipInDbExist *clipdomain.Clip
-	err := GoMongoDBCollUsers.FindOne(context.Background(), FindClipInDb).Decode(&findClipInDbExist)
-	return findClipInDbExist, err
+	err := GoMongoDBColl.FindOne(context.Background(), FindClipInDb).Decode(&findClipInDbExist)
+	if err != nil {
+		return nil, err
+	}
+
+	update := bson.D{
+		{Key: "$inc", Value: bson.D{{Key: "views", Value: 1}}},
+	}
+
+	_, err = GoMongoDBColl.UpdateOne(context.Background(), FindClipInDb, update)
+	if err != nil {
+		return nil, err
+	}
+
+	err = GoMongoDBColl.FindOne(context.Background(), FindClipInDb).Decode(&findClipInDbExist)
+	if err != nil {
+		return nil, err
+	}
+
+	return findClipInDbExist, nil
 }
+
 func (c *ClipRepository) FindUser(totalKey string) (*userdomain.User, error) {
 	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	var FindUserInDb primitive.D
