@@ -164,3 +164,25 @@ func (c *ClipRepository) GetClipsNameUser(page int, GetClipsNameUser string) ([]
 
 	return clips, nil
 }
+func (c *ClipRepository) GetClipsCategory(page int, Category string) ([]clipdomain.Clip, error) {
+	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+
+	options := options.Find()
+	options.SetSort(bson.D{{"TimeStamp", -1}})
+	options.SetSkip(int64((page - 1) * 10))
+	options.SetLimit(10)
+	filter := bson.D{{"Category", Category}}
+
+	cursor, err := GoMongoDBColl.Find(context.Background(), filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var clips []clipdomain.Clip
+	if err := cursor.All(context.Background(), &clips); err != nil {
+		return nil, err
+	}
+
+	return clips, nil
+}

@@ -50,7 +50,7 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		URL:             outputFilePath,
 		Likes:           []string{},
 		StreamThumbnail: CategorieStream.StreamThumbnail,
-		StreamCategory:  CategorieStream.StreamCategory,
+		Category:        CategorieStream.StreamCategory,
 		Duration:        10,
 		Views:           0,
 		Cover:           "",
@@ -75,8 +75,13 @@ func (u *ClipService) GetClipId(clipId primitive.ObjectID) (*clipdomain.Clip, er
 
 func (u *ClipService) GetClipsNameUser(page int, NameUser string) ([]clipdomain.Clip, error) {
 
-	Clips, errGetFollowedUsers := u.ClipRepository.GetClipsNameUser(page, NameUser)
-	return Clips, errGetFollowedUsers
+	Clips, err := u.ClipRepository.GetClipsNameUser(page, NameUser)
+	return Clips, err
+}
+func (u *ClipService) GetClipsCategory(page int, Category string) ([]clipdomain.Clip, error) {
+
+	Clips, err := u.ClipRepository.GetClipsCategory(page, Category)
+	return Clips, err
 }
 
 // func (u *ClipService) ExtractFrameFromVideo(videoPath, outputPath, ffmpegPath string) error {
