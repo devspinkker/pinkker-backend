@@ -214,8 +214,35 @@ func (clip *ClipHandler) GetClipsCategory(c *fiber.Ctx) error {
 		page = 1
 	}
 	Category := c.Query("Category")
+	lastClip := c.Query("lastClip")
 
-	Clips, errClipsGetFollow := clip.ClipService.GetClipsCategory(page, Category)
+	lastClipId, err := primitive.ObjectIDFromHex(lastClip)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+	Clips, errClipsGetFollow := clip.ClipService.GetClipsCategory(page, Category, lastClipId)
+	if errClipsGetFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errClipsGetFollow.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Clips,
+	})
+}
+func (clip *ClipHandler) GetClipsMostViewed(c *fiber.Ctx) error {
+
+	page, errpage := strconv.Atoi(c.Query("page", "1"))
+	if errpage != nil || page < 1 {
+		page = 1
+	}
+
+	Clips, errClipsGetFollow := clip.ClipService.GetClipsMostViewed(page)
 	if errClipsGetFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
