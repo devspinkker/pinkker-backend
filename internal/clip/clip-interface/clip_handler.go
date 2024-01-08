@@ -209,19 +209,23 @@ func (clip *ClipHandler) GetClipsNameUser(c *fiber.Ctx) error {
 }
 func (clip *ClipHandler) GetClipsCategory(c *fiber.Ctx) error {
 
-	page, errpage := strconv.Atoi(c.Query("page", "1"))
-	if errpage != nil || page < 1 {
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
 		page = 1
 	}
 	Category := c.Query("Category")
 	lastClip := c.Query("lastClip")
-
-	lastClipId, err := primitive.ObjectIDFromHex(lastClip)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "StatusBadRequest",
-			"data":    err.Error(),
-		})
+	var lastClipId primitive.ObjectID
+	if lastClip == "" {
+		lastClipId = primitive.ObjectID{}
+	} else {
+		lastClipId, err = primitive.ObjectIDFromHex(lastClip)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": "StatusBadRequest",
+				"data":    err.Error(),
+			})
+		}
 	}
 	Clips, errClipsGetFollow := clip.ClipService.GetClipsCategory(page, Category, lastClipId)
 	if errClipsGetFollow != nil {
