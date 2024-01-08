@@ -76,9 +76,14 @@ func (u *ClipService) GetClipsNameUser(page int, NameUser string) ([]clipdomain.
 	Clips, err := u.ClipRepository.GetClipsNameUser(page, NameUser)
 	return Clips, err
 }
-func (u *ClipService) GetClipsCategory(page int, Category string) ([]clipdomain.Clip, error) {
+func (u *ClipService) GetClipsCategory(page int, Category string, lastClipID primitive.ObjectID) ([]clipdomain.Clip, error) {
 
-	Clips, err := u.ClipRepository.GetClipsCategory(page, Category)
+	Clips, err := u.ClipRepository.GetClipsCategory(page, Category, lastClipID)
+	return Clips, err
+}
+func (u *ClipService) GetClipsMostViewed(page int) ([]clipdomain.Clip, error) {
+
+	Clips, err := u.ClipRepository.GetClipsMostViewed(page)
 	return Clips, err
 }
 func (u *ClipService) LikeClip(idClip primitive.ObjectID, idValueToken primitive.ObjectID) error {

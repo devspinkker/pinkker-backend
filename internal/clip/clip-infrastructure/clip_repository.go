@@ -165,14 +165,23 @@ func (c *ClipRepository) GetClipsNameUser(page int, GetClipsNameUser string) ([]
 
 	return clips, nil
 }
-func (c *ClipRepository) GetClipsCategory(page int, Category string) ([]clipdomain.Clip, error) {
+func (c *ClipRepository) GetClipsCategory(page int, Category string, lastClipID primitive.ObjectID) ([]clipdomain.Clip, error) {
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
 	options := options.Find()
-	options.SetSort(bson.D{{"TimeStamp", -1}})
+	options.SetSort(bson.D{{"_id", -1}}) // Ordenar por _id en orden descendente
 	options.SetSkip(int64((page - 1) * 10))
 	options.SetLimit(10)
-	filter := bson.D{{"Category", Category}}
+
+	var filter bson.D
+	if Category != "" {
+		filter = bson.D{{"Category", Category}}
+	}
+
+	// Si lastClipID no está vacío, añade un filtro para traer clips después de este _id
+	if !lastClipID.IsZero() {
+		filter = append(filter, bson.E{"_id", bson.M{"$lt": lastClipID}})
+	}
 
 	cursor, err := GoMongoDBColl.Find(context.Background(), filter, options)
 	if err != nil {
@@ -187,6 +196,30 @@ func (c *ClipRepository) GetClipsCategory(page int, Category string) ([]clipdoma
 
 	return clips, nil
 }
+func (c *ClipRepository) GetClipsMostViewed(page int) ([]clipdomain.Clip, error) {
+	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+
+	options := options.Find()
+	options.SetSort(bson.D{{"Views", -1}})
+	options.SetSkip(int64((page - 1) * 10))
+	options.SetLimit(10)
+
+	filter := bson.D{}
+
+	cursor, err := GoMongoDBColl.Find(context.Background(), filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var clips []clipdomain.Clip
+	if err := cursor.All(context.Background(), &clips); err != nil {
+		return nil, err
+	}
+
+	return clips, nil
+}
+
 func (c *ClipRepository) LikeClip(ClipId, idValueToken primitive.ObjectID) error {
 	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBColl := GoMongoDB.Collection("Clips")
