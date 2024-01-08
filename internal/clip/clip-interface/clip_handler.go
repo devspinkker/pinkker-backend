@@ -237,6 +237,7 @@ func (clip *ClipHandler) CliptLike(c *fiber.Ctx) error {
 	if err := c.BodyParser(&IDClipReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
+			"data":    err.Error(),
 		})
 	}
 
@@ -244,6 +245,7 @@ func (clip *ClipHandler) CliptLike(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
+			"data":    err.Error(),
 		})
 	}
 	idValue := c.Context().UserValue("_id").(string)
@@ -251,6 +253,7 @@ func (clip *ClipHandler) CliptLike(c *fiber.Ctx) error {
 	if errorID != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
+			"data":    errorID.Error(),
 		})
 	}
 
@@ -273,6 +276,7 @@ func (clip *ClipHandler) ClipDislike(c *fiber.Ctx) error {
 	if err := c.BodyParser(&IDClipReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
+			"data":    err.Error(),
 		})
 	}
 
@@ -280,6 +284,7 @@ func (clip *ClipHandler) ClipDislike(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
+			"data":    err.Error(),
 		})
 	}
 	idValue := c.Context().UserValue("_id").(string)
@@ -287,6 +292,7 @@ func (clip *ClipHandler) ClipDislike(c *fiber.Ctx) error {
 	if errorID != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
+			"data":    errorID.Error(),
 		})
 	}
 
