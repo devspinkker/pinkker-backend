@@ -48,7 +48,7 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		Avatar:          user.Avatar,
 		ClipTitle:       ClipTitle,
 		URL:             outputFilePath,
-		Likes:           []string{},
+		Likes:           []primitive.ObjectID{},
 		StreamThumbnail: CategorieStream.StreamThumbnail,
 		Category:        CategorieStream.StreamCategory,
 		Duration:        10,
@@ -56,7 +56,7 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		Cover:           "",
 		TotalLikes:      0,
 		TotalRetweets:   0,
-		TotalComments:   0,
+		Comments:        []primitive.ObjectID{},
 		Timestamps:      timeStamps,
 	}
 	clip, err = u.ClipRepository.SaveClip(clip)
@@ -82,6 +82,15 @@ func (u *ClipService) GetClipsCategory(page int, Category string) ([]clipdomain.
 
 	Clips, err := u.ClipRepository.GetClipsCategory(page, Category)
 	return Clips, err
+}
+func (u *ClipService) LikeClip(idClip primitive.ObjectID, idValueToken primitive.ObjectID) error {
+	err := u.ClipRepository.LikeClip(idClip, idValueToken)
+	return err
+}
+
+func (u *ClipService) ClipDislike(idClip primitive.ObjectID, idValueToken primitive.ObjectID) error {
+	err := u.ClipRepository.ClipDislike(idClip, idValueToken)
+	return err
 }
 
 // func (u *ClipService) ExtractFrameFromVideo(videoPath, outputPath, ffmpegPath string) error {

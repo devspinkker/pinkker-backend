@@ -227,3 +227,77 @@ func (clip *ClipHandler) GetClipsCategory(c *fiber.Ctx) error {
 		"data":    Clips,
 	})
 }
+
+func (clip *ClipHandler) CliptLike(c *fiber.Ctx) error {
+	type IDClipT struct {
+		IDClip string `json:"ClipId"`
+	}
+
+	var IDClipReq IDClipT
+	if err := c.BodyParser(&IDClipReq); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	IDClip, err := primitive.ObjectIDFromHex(IDClipReq.IDClip)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	errLike := clip.ClipService.LikeClip(IDClip, idValueToken)
+	if errLike != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errLike.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Like",
+	})
+}
+func (clip *ClipHandler) ClipDislike(c *fiber.Ctx) error {
+	type IDClipT struct {
+		IDClip string `json:"ClipId"`
+	}
+	var IDClipReq IDClipT
+	if err := c.BodyParser(&IDClipReq); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	IDClip, err := primitive.ObjectIDFromHex(IDClipReq.IDClip)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	errLike := clip.ClipService.ClipDislike(IDClip, idValueToken)
+	if errLike != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errLike.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Dislike",
+	})
+}

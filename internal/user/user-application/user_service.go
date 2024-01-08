@@ -43,6 +43,7 @@ func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avat
 	modelNewUser.Likes = []primitive.ObjectID{}
 	modelNewUser.Followers = []primitive.ObjectID{}
 	modelNewUser.Following = []primitive.ObjectID{}
+	modelNewUser.ClipsLikes = []primitive.ObjectID{}
 	modelNewUser.Verified = false
 	modelNewUser.Wallet = newUser.Wallet
 	modelNewUser.Subscribers = []domain.Subscriber{}
