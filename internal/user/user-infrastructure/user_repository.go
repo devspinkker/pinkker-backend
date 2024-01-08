@@ -290,7 +290,9 @@ func (r *UserRepository) Subscription(Source, Destination primitive.ObjectID) er
 	if err != nil {
 		return err
 	}
-
+	if sourceUser.Pixeles < 1000 {
+		return errors.New("pixeles insufficient")
+	}
 	// Verificar si el usuario que recibe ya está suscrito
 	var existingSubscription *userdomain.Subscription
 	for _, subscription := range sourceUser.Subscriptions {
