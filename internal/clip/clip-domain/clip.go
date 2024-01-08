@@ -9,23 +9,23 @@ import (
 )
 
 type Clip struct {
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	NameUserCreator string             `json:"nameUserCreator" bson:"NameUserCreator"`
-	IDCreator       primitive.ObjectID `json:"idCreator" bson:"IDCreator"`
-	NameUser        string             `json:"streamerId" bson:"StreamerID"`
-	StreamThumbnail string             `json:"streamThumbnail" bson:"StreamThumbnail"`
-	Category        string             `json:"category" bson:"Category"`
-	UserID          primitive.ObjectID `json:"userId" bson:"UserID"`
-	Avatar          string             `json:"Avatar" bson:"Avatar"`
-	ClipTitle       string             `json:"clipTitle" bson:"ClipTitle"`
-	URL             string             `json:"url" bson:"url"`
-	Likes           []string           `json:"likes" bson:"likes"`
-	Duration        int                `json:"duration" bson:"duration"`
-	Views           int                `json:"views" bson:"views"`
-	Cover           string             `json:"cover" bson:"cover"`
-	TotalLikes      int                `json:"totalLikes" bson:"totalLikes"`
-	TotalRetweets   int                `json:"totalRetweets" bson:"totalRetweets"`
-	TotalComments   int                `json:"totalComments" bson:"totalComments"`
+	ID              primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	NameUserCreator string               `json:"nameUserCreator" bson:"NameUserCreator"`
+	IDCreator       primitive.ObjectID   `json:"idCreator" bson:"IDCreator"`
+	NameUser        string               `json:"streamerId" bson:"StreamerID"`
+	StreamThumbnail string               `json:"streamThumbnail" bson:"StreamThumbnail"`
+	Category        string               `json:"category" bson:"Category"`
+	UserID          primitive.ObjectID   `json:"userId" bson:"UserID"`
+	Avatar          string               `json:"Avatar" bson:"Avatar"`
+	ClipTitle       string               `json:"clipTitle" bson:"ClipTitle"`
+	URL             string               `json:"url" bson:"url"`
+	Likes           []primitive.ObjectID `json:"likes" bson:"likes"`
+	Duration        int                  `json:"duration" bson:"duration"`
+	Views           int                  `json:"views" bson:"views"`
+	Cover           string               `json:"cover" bson:"cover"`
+	TotalLikes      int                  `json:"totalLikes" bson:"totalLikes"`
+	TotalRetweets   int                  `json:"totalRetweets" bson:"totalRetweets"`
+	Comments        []primitive.ObjectID `json:"comments" bson:"Comments"`
 	Timestamps      struct {
 		CreatedAt time.Time `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 		UpdatedAt time.Time `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
@@ -35,7 +35,7 @@ type ClipRequest struct {
 	Video     []byte `json:"video" validate:"required"`
 	Start     int    `json:"start" validate:"required"`
 	End       int    `json:"end" validate:"required"`
-	ClipTitle string `json:"clipTitle" validate:"required,min=2,max=30"`
+	ClipTitle string `json:"clipTitle" validate:"required,min=2,max=100"`
 	TotalKey  string `json:"totalKey" validate:"required"`
 }
 

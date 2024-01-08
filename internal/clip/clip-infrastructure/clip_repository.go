@@ -7,6 +7,7 @@ import (
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
@@ -185,4 +186,67 @@ func (c *ClipRepository) GetClipsCategory(page int, Category string) ([]clipdoma
 	}
 
 	return clips, nil
+}
+func (c *ClipRepository) LikeClip(ClipId, idValueToken primitive.ObjectID) error {
+	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBColl := GoMongoDB.Collection("Clips")
+
+	count, err := GoMongoDBColl.CountDocuments(context.Background(), bson.D{{Key: "_id", Value: ClipId}})
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return fmt.Errorf("el ClipId no existe")
+	}
+	filter := bson.D{{Key: "_id", Value: ClipId}}
+	update := bson.D{{Key: "$addToSet", Value: bson.D{{Key: "Likes", Value: idValueToken}}}}
+
+	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+	GoMongoDBColl = GoMongoDB.Collection("Users")
+
+	filter = bson.D{{Key: "_id", Value: idValueToken}}
+	update = bson.D{{Key: "$addToSet", Value: bson.D{{Key: "ClipsLikes", Value: ClipId}}}}
+
+	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (c *ClipRepository) ClipDislike(ClipId, idValueToken primitive.ObjectID) error {
+	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBColl := GoMongoDB.Collection("Clips")
+
+	count, err := GoMongoDBColl.CountDocuments(context.Background(), bson.D{{Key: "_id", Value: ClipId}})
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return fmt.Errorf("el ClipId no existe")
+	}
+	filter := bson.D{{Key: "_id", Value: ClipId}}
+	update := bson.D{{Key: "$pull", Value: bson.D{{Key: "Likes", Value: idValueToken}}}}
+
+	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+	GoMongoDBColl = GoMongoDB.Collection("Users")
+
+	filter = bson.D{{Key: "_id", Value: idValueToken}}
+	update = bson.D{{Key: "$pull", Value: bson.D{{Key: "ClipsLikes", Value: ClipId}}}}
+
+	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }
