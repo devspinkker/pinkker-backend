@@ -23,8 +23,6 @@ type Clip struct {
 	Duration        int                  `json:"duration" bson:"duration"`
 	Views           int                  `json:"views" bson:"views"`
 	Cover           string               `json:"cover" bson:"cover"`
-	TotalLikes      int                  `json:"totalLikes" bson:"totalLikes"`
-	TotalRetweets   int                  `json:"totalRetweets" bson:"totalRetweets"`
 	Comments        []primitive.ObjectID `json:"comments" bson:"Comments"`
 	Timestamps      struct {
 		CreatedAt time.Time `json:"createdAt,omitempty" bson:"createdAt,omitempty"`

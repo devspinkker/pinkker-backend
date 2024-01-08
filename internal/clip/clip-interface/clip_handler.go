@@ -228,10 +228,11 @@ func (clip *ClipHandler) GetClipsCategory(c *fiber.Ctx) error {
 	})
 }
 
+type IDClipT struct {
+	IDClip string `json:"ClipId"`
+}
+
 func (clip *ClipHandler) CliptLike(c *fiber.Ctx) error {
-	type IDClipT struct {
-		IDClip string `json:"ClipId"`
-	}
 
 	var IDClipReq IDClipT
 	if err := c.BodyParser(&IDClipReq); err != nil {
@@ -269,9 +270,7 @@ func (clip *ClipHandler) CliptLike(c *fiber.Ctx) error {
 	})
 }
 func (clip *ClipHandler) ClipDislike(c *fiber.Ctx) error {
-	type IDClipT struct {
-		IDClip string `json:"ClipId"`
-	}
+
 	var IDClipReq IDClipT
 	if err := c.BodyParser(&IDClipReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

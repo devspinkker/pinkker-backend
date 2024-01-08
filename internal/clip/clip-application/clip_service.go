@@ -54,8 +54,6 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		Duration:        10,
 		Views:           0,
 		Cover:           "",
-		TotalLikes:      0,
-		TotalRetweets:   0,
 		Comments:        []primitive.ObjectID{},
 		Timestamps:      timeStamps,
 	}
