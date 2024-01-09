@@ -95,6 +95,10 @@ func (u *ClipService) ClipDislike(idClip primitive.ObjectID, idValueToken primit
 	err := u.ClipRepository.ClipDislike(idClip, idValueToken)
 	return err
 }
+func (u *ClipService) MoreViewOfTheClip(idClip primitive.ObjectID) error {
+	err := u.ClipRepository.MoreViewOfTheClip(idClip)
+	return err
+}
 
 // func (u *ClipService) ExtractFrameFromVideo(videoPath, outputPath, ffmpegPath string) error {
 // 	transcoder.FFmpegBin = ffmpegPath
