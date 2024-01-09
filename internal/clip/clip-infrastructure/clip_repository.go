@@ -283,3 +283,14 @@ func (c *ClipRepository) ClipDislike(ClipId, idValueToken primitive.ObjectID) er
 	return nil
 
 }
+func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID) error {
+
+	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBColl := GoMongoDB.Collection("Clips")
+
+	filter := bson.D{{Key: "_id", Value: ClipId}}
+	update := bson.D{{Key: "$inc", Value: bson.D{{Key: "views", Value: 1}}}}
+
+	_, err := GoMongoDBColl.UpdateOne(context.Background(), filter, update)
+	return err
+}
