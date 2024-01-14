@@ -117,7 +117,7 @@ func (u *UserRepository) CreateStreamUser(user *domain.User, id primitive.Object
 		StreamerID:         id,
 		Streamer:           user.NameUser,
 		StreamTitle:        "Your Title",
-		StreamCategory:     "Charlando",
+		StreamCategory:     "Just Chatting",
 		StreamNotification: user.NameUser + " is live!",
 		StreamerAvatar:     user.Avatar,
 		StreamTag:          []string{"Español"},
@@ -290,6 +290,9 @@ func (r *UserRepository) Subscription(Source, Destination primitive.ObjectID) er
 	if err != nil {
 		return err
 	}
+	if sourceUser.ID == destUser.ID {
+		return errors.New("You can't subscribe to yourself")
+	}
 	if sourceUser.Pixeles < 1000 {
 		return errors.New("pixeles insufficient")
 	}
@@ -356,10 +359,8 @@ func (r *UserRepository) addSubscription(sourceUser *userdomain.User, destUser *
 
 // Actualiza una suscripción existente
 func (r *UserRepository) updateSubscription(subscription *userdomain.Subscription, subscriptionStart, subscriptionEnd time.Time) {
-
 	subscription.SubscriptionStart = subscriptionStart
 	subscription.SubscriptionEnd = subscriptionEnd
-	// No es necesario actualizar MonthsSubscribed, ya que comenzamos desde 1
 }
 
 // Actualiza el usuario que da en MongoDB
