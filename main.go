@@ -3,7 +3,6 @@ package main
 import (
 	"PINKKER-BACKEND/config"
 	cliproutes "PINKKER-BACKEND/internal/clip/clip-routes"
-	cryptoroutes "PINKKER-BACKEND/internal/crypto/crypto-routes"
 	donationroutes "PINKKER-BACKEND/internal/donation/donation-routes"
 	streamroutes "PINKKER-BACKEND/internal/stream/stream-routes"
 	tweetroutes "PINKKER-BACKEND/internal/tweet/tweet-routes"
@@ -40,10 +39,7 @@ func main() {
 	donationroutes.DonatioRoutes(app, redisClient, newMongoDB)
 	// streams
 	streamroutes.StreamsRoutes(app, redisClient, newMongoDB)
-	// crypto
-	cryptoroutes.CryptoRoutes(app, redisClient, newMongoDB)
 	// clips
-
 	cliproutes.ClipRoutes(app, redisClient, newMongoDB)
 
 	PORT := config.PORT()
