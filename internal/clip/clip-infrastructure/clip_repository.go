@@ -29,7 +29,7 @@ func NewClipRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Cl
 }
 
 func (c *ClipRepository) SaveClip(clip *clipdomain.Clip) (*clipdomain.Clip, error) {
-	database := c.mongoClient.Database("PINKKER-BACKEND")
+	database := c.mongoClient.Database("pinkker")
 	clipCollection := database.Collection("Clips")
 	userCollection := database.Collection("Users")
 
@@ -61,7 +61,7 @@ func (c *ClipRepository) SaveClip(clip *clipdomain.Clip) (*clipdomain.Clip, erro
 	return clip, err
 }
 func (c *ClipRepository) UpdateClip(clipID primitive.ObjectID, newURL string) {
-	clipCollection := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+	clipCollection := c.mongoClient.Database("pinkker").Collection("Clips")
 
 	filter := bson.M{"_id": clipID}
 
@@ -73,7 +73,7 @@ func (c *ClipRepository) UpdateClip(clipID primitive.ObjectID, newURL string) {
 
 }
 func (c *ClipRepository) UpdateClipPreviouImage(clipID primitive.ObjectID, newURL string) {
-	clipCollection := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+	clipCollection := c.mongoClient.Database("pinkker").Collection("Clips")
 
 	filter := bson.M{"_id": clipID}
 
@@ -85,7 +85,7 @@ func (c *ClipRepository) UpdateClipPreviouImage(clipID primitive.ObjectID, newUR
 
 }
 func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Clip, error) {
-	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+	GoMongoDBColl := c.mongoClient.Database("pinkker").Collection("Clips")
 	FindClipInDb := bson.D{
 		{Key: "_id", Value: IdClip},
 	}
@@ -114,7 +114,7 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Cli
 }
 
 func (c *ClipRepository) FindUser(totalKey string) (*userdomain.User, error) {
-	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := c.mongoClient.Database("pinkker").Collection("Users")
 	var FindUserInDb primitive.D
 	FindUserInDb = bson.D{
 		{Key: "KeyTransmission", Value: "live" + totalKey},
@@ -124,7 +124,7 @@ func (c *ClipRepository) FindUser(totalKey string) (*userdomain.User, error) {
 	return findUserInDbExist, errCollUsers
 }
 func (c *ClipRepository) FindUserId(FindUserId string) (*userdomain.User, error) {
-	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := c.mongoClient.Database("pinkker").Collection("Users")
 	var FindUserInDb primitive.D
 	FindUserInDb = bson.D{
 		{Key: "NameUser", Value: FindUserId},
@@ -134,7 +134,7 @@ func (c *ClipRepository) FindUserId(FindUserId string) (*userdomain.User, error)
 	return findUserInDbExist, errCollUsers
 }
 func (c *ClipRepository) FindCategorieStream(StreamerID primitive.ObjectID) (*streamdomain.Stream, error) {
-	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBColl := c.mongoClient.Database("pinkker").Collection("Streams")
 	var FindInDb primitive.D
 	FindInDb = bson.D{
 		{Key: "StreamerID", Value: StreamerID},
@@ -144,7 +144,7 @@ func (c *ClipRepository) FindCategorieStream(StreamerID primitive.ObjectID) (*st
 	return findStream, errCollUsers
 }
 func (c *ClipRepository) GetClipsNameUser(page int, GetClipsNameUser string) ([]clipdomain.Clip, error) {
-	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+	GoMongoDBColl := c.mongoClient.Database("pinkker").Collection("Clips")
 
 	options := options.Find()
 	options.SetSort(bson.D{{"TimeStamp", -1}})
@@ -166,7 +166,7 @@ func (c *ClipRepository) GetClipsNameUser(page int, GetClipsNameUser string) ([]
 	return clips, nil
 }
 func (c *ClipRepository) GetClipsCategory(page int, Category string, lastClipID primitive.ObjectID) ([]clipdomain.Clip, error) {
-	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+	GoMongoDBColl := c.mongoClient.Database("pinkker").Collection("Clips")
 
 	options := options.Find()
 	options.SetSort(bson.D{{"_id", -1}}) // Ordenar por _id en orden descendente
@@ -197,7 +197,7 @@ func (c *ClipRepository) GetClipsCategory(page int, Category string, lastClipID 
 	return clips, nil
 }
 func (c *ClipRepository) GetClipsMostViewed(page int) ([]clipdomain.Clip, error) {
-	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+	GoMongoDBColl := c.mongoClient.Database("pinkker").Collection("Clips")
 
 	options := options.Find()
 	options.SetSort(bson.D{{"Views", -1}})
@@ -221,7 +221,7 @@ func (c *ClipRepository) GetClipsMostViewed(page int) ([]clipdomain.Clip, error)
 }
 
 func (c *ClipRepository) LikeClip(ClipId, idValueToken primitive.ObjectID) error {
-	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDB := c.mongoClient.Database("pinkker")
 	GoMongoDBColl := GoMongoDB.Collection("Clips")
 
 	count, err := GoMongoDBColl.CountDocuments(context.Background(), bson.D{{Key: "_id", Value: ClipId}})
@@ -252,7 +252,7 @@ func (c *ClipRepository) LikeClip(ClipId, idValueToken primitive.ObjectID) error
 	return nil
 }
 func (c *ClipRepository) ClipDislike(ClipId, idValueToken primitive.ObjectID) error {
-	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDB := c.mongoClient.Database("pinkker")
 	GoMongoDBColl := GoMongoDB.Collection("Clips")
 
 	count, err := GoMongoDBColl.CountDocuments(context.Background(), bson.D{{Key: "_id", Value: ClipId}})
@@ -285,7 +285,7 @@ func (c *ClipRepository) ClipDislike(ClipId, idValueToken primitive.ObjectID) er
 }
 func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID) error {
 
-	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDB := c.mongoClient.Database("pinkker")
 	GoMongoDBColl := GoMongoDB.Collection("Clips")
 
 	filter := bson.D{{Key: "_id", Value: ClipId}}

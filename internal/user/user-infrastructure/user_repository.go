@@ -29,7 +29,7 @@ func NewUserRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Us
 }
 
 func (u *UserRepository) SaveUserDB(User *domain.User) (primitive.ObjectID, error) {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := u.mongoClient.Database("pinkker").Collection("Users")
 
 	insertResult, errInsertOne := GoMongoDBCollUsers.InsertOne(context.Background(), User)
 	if errInsertOne != nil {
@@ -39,7 +39,7 @@ func (u *UserRepository) SaveUserDB(User *domain.User) (primitive.ObjectID, erro
 	return insertedID, nil
 }
 func (u *UserRepository) FindNameUser(NameUser string, Email string) (*domain.User, error) {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := u.mongoClient.Database("pinkker").Collection("Users")
 	var FindUserInDb primitive.D
 	if Email == "" {
 		FindUserInDb = bson.D{
@@ -61,7 +61,7 @@ func (u *UserRepository) FindNameUser(NameUser string, Email string) (*domain.Us
 	return findUserInDbExist, errCollUsers
 }
 func (u *UserRepository) FindUserById(id primitive.ObjectID) (*domain.User, error) {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := u.mongoClient.Database("pinkker").Collection("Users")
 	var FindUserInDb primitive.D
 	FindUserInDb = bson.D{
 		{Key: "_id", Value: id},
@@ -71,7 +71,7 @@ func (u *UserRepository) FindUserById(id primitive.ObjectID) (*domain.User, erro
 	return FindUserById, errCollUsers
 }
 func (u *UserRepository) GetUserBykey(key string) (*domain.User, error) {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := u.mongoClient.Database("pinkker").Collection("Users")
 	var FindUserInDb primitive.D
 	FindUserInDb = bson.D{
 		{Key: "KeyTransmission", Value: key},
@@ -96,7 +96,7 @@ func (u *UserRepository) SendConfirmationEmail(Email string, Token string) error
 	return nil
 }
 func (u *UserRepository) UpdateConfirmationEmailToken(user *domain.User) error {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := u.mongoClient.Database("pinkker").Collection("Users")
 	FindUserInDb := bson.D{
 		{Key: "NameUser", Value: user.NameUser},
 	}
@@ -111,7 +111,7 @@ func (u *UserRepository) UpdateConfirmationEmailToken(user *domain.User) error {
 
 // create Stream documment
 func (u *UserRepository) CreateStreamUser(user *domain.User, id primitive.ObjectID) error {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBCollUsers := u.mongoClient.Database("pinkker").Collection("Streams")
 
 	newStream := streamdomain.Stream{
 		StreamerID:         id,
@@ -132,7 +132,7 @@ func (u *UserRepository) CreateStreamUser(user *domain.User, id primitive.Object
 
 // follow
 func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.ObjectID) error {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := u.mongoClient.Database("pinkker").Collection("Users")
 
 	// Agregar el followedUserID al campo Following del usuario que sigue
 	updateFollowing := bson.D{
@@ -156,7 +156,7 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 }
 
 func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectID) error {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := u.mongoClient.Database("pinkker").Collection("Users")
 
 	updateFollowing := bson.D{
 		{Key: "$pull", Value: bson.D{{Key: "Following", Value: unfollowedUserID}}},
@@ -184,7 +184,7 @@ func (u *UserRepository) FindEmailForOauth2Updata(user *domain.Google_callback_C
 		if err != mongo.ErrNoDocuments {
 			return nil, err
 		}
-		GoMongoDBColl := u.mongoClient.Database("PINKKER-BACKEND")
+		GoMongoDBColl := u.mongoClient.Database("pinkker")
 
 		GoMongoDBCollUsers := GoMongoDBColl.Collection("Users")
 		GoMongoDBCollStreams := GoMongoDBColl.Collection("Streams")
@@ -240,7 +240,7 @@ func (u *UserRepository) FindEmailForOauth2Updata(user *domain.Google_callback_C
 
 }
 func (u *UserRepository) EditProfile(profile domain.EditProfile, id primitive.ObjectID) error {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := u.mongoClient.Database("pinkker").Collection("Users")
 	filter := bson.M{"_id": id}
 	update := bson.M{
 		"$set": bson.M{
@@ -258,7 +258,7 @@ func (u *UserRepository) EditProfile(profile domain.EditProfile, id primitive.Ob
 	return err
 }
 func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error {
-	GoMongoDB := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDB := u.mongoClient.Database("pinkker")
 	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
 	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
 
@@ -281,7 +281,7 @@ func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error 
 	return err
 }
 func (r *UserRepository) Subscription(Source, Destination primitive.ObjectID) error {
-	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	usersCollection := r.mongoClient.Database("pinkker").Collection("Users")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*24*time.Hour)
 	defer cancel()
@@ -377,7 +377,7 @@ func (r *UserRepository) updateUserSource(ctx context.Context, user *userdomain.
 		return err
 	}
 
-	database := r.mongoClient.Database("PINKKER-BACKEND")
+	database := r.mongoClient.Database("pinkker")
 
 	// Obtén la información del stream
 	streamFilter := bson.M{"StreamerID": Destination}

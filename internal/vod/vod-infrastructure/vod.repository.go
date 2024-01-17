@@ -27,7 +27,7 @@ func NewVodRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Vod
 	}
 }
 func (v *VodRepository) GetVodsByStreamer(streamer string, limit string, sort string) ([]*voddomain.Vod, error) {
-	GoMongoDBCollVod := v.mongoClient.Database("PINKKER-BACKEND").Collection("Vod")
+	GoMongoDBCollVod := v.mongoClient.Database("pinkker").Collection("Vod")
 	var FindvodInDb primitive.D
 	FindvodInDb = bson.D{
 		{Key: "Streamer", Value: streamer},
@@ -67,7 +67,7 @@ func (v *VodRepository) GetVodsByStreamer(streamer string, limit string, sort st
 }
 
 func (v *VodRepository) GetVodWithId(vodId string) (*voddomain.Vod, error) {
-	GoMongoDBCollVod := v.mongoClient.Database("PINKKER-BACKEND").Collection("Vod")
+	GoMongoDBCollVod := v.mongoClient.Database("pinkker").Collection("Vod")
 	var FindvodInDb primitive.D
 	FindvodInDb = bson.D{
 		{Key: "_id", Value: vodId},
@@ -78,7 +78,7 @@ func (v *VodRepository) GetVodWithId(vodId string) (*voddomain.Vod, error) {
 	return findVodInDbExist, errCollUsers
 }
 func (v *VodRepository) GetUserByStreamKey(streamKey string) (*userdomain.User, error) {
-	GoMongoDBCollUsers := v.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := v.mongoClient.Database("pinkker").Collection("Users")
 	var FindUserInDb primitive.D
 	FindUserInDb = bson.D{
 		{Key: "KeyTransmission", Value: "live" + streamKey},
@@ -90,7 +90,7 @@ func (v *VodRepository) GetUserByStreamKey(streamKey string) (*userdomain.User, 
 }
 
 func (v *VodRepository) GetStreamByStreamer(streamer string) (*streamdomain.Stream, error) {
-	GoMongoDBCollStreams := v.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBCollStreams := v.mongoClient.Database("pinkker").Collection("Streams")
 	var FindStreamInDb primitive.D
 	FindStreamInDb = bson.D{
 		{Key: "Streamer", Value: streamer},
@@ -102,7 +102,7 @@ func (v *VodRepository) GetStreamByStreamer(streamer string) (*streamdomain.Stre
 }
 
 func (v *VodRepository) CreateVod(vod *voddomain.Vod) error {
-	GoMongoDBCollVod := v.mongoClient.Database("PINKKER-BACKEND").Collection("Vod")
+	GoMongoDBCollVod := v.mongoClient.Database("pinkker").Collection("Vod")
 	_, err := GoMongoDBCollVod.InsertOne(context.Background(), vod)
 	return err
 }

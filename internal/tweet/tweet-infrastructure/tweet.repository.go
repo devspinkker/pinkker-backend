@@ -29,7 +29,7 @@ func NewTweetRepository(redisClient *redis.Client, mongoClient *mongo.Client) *T
 
 // Save
 func (t *TweetRepository) TweetSave(Tweet tweetdomain.Post) error {
-	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBCollUsers := t.mongoClient.Database("pinkker").Collection("Post")
 
 	_, errInsertOne := GoMongoDBCollUsers.InsertOne(context.Background(), Tweet)
 	if errInsertOne != nil {
@@ -39,14 +39,14 @@ func (t *TweetRepository) TweetSave(Tweet tweetdomain.Post) error {
 }
 
 func (t *TweetRepository) SaveComment(tweetComment *tweetdomain.PostComment) error {
-	GoMongoDBCollComments := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBCollComments := t.mongoClient.Database("pinkker").Collection("Post")
 
 	res, errInsertOne := GoMongoDBCollComments.InsertOne(context.Background(), tweetComment)
 	if errInsertOne != nil {
 		return errInsertOne
 	}
 
-	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBCollTweets := t.mongoClient.Database("pinkker").Collection("Post")
 	filter := bson.M{"_id": tweetComment.OriginalPost}
 	update := bson.M{"$push": bson.M{"Comments": res.InsertedID}}
 
@@ -60,7 +60,7 @@ func (t *TweetRepository) SaveComment(tweetComment *tweetdomain.PostComment) err
 
 func (t *TweetRepository) FindTweetbyId(idTweet primitive.ObjectID) (tweetdomain.Post, error) {
 
-	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBCollUsers := t.mongoClient.Database("pinkker").Collection("Post")
 	findTweet := bson.D{
 		{Key: "_id", Value: idTweet},
 	}
@@ -74,7 +74,7 @@ func (t *TweetRepository) FindTweetbyId(idTweet primitive.ObjectID) (tweetdomain
 	return PostDocument, nil
 }
 func (t *TweetRepository) UpdateTweetbyId(tweet tweetdomain.Post) error {
-	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBCollTweets := t.mongoClient.Database("pinkker").Collection("Post")
 
 	filter := bson.D{{Key: "_id", Value: tweet.ID}}
 
@@ -94,7 +94,7 @@ func (t *TweetRepository) UpdateTweetbyId(tweet tweetdomain.Post) error {
 
 // Like
 func (t *TweetRepository) LikeTweet(TweetId, idValueToken primitive.ObjectID) error {
-	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBColl := t.mongoClient.Database("pinkker").Collection("Post")
 
 	count, err := GoMongoDBColl.CountDocuments(context.Background(), bson.D{{Key: "_id", Value: TweetId}})
 	if err != nil {
@@ -111,7 +111,7 @@ func (t *TweetRepository) LikeTweet(TweetId, idValueToken primitive.ObjectID) er
 	if err != nil {
 		return err
 	}
-	GoMongoDBColl = t.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBColl = t.mongoClient.Database("pinkker").Collection("Users")
 
 	filter = bson.D{{Key: "_id", Value: idValueToken}}
 	update = bson.D{{Key: "$addToSet", Value: bson.D{{Key: "Likes", Value: TweetId}}}}
@@ -125,7 +125,7 @@ func (t *TweetRepository) LikeTweet(TweetId, idValueToken primitive.ObjectID) er
 
 }
 func (t *TweetRepository) TweetDislike(TweetId, idValueToken primitive.ObjectID) error {
-	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBColl := t.mongoClient.Database("pinkker").Collection("Post")
 
 	count, err := GoMongoDBColl.CountDocuments(context.Background(), bson.D{{Key: "_id", Value: TweetId}})
 	if err != nil {
@@ -142,7 +142,7 @@ func (t *TweetRepository) TweetDislike(TweetId, idValueToken primitive.ObjectID)
 	if err != nil {
 		return err
 	}
-	GoMongoDBColl = t.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBColl = t.mongoClient.Database("pinkker").Collection("Users")
 
 	filter = bson.D{{Key: "_id", Value: idValueToken}}
 	update = bson.D{{Key: "$pull", Value: bson.D{{Key: "Likes", Value: TweetId}}}}
@@ -158,7 +158,7 @@ func (t *TweetRepository) TweetDislike(TweetId, idValueToken primitive.ObjectID)
 
 // find
 func (t *TweetRepository) GetFollowedUsers(idValueObj primitive.ObjectID) (userdomain.User, error) {
-	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollTweets := t.mongoClient.Database("pinkker").Collection("Users")
 	filter := bson.D{{Key: "_id", Value: idValueObj}}
 	var user userdomain.User
 	err := GoMongoDBCollTweets.FindOne(context.Background(), filter).Decode(&user)
@@ -166,7 +166,7 @@ func (t *TweetRepository) GetFollowedUsers(idValueObj primitive.ObjectID) (userd
 }
 func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, error) {
 
-	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBCollTweets := t.mongoClient.Database("pinkker").Collection("Post")
 
 	skip := (page - 1) * 10
 	pipeline := []bson.D{
@@ -277,7 +277,7 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 }
 func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
 
-	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBCollTweets := t.mongoClient.Database("pinkker").Collection("Post")
 
 	skip := (page - 1) * 10
 	pipeline := []bson.D{
@@ -388,7 +388,7 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 	return tweetsWithUserInfo, nil
 }
 func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectID, page int) ([]tweetdomain.TweetGetFollowReq, error) {
-	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBCollTweets := t.mongoClient.Database("pinkker").Collection("Post")
 	currentTime := time.Now()
 	last24Hours := currentTime.Add(-24 * time.Hour)
 	skip := (page - 1) * 13
@@ -505,7 +505,7 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 }
 
 func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int) ([]tweetdomain.TweetCommentsGetReq, error) {
-	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBCollTweets := t.mongoClient.Database("pinkker").Collection("Post")
 
 	var tweet tweetdomain.Post
 	if err := GoMongoDBCollTweets.FindOne(context.Background(), bson.M{"_id": tweetID}).Decode(&tweet); err != nil {
@@ -565,7 +565,7 @@ func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int) 
 	return comments, nil
 }
 func (t *TweetRepository) RePost(rePost *tweetdomain.RePost) error {
-	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBColl := t.mongoClient.Database("pinkker").Collection("Post")
 
 	filterRePost := bson.D{{Key: "UserID", Value: rePost.UserID}, {Key: "OriginalPost", Value: rePost.OriginalPost}}
 	existingRePost := GoMongoDBColl.FindOne(context.Background(), filterRePost)
@@ -602,7 +602,7 @@ func (t *TweetRepository) RePost(rePost *tweetdomain.RePost) error {
 	return errPull
 }
 func (t *TweetRepository) CitaPost(rePost *tweetdomain.CitaPost) error {
-	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	GoMongoDBColl := t.mongoClient.Database("pinkker").Collection("Post")
 
 	_, err := GoMongoDBColl.InsertOne(context.Background(), rePost)
 	return err

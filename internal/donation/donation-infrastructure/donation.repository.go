@@ -25,7 +25,7 @@ func NewDonationRepository(redisClient *redis.Client, mongoClient *mongo.Client)
 	}
 }
 func (d *DonationRepository) UserHasNumberPikels(FromUser primitive.ObjectID, Pixeles float64) error {
-	GoMongoDBCollUsers := d.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollUsers := d.mongoClient.Database("pinkker").Collection("Users")
 	filter := bson.M{"_id": FromUser, "Pixeles": bson.M{"$gte": Pixeles}}
 
 	err := GoMongoDBCollUsers.FindOne(context.Background(), filter)
@@ -43,8 +43,8 @@ func (d *DonationRepository) UserHasNumberPikels(FromUser primitive.ObjectID, Pi
 // DonatePixels transfiere pixeles de un usuario a otro
 func (d *DonationRepository) DonatePixels(FromUser, ToUser primitive.ObjectID, Pixels float64, text string) error {
 	// Obtener las colecciones "Users" y "Donations"
-	GoMongoDBCollUsers := d.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	GoMongoDBCollDonations := d.mongoClient.Database("PINKKER-BACKEND").Collection("Donations")
+	GoMongoDBCollUsers := d.mongoClient.Database("pinkker").Collection("Users")
+	GoMongoDBCollDonations := d.mongoClient.Database("pinkker").Collection("Donations")
 
 	// Iniciar una sesión para realizar las actualizaciones de manera transaccional
 	session, err := d.mongoClient.StartSession()
@@ -122,7 +122,7 @@ func (d *DonationRepository) DonatePixels(FromUser, ToUser primitive.ObjectID, P
 
 // donadores de pixeles con Notified en false
 func (d *DonationRepository) MyPixelesdonors(id primitive.ObjectID) ([]donationdomain.ResDonation, error) {
-	GoMongoDBCollDonations := d.mongoClient.Database("PINKKER-BACKEND").Collection("Donations")
+	GoMongoDBCollDonations := d.mongoClient.Database("pinkker").Collection("Donations")
 	filter := bson.D{
 		{Key: "ToUser", Value: id},
 		{Key: "Notified", Value: false},
@@ -175,7 +175,7 @@ func (d *DonationRepository) MyPixelesdonors(id primitive.ObjectID) ([]donationd
 
 // todos los donantes de Pixeles de user token
 func (d *DonationRepository) AllMyPixelesDonors(id primitive.ObjectID) ([]donationdomain.ResDonation, error) {
-	GoMongoDBCollDonations := d.mongoClient.Database("PINKKER-BACKEND").Collection("Donations")
+	GoMongoDBCollDonations := d.mongoClient.Database("pinkker").Collection("Donations")
 	filter := bson.D{
 		{Key: "ToUser", Value: id},
 	}
@@ -227,7 +227,7 @@ func (d *DonationRepository) AllMyPixelesDonors(id primitive.ObjectID) ([]donati
 
 // actualzaa el Notified
 func (d *DonationRepository) UpdateDonationsNotifiedStatus(donations []donationdomain.ResDonation) error {
-	GoMongoDBCollDonations := d.mongoClient.Database("PINKKER-BACKEND").Collection("Donations")
+	GoMongoDBCollDonations := d.mongoClient.Database("pinkker").Collection("Donations")
 	var donationsID []primitive.ObjectID
 	for _, value := range donations {
 		donationsID = append(donationsID, value.ID)
