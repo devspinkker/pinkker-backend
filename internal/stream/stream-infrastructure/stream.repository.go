@@ -29,7 +29,7 @@ func NewStreamRepository(redisClient *redis.Client, mongoClient *mongo.Client) *
 
 // get stream by id
 func (r *StreamRepository) GetStreamById(id primitive.ObjectID) (*streamdomain.Stream, error) {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBCollStreams := r.mongoClient.Database("pinkker").Collection("Streams")
 	FindStreamInDb := bson.D{
 		{Key: "StreamerID", Value: id},
 	}
@@ -40,7 +40,7 @@ func (r *StreamRepository) GetStreamById(id primitive.ObjectID) (*streamdomain.S
 
 // get stream by name user
 func (r *StreamRepository) GetStreamByNameUser(nameUser string) (*streamdomain.Stream, error) {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBCollStreams := r.mongoClient.Database("pinkker").Collection("Streams")
 	FindStreamInDb := bson.D{
 		{Key: "Streamer", Value: nameUser},
 	}
@@ -51,7 +51,7 @@ func (r *StreamRepository) GetStreamByNameUser(nameUser string) (*streamdomain.S
 
 // get streams by Categorie
 func (r *StreamRepository) GetStreamsByCategorie(Categorie string, page int) ([]streamdomain.Stream, error) {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBCollStreams := r.mongoClient.Database("pinkker").Collection("Streams")
 	skip := (page - 1) * 10
 
 	findOptions := options.Find()
@@ -85,7 +85,7 @@ func (r *StreamRepository) GetStreamsByCategorie(Categorie string, page int) ([]
 }
 
 func (r *StreamRepository) GetAllsStreamsOnline() ([]streamdomain.Stream, error) {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBCollStreams := r.mongoClient.Database("pinkker").Collection("Streams")
 
 	cursor, err := GoMongoDBCollStreams.Find(context.Background(), bson.D{{Key: "Online", Value: true}})
 	if err != nil {
@@ -111,7 +111,7 @@ func (r *StreamRepository) GetAllsStreamsOnline() ([]streamdomain.Stream, error)
 
 // GetStremesIFollow
 func (r *StreamRepository) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID) ([]streamdomain.Stream, error) {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBCollStreams := r.mongoClient.Database("pinkker").Collection("Streams")
 
 	filter := bson.D{
 		{Key: "StreamerID", Value: bson.D{{Key: "$in", Value: idsUsersF}}},
@@ -138,7 +138,7 @@ func (r *StreamRepository) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID)
 	return streams, nil
 }
 func (r *StreamRepository) Update_online(Key string, state bool) error {
-	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDB := r.mongoClient.Database("pinkker")
 	GoMongoDBColluser := GoMongoDB.Collection("Users")
 
 	filter := bson.D{
@@ -165,7 +165,7 @@ func (r *StreamRepository) Update_online(Key string, state bool) error {
 	return err
 }
 func (r *StreamRepository) CloseStream(key string) error {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBCollStreams := r.mongoClient.Database("pinkker").Collection("Streams")
 
 	filter := bson.D{
 		{Key: "KeyTransmission", Value: key},
@@ -182,7 +182,7 @@ func (r *StreamRepository) CloseStream(key string) error {
 	return err
 }
 func (r *StreamRepository) Update_thumbnail(cmt, image string) error {
-	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDB := r.mongoClient.Database("pinkker")
 
 	GoMongoDBCollUser := GoMongoDB.Collection("Users")
 	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
@@ -210,7 +210,7 @@ func (r *StreamRepository) Update_thumbnail(cmt, image string) error {
 	return err
 }
 func (r *StreamRepository) Update_start_date(req streamdomain.Update_start_date) error {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBCollStreams := r.mongoClient.Database("pinkker").Collection("Streams")
 
 	filter := bson.D{
 		{Key: "KeyTransmission", Value: req.Key},
@@ -227,7 +227,7 @@ func (r *StreamRepository) Update_start_date(req streamdomain.Update_start_date)
 	return err
 }
 func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStreamInfo, id primitive.ObjectID) error {
-	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDB := r.mongoClient.Database("pinkker")
 
 	GoMongoDBCollUser := GoMongoDB.Collection("Users")
 	var userCmt *userdomain.User
@@ -263,7 +263,7 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 }
 
 func (r *StreamRepository) Update_Emotes(idUser primitive.ObjectID, date int) error {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBCollStreams := r.mongoClient.Database("pinkker").Collection("Streams")
 
 	filter := bson.D{
 		{Key: "StreamerID", Value: idUser},
@@ -281,7 +281,7 @@ func (r *StreamRepository) Update_Emotes(idUser primitive.ObjectID, date int) er
 }
 
 func (r *StreamRepository) Streamings_online() (int, error) {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	GoMongoDBCollStreams := r.mongoClient.Database("pinkker").Collection("Streams")
 	FindStreamsInDb := bson.D{
 		{Key: "Online", Value: true},
 	}
@@ -306,7 +306,7 @@ func (r *StreamRepository) Streamings_online() (int, error) {
 }
 
 func (r *StreamRepository) GetCategories() (error, []streamdomain.Categoria) {
-	GoMongoDBCollCategorias := r.mongoClient.Database("PINKKER-BACKEND").Collection("Categorias")
+	GoMongoDBCollCategorias := r.mongoClient.Database("pinkker").Collection("Categorias")
 	FindCategoriasInDb := bson.D{}
 
 	cursor, err := GoMongoDBCollCategorias.Find(context.Background(), FindCategoriasInDb)
