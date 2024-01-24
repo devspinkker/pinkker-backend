@@ -42,6 +42,11 @@ func (D *DonationService) AllMyPixelesDonors(id primitive.ObjectID) ([]donationd
 
 	return Donations, err
 }
+func (D *DonationService) GetPixelesDonationsChat(id primitive.ObjectID) ([]donationdomain.ResDonation, error) {
+	Donations, err := D.DonationRepository.GetPixelesDonationsChat(id)
+
+	return Donations, err
+}
 
 // actualzaa el Notified
 func (D *DonationService) UpdateDonationsNotifiedStatus(donation []donationdomain.ResDonation) error {

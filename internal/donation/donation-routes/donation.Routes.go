@@ -20,5 +20,6 @@ func DonatioRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	App.Post("/pixel/DonatePixel", middleware.UseExtractor(), donationHandler.Donate)
 	App.Get("/pixel/Mydonors", middleware.UseExtractor(), donationHandler.Mydonors)
 	App.Get("/pixel/AllMyPixelesDonors", middleware.UseExtractor(), donationHandler.AllMyPixelesDonors)
+	App.Get("/pixel/GetPixelesDonationsChat", donationHandler.GetPixelesDonationsChat)
 
 }

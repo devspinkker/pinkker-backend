@@ -307,6 +307,26 @@ func (h *UserHandler) GetUserByNameUser(c *fiber.Ctx) error {
 		"data":    user,
 	})
 }
+func (h *UserHandler) GetUserByNameUserIndex(c *fiber.Ctx) error {
+
+	var Req ReqGetUserByNameUser
+	if err := c.QueryParser(&Req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	user, errGetUserBykey := h.userService.GetUserByNameUserIndex(Req.NameUser)
+	if errGetUserBykey != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    user,
+	})
+}
 
 // login google
 func (h *UserHandler) GoogleLogin(c *fiber.Ctx) error {
@@ -500,30 +520,4 @@ func (h *UserHandler) EditAvatar(c *fiber.Ctx) error {
 
 	}
 
-}
-func (h *UserHandler) Suscribirse(c *fiber.Ctx) error {
-	var idReq domain.ReqCreateSuscribirse
-	if err := c.BodyParser(&idReq); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "StatusBadRequest",
-		})
-	}
-
-	IdUserToken := c.Context().UserValue("_id").(string)
-	FromUser, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
-	if errinObjectID != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "StatusInternalServerError",
-		})
-	}
-
-	errdonatePixels := h.userService.Subscription(FromUser, idReq.ToUser)
-	if errdonatePixels != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": errdonatePixels.Error(),
-		})
-	}
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "ok",
-	})
 }

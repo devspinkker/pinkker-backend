@@ -7,18 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Subscription struct {
-	SubscriptionNameUser string    `bson:"SubscriptionNameUser"`
-	SubscriptionStart    time.Time `bson:"SubscriptionStart"`
-	SubscriptionEnd      time.Time `bson:"SubscriptionEnd"`
-	MonthsSubscribed     int       `bson:"MonthsSubscribed"`
-}
-type Subscriber struct {
-	SubscriberNameUser string    `bson:"SubscriberNameUser"`
-	SubscriptionStart  time.Time `bson:"SubscriptionStart"`
-	SubscriptionEnd    time.Time `bson:"SubscriptionEnd"`
-	MonthsSubscribed   int       `bson:"MonthsSubscribed"`
-}
 type User struct {
 	ID                primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
 	Avatar            string                 `json:"Avatar" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"Avatar"`
@@ -26,8 +14,8 @@ type User struct {
 	NameUser          string                 `json:"NameUser" bson:"NameUser"`
 	PasswordHash      string                 `json:"passwordHash" bson:"PasswordHash"`
 	Pais              string                 `json:"Pais" bson:"Pais"`
-	Subscriptions     []Subscription         `bson:"Subscriptions"`
-	Subscribers       []Subscriber           `bson:"Subscribers"`
+	Subscriptions     []primitive.ObjectID   `bson:"Subscriptions"`
+	Subscribers       []primitive.ObjectID   `bson:"Subscribers"`
 	Clips             []primitive.ObjectID   `bson:"Clips,omitempty"`
 	ClipsLikes        []primitive.ObjectID   `bson:"ClipsLikes,omitempty"`
 	Ciudad            string                 `json:"Ciudad" bson:"Ciudad"`
@@ -215,10 +203,6 @@ func (u *Google_callback_Complete_Profile_And_Username) ValidateUser() error {
 	return validate.Struct(u)
 }
 
-type ReqCreateSuscribirse struct {
-	ToUser primitive.ObjectID `json:"ToUser" validate:"required"`
-	Text   string             `json:"Text" validate:"required,min=2,max=70"`
-}
 type InfoUserInRoom struct {
 	ID       primitive.ObjectID       `json:"id" bson:"_id,omitempty"`
 	NameUser string                   `json:"nameuser" bson:"NameUser"`

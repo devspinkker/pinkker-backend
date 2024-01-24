@@ -46,8 +46,8 @@ func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avat
 	modelNewUser.ClipsLikes = []primitive.ObjectID{}
 	modelNewUser.Verified = false
 	modelNewUser.Wallet = newUser.Wallet
-	modelNewUser.Subscribers = []domain.Subscriber{}
-	modelNewUser.Subscriptions = []domain.Subscription{}
+	modelNewUser.Subscribers = []primitive.ObjectID{}
+	modelNewUser.Subscriptions = []primitive.ObjectID{}
 	modelNewUser.BirthDate = time.Now()
 	modelNewUser.Clips = []primitive.ObjectID{}
 	return &modelNewUser
@@ -80,6 +80,12 @@ func (u *UserService) FindNameUser(NameUser string, Email string) (*domain.User,
 	NameUserLower := strings.ToLower(NameUser)
 
 	user, err := u.roomRepository.FindNameUser(NameUserLower, Email)
+	return user, err
+}
+func (u *UserService) GetUserByNameUserIndex(NameUser string) ([]*domain.User, error) {
+	NameUserLower := strings.ToLower(NameUser)
+
+	user, err := u.roomRepository.GetUserByNameUserIndex(NameUserLower)
 	return user, err
 }
 func (u *UserService) FindUserById(id primitive.ObjectID) (*domain.User, error) {
@@ -115,9 +121,5 @@ func (u *UserService) EditProfile(Profile domain.EditProfile, IdUserTokenP primi
 func (u *UserService) EditAvatar(avatarUrl string, IdUserTokenP primitive.ObjectID) error {
 
 	err := u.roomRepository.EditAvatar(avatarUrl, IdUserTokenP)
-	return err
-}
-func (s *UserService) Subscription(FromUser, ToUser primitive.ObjectID) error {
-	err := s.roomRepository.Subscription(FromUser, ToUser)
 	return err
 }
