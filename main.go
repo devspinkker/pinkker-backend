@@ -5,6 +5,7 @@ import (
 	cliproutes "PINKKER-BACKEND/internal/clip/clip-routes"
 	donationroutes "PINKKER-BACKEND/internal/donation/donation-routes"
 	streamroutes "PINKKER-BACKEND/internal/stream/stream-routes"
+	subscriptionroutes "PINKKER-BACKEND/internal/subscription/subscription-routes"
 	tweetroutes "PINKKER-BACKEND/internal/tweet/tweet-routes"
 	userroutes "PINKKER-BACKEND/internal/user/user-routes"
 
@@ -41,7 +42,8 @@ func main() {
 	streamroutes.StreamsRoutes(app, redisClient, newMongoDB)
 	// clips
 	cliproutes.ClipRoutes(app, redisClient, newMongoDB)
-
+	//subs
+	subscriptionroutes.SubsRoutes(app, redisClient, newMongoDB)
 	PORT := config.PORT()
 	if PORT == "" {
 		PORT = "8081"

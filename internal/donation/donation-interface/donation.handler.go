@@ -58,6 +58,7 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 }
 func (d *DonationHandler) Mydonors(c *fiber.Ctx) error {
 	IdUserToken := c.Context().UserValue("_id").(string)
+
 	id, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
 	if errinObjectID != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -96,6 +97,34 @@ func (d *DonationHandler) AllMyPixelesDonors(c *fiber.Ctx) error {
 		})
 	}
 	donations, err := d.VodServise.AllMyPixelesDonors(id)
+	if err != nil {
+		if err.Error() == "no documents found" {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": err.Error(),
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    donations,
+	})
+}
+
+type ReqChatDonations struct {
+	Id primitive.ObjectID `json:"-" query:"Toid"`
+}
+
+func (d *DonationHandler) GetPixelesDonationsChat(c *fiber.Ctx) error {
+	var req ReqChatDonations
+	if err := c.QueryParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request",
+		})
+	}
+	donations, err := d.VodServise.GetPixelesDonationsChat(req.Id)
 	if err != nil {
 		if err.Error() == "no documents found" {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{

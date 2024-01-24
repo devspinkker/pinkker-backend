@@ -224,6 +224,57 @@ func (d *DonationRepository) AllMyPixelesDonors(id primitive.ObjectID) ([]donati
 	}
 	return Donations, nil
 }
+func (d *DonationRepository) GetPixelesDonationsChat(id primitive.ObjectID) ([]donationdomain.ResDonation, error) {
+	GoMongoDBCollDonations := d.mongoClient.Database("PINKKER-BACKEND").Collection("Donations")
+	filter := bson.D{
+		{Key: "ToUser", Value: id},
+	}
+	pipeline := []bson.D{
+		// Filtra las donations que cumplan con el filtro
+		{{Key: "$match", Value: filter}},
+		{{Key: "$sort", Value: bson.D{{Key: "TimeStamp", Value: -1}}}},
+		{{Key: "$limit", Value: 10}},
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "FromUser"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "FromUserInfo"},
+		}}},
+		{{Key: "$unwind", Value: "$FromUserInfo"}},
+		// Proyecta los campos necesarios
+		{{Key: "$project", Value: bson.D{
+			{Key: "FromUser", Value: "$FromUser"},
+			{Key: "FromUserInfo.Avatar", Value: "$FromUserInfo.Avatar"},
+			{Key: "FromUserInfo.NameUser", Value: "$FromUserInfo.NameUser"},
+			{Key: "Pixeles", Value: 1},
+			{Key: "Text", Value: 1},
+			{Key: "TimeStamp", Value: 1},
+			{Key: "Notified", Value: 1},
+			{Key: "ToUser", Value: 1},
+			{Key: "id", Value: "$_id"},
+		}}},
+	}
+	cursor, err := GoMongoDBCollDonations.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var Donations []donationdomain.ResDonation
+
+	for cursor.Next(context.Background()) {
+		var donation donationdomain.ResDonation
+		if err := cursor.Decode(&donation); err != nil {
+			return nil, err
+		}
+		Donations = append(Donations, donation)
+	}
+	if len(Donations) == 0 {
+		return nil, errors.New("no documents found")
+
+	}
+	return Donations, nil
+}
 
 // actualzaa el Notified
 func (d *DonationRepository) UpdateDonationsNotifiedStatus(donations []donationdomain.ResDonation) error {
