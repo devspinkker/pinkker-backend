@@ -3,7 +3,6 @@ package subscriptioninfrastructure
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -313,7 +312,6 @@ func (r *SubscriptionRepository) addSubscriber(destUser *userdomain.User, source
 	}
 	if existingSubscriberID != "" {
 		// Actualizar la suscripción existente
-		fmt.Println(existingSubscriberID)
 		err := r.updateSubscriber(existingSubscriberID, subscriptionEnd, text)
 		if err != nil {
 			return err
@@ -346,10 +344,6 @@ func (r *SubscriptionRepository) addSubscriber(destUser *userdomain.User, source
 }
 func (r *SubscriptionRepository) updateSubscriber(subscriberID string, subscriptionEnd time.Time, text string) error {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscribers")
-	fmt.Println("algo")
-	fmt.Println(subscriberID)
-	fmt.Println(subscriptionEnd)
-	fmt.Println(text)
 
 	objectID, err := primitive.ObjectIDFromHex(subscriberID)
 	if err != nil {
@@ -388,7 +382,6 @@ func (r *SubscriptionRepository) getSubscriberByID(subscriberID primitive.Object
 }
 func (r *SubscriptionRepository) GetSubsChat(id primitive.ObjectID) ([]subscriptiondomain.ResSubscriber, error) {
 	GoMongoDBCollDonations := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscribers")
-	fmt.Println(id)
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{{Key: "destinationUserID", Value: id}}}},
 		{{Key: "$sort", Value: bson.D{{Key: "SubscriptionEnd", Value: -1}}}},
@@ -428,7 +421,6 @@ func (r *SubscriptionRepository) GetSubsChat(id primitive.ObjectID) ([]subscript
 		}
 		Subscriber = append(Subscriber, donation)
 	}
-	fmt.Println(Subscriber)
 	if len(Subscriber) == 0 {
 		return nil, errors.New("no documents found")
 
