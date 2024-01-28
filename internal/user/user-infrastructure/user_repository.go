@@ -59,7 +59,29 @@ func (u *UserRepository) FindNameUser(NameUser string, Email string) (*domain.Us
 	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&findUserInDbExist)
 	return findUserInDbExist, errCollUsers
 }
-func (u *UserRepository) GetUserByNameUserIndex(NameUser string) ([]*domain.User, error) {
+func (u *UserRepository) FindNameUserNoSensitiveInformation(NameUser string, Email string) (*domain.GetUser, error) {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	var FindUserInDb primitive.D
+	if Email == "" {
+		FindUserInDb = bson.D{
+			{Key: "NameUser", Value: NameUser},
+		}
+	} else {
+		FindUserInDb = bson.D{
+			{
+				Key: "$or",
+				Value: bson.A{
+					bson.D{{Key: "NameUser", Value: NameUser}},
+					bson.D{{Key: "Email", Value: Email}},
+				},
+			},
+		}
+	}
+	var findUserInDbExist *domain.GetUser
+	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&findUserInDbExist)
+	return findUserInDbExist, errCollUsers
+}
+func (u *UserRepository) GetUserByNameUserIndex(NameUser string) ([]*domain.GetUser, error) {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
 	indexModel := mongo.IndexModel{
@@ -80,9 +102,9 @@ func (u *UserRepository) GetUserByNameUserIndex(NameUser string) ([]*domain.User
 	}
 	defer cursor.Close(context.Background())
 
-	var users []*domain.User
+	var users []*domain.GetUser
 	for cursor.Next(context.Background()) {
-		var user domain.User
+		var user domain.GetUser
 		if err := cursor.Decode(&user); err != nil {
 			return nil, err
 		}

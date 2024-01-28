@@ -50,6 +50,7 @@ func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avat
 	modelNewUser.Subscriptions = []primitive.ObjectID{}
 	modelNewUser.BirthDate = time.Now()
 	modelNewUser.Clips = []primitive.ObjectID{}
+	modelNewUser.Online = false
 	return &modelNewUser
 }
 
@@ -82,7 +83,13 @@ func (u *UserService) FindNameUser(NameUser string, Email string) (*domain.User,
 	user, err := u.roomRepository.FindNameUser(NameUserLower, Email)
 	return user, err
 }
-func (u *UserService) GetUserByNameUserIndex(NameUser string) ([]*domain.User, error) {
+func (u *UserService) FindNameUserNoSensitiveInformationApli(NameUser string, Email string) (*domain.GetUser, error) {
+	NameUserLower := strings.ToLower(NameUser)
+
+	user, err := u.roomRepository.FindNameUserNoSensitiveInformation(NameUserLower, Email)
+	return user, err
+}
+func (u *UserService) GetUserByNameUserIndex(NameUser string) ([]*domain.GetUser, error) {
 	NameUserLower := strings.ToLower(NameUser)
 
 	user, err := u.roomRepository.GetUserByNameUserIndex(NameUserLower)

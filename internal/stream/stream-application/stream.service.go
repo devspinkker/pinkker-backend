@@ -45,7 +45,7 @@ func (s *StreamService) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID) ([
 }
 
 func (s *StreamService) Update_online(Key string, state bool) error {
-	err := s.StreamRepository.Update_online(Key, state)
+	err := s.StreamRepository.UpdateOnline(Key, state)
 	return err
 }
 

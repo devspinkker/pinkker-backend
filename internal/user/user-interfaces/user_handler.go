@@ -296,7 +296,7 @@ func (h *UserHandler) GetUserByNameUser(c *fiber.Ctx) error {
 		})
 	}
 
-	user, errGetUserBykey := h.userService.FindNameUser(Req.NameUser, "")
+	user, errGetUserBykey := h.userService.FindNameUserNoSensitiveInformationApli(Req.NameUser, "")
 	if errGetUserBykey != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
