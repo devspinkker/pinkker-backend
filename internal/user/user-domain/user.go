@@ -56,6 +56,7 @@ type User struct {
 	Timestamp                time.Time            `json:"Timestamp" bson:"Timestamp"`
 	Likes                    []primitive.ObjectID `json:"Likes" bson:"Likes"`
 	Wallet                   string               `json:"Wallet" bson:"Wallet"`
+	Online                   bool                 `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
 }
 
 type UserModelValidator struct {
@@ -115,7 +116,6 @@ type GetUser struct {
 	HeadImage         string                 `json:"headImage" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png"`
 	Color             string                 `json:"color" `
 	BirthDate         primitive.DateTime     `json:"birthDate" `
-	Pixeles           float64                `json:"Pixeles,default:0.0" `
 	CustomAvatar      bool                   `json:"customAvatar,omitempty"`
 	CountryInfo       map[string]interface{} `json:"countryInfo,omitempty"`
 	PinkkerPrime      struct {
@@ -132,7 +132,6 @@ type GetUser struct {
 		Youtube   string `json:"youtube,omitempty" `
 		Tiktok    string `json:"tiktok,omitempty"`
 	} `json:"socialnetwork,omitempty"`
-	Cmt                      string               `json:"cmt,omitempty" `
 	Verified                 bool                 `json:"verified,omitempty" `
 	Website                  string               `json:"website,omitempty" `
 	Phone                    string               `json:"phone,omitempty" `

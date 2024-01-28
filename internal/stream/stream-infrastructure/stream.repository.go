@@ -137,32 +137,74 @@ func (r *StreamRepository) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID)
 	}
 	return streams, nil
 }
-func (r *StreamRepository) Update_online(Key string, state bool) error {
-	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBColluser := GoMongoDB.Collection("Users")
-
-	filter := bson.D{
-		{Key: "KeyTransmission", Value: Key},
+func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
+	session, err := r.mongoClient.StartSession()
+	if err != nil {
+		return err
 	}
-	var userFind userdomain.User
-	GoMongoDBColluser.FindOne(context.Background(), filter).Decode(&userFind)
+	defer session.EndSession(context.Background())
 
+	err = session.StartTransaction()
+	if err != nil {
+		return err
+	}
+
+	ctx := mongo.NewSessionContext(context.Background(), session)
+
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
 	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
 
-	filter = bson.D{
+	filterUsers := bson.D{
+		{Key: "KeyTransmission", Value: Key},
+	}
+
+	var userFind userdomain.User
+	err = GoMongoDBCollUsers.FindOne(ctx, filterUsers).Decode(&userFind)
+	if err != nil {
+		session.AbortTransaction(ctx)
+		return err
+	}
+
+	filterStreams := bson.D{
 		{Key: "StreamerID", Value: userFind.ID},
 	}
-	var update primitive.D
-	update = bson.D{
+
+	updateStreams := bson.D{
 		{Key: "$set", Value: bson.D{
 			{Key: "Online", Value: state},
 			{Key: "StartDate", Value: time.Now()},
 		}},
 	}
 
-	_, err := GoMongoDBCollStreams.UpdateOne(context.Background(), filter, update)
+	_, err = GoMongoDBCollStreams.UpdateOne(ctx, filterStreams, updateStreams)
+	if err != nil {
+		session.AbortTransaction(ctx)
+		return err
+	}
 
-	return err
+	filterUsers = bson.D{
+		{Key: "_id", Value: userFind.ID},
+	}
+
+	updateUsers := bson.D{
+		{Key: "$set", Value: bson.D{
+			{Key: "Online", Value: state},
+		}},
+	}
+
+	_, err = GoMongoDBCollUsers.UpdateOne(ctx, filterUsers, updateUsers)
+	if err != nil {
+		session.AbortTransaction(ctx)
+		return err
+	}
+
+	err = session.CommitTransaction(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 func (r *StreamRepository) CloseStream(key string) error {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
