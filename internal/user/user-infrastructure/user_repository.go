@@ -79,6 +79,7 @@ func (u *UserRepository) FindNameUserNoSensitiveInformation(NameUser string, Ema
 	}
 	var findUserInDbExist *domain.GetUser
 	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&findUserInDbExist)
+
 	return findUserInDbExist, errCollUsers
 }
 func (u *UserRepository) GetUserByNameUserIndex(NameUser string) ([]*domain.GetUser, error) {

@@ -108,6 +108,42 @@ func (r *StreamRepository) GetAllsStreamsOnline() ([]streamdomain.Stream, error)
 
 	return streams, nil
 }
+func (r *StreamRepository) GetAllStreamsOnlineThatUserFollows(idValueObj primitive.ObjectID) ([]streamdomain.Stream, error) {
+	GoMongoDBCollUsers := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+
+	var user userdomain.User
+	if err := GoMongoDBCollUsers.FindOne(context.Background(), bson.D{{Key: "_id", Value: idValueObj}}).Decode(&user); err != nil {
+		return nil, err
+	}
+
+	cursor, err := GoMongoDBCollStreams.Find(
+		context.Background(),
+		bson.D{
+			{Key: "Online", Value: true},
+			{Key: "StreamerID", Value: bson.D{{Key: "$in", Value: user.Following}}},
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var streams []streamdomain.Stream
+	for cursor.Next(context.Background()) {
+		var stream streamdomain.Stream
+		if err := cursor.Decode(&stream); err != nil {
+			return nil, err
+		}
+		streams = append(streams, stream)
+	}
+
+	if len(streams) == 0 {
+		return nil, errors.New("no se encontraron streams")
+	}
+
+	return streams, nil
+}
 
 // GetStremesIFollow
 func (r *StreamRepository) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID) ([]streamdomain.Stream, error) {

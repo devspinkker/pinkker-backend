@@ -39,6 +39,10 @@ func (s *StreamService) GetAllsStreamsOnline() ([]streamdomain.Stream, error) {
 	stream, err := s.StreamRepository.GetAllsStreamsOnline()
 	return stream, err
 }
+func (s *StreamService) GetAllsStreamsOnlineThatUserFollows(idValueObj primitive.ObjectID) ([]streamdomain.Stream, error) {
+	stream, err := s.StreamRepository.GetAllStreamsOnlineThatUserFollows(idValueObj)
+	return stream, err
+}
 func (s *StreamService) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID) ([]streamdomain.Stream, error) {
 	stream, err := s.StreamRepository.GetStreamsIdsStreamer(idsUsersF)
 	return stream, err

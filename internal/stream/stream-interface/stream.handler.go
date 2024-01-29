@@ -121,6 +121,26 @@ func (s *StreamHandler) GetAllsStreamsOnline(c *fiber.Ctx) error {
 	})
 }
 
+func (s *StreamHandler) GetAllsStreamsOnlineThatUserFollows(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	stream, err := s.StreamServise.GetAllsStreamsOnlineThatUserFollows(idValueObj)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    stream,
+	})
+}
+
 type StremesIFollow struct {
 	FollowingIds []primitive.ObjectID `json:"FollowingIds"`
 }
