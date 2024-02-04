@@ -3,7 +3,9 @@ package userinfrastructure
 import (
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	domain "PINKKER-BACKEND/internal/user/user-domain"
+	"PINKKER-BACKEND/pkg/helpers"
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -27,7 +29,44 @@ func NewUserRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Us
 	}
 }
 
-func (u *UserRepository) SaveUserDB(User *domain.User) (primitive.ObjectID, error) {
+func (u *UserRepository) SaveUserRedis(User *domain.User) (string, error) {
+
+	code := helpers.GenerateRandomCode()
+
+	// Convertir el usuario a formato JSON
+	userJSON, errMarshal := json.Marshal(User)
+	if errMarshal != nil {
+		return "", errMarshal
+	}
+
+	// Almacenar en Redis con clave como el código
+	errSet := u.redisClient.Set(context.Background(), code, userJSON, 5*time.Minute).Err()
+	if errSet != nil {
+		return "", errSet
+	}
+	return code, nil
+}
+func (u *UserRepository) GetUserByCodeFromRedis(code string) (*domain.User, error) {
+	userJSON, errGet := u.redisClient.Get(context.Background(), code).Result()
+	if errGet != nil {
+		return nil, errGet
+	}
+
+	var user domain.User
+	errUnmarshal := json.Unmarshal([]byte(userJSON), &user)
+	if errUnmarshal != nil {
+		return nil, errUnmarshal
+	}
+	_, errDel := u.redisClient.Del(context.Background(), code).Result()
+	if errDel != nil {
+		return &user, nil
+	}
+
+	return &user, nil
+}
+
+func (u *UserRepository) SaveUser(User *domain.User) (primitive.ObjectID, error) {
+
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
 	insertResult, errInsertOne := GoMongoDBCollUsers.InsertOne(context.Background(), User)

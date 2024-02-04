@@ -60,20 +60,31 @@ type User struct {
 }
 
 type UserModelValidator struct {
-	FullName  string `json:"fullName" validate:"required,min=8,max=70"`
-	NameUser  string `json:"NameUser" validate:"required,min=5,max=20"`
-	Password  string `json:"password" validate:"required,min=8"`
-	Pais      string `json:"Pais" validate:"required"`
-	Ciudad    string `json:"Ciudad" validate:"required"`
-	Email     string `json:"email" validate:"required,email"`
-	Instagram string `json:"instagram" default:""`
-	Twitter   string `json:"twitter" default:""`
-	Youtube   string `json:"youtube" default:""`
-	Wallet    string `json:"Wallet" default:""`
+	FullName      string    `json:"fullName" validate:"required,min=8,max=70"`
+	NameUser      string    `json:"NameUser" validate:"required,min=5,max=20"`
+	Password      string    `json:"password" validate:"required,min=8"`
+	Pais          string    `json:"Pais" `
+	Ciudad        string    `json:"Ciudad"`
+	Email         string    `json:"email" validate:"required,email"`
+	Instagram     string    `json:"instagram" default:""`
+	Twitter       string    `json:"twitter" default:""`
+	Youtube       string    `json:"youtube" default:""`
+	Wallet        string    `json:"Wallet" default:""`
+	BirthDate     string    `json:"BirthDate" default:""`
+	BirthDateTime time.Time `json:"-" bson:"BirthDate"`
 }
 
 func (u *UserModelValidator) ValidateUser() error {
 	validate := validator.New()
+	if u.BirthDate != "" {
+		_, err := time.Parse("2006-01-02", u.BirthDate)
+		if err != nil {
+			return err
+		}
+
+		birthDate, _ := time.Parse("2006-01-02", u.BirthDate)
+		u.BirthDateTime = birthDate
+	}
 	return validate.Struct(u)
 }
 
@@ -169,12 +180,10 @@ func (u *EditProfile) ValidateEditProfile() error {
 	validate := validator.New()
 
 	if u.BirthDate != "" {
-		_, err := time.Parse("2006-01-02", u.BirthDate)
+		birthDate, err := time.Parse("2006-01-02", u.BirthDate)
 		if err != nil {
 			return err
 		}
-
-		birthDate, _ := time.Parse("2006-01-02", u.BirthDate)
 		u.BirthDateTime = birthDate
 	}
 
