@@ -48,14 +48,22 @@ func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avat
 	modelNewUser.Wallet = newUser.Wallet
 	modelNewUser.Subscribers = []primitive.ObjectID{}
 	modelNewUser.Subscriptions = []primitive.ObjectID{}
-	modelNewUser.BirthDate = time.Now()
+	modelNewUser.BirthDate = newUser.BirthDateTime
 	modelNewUser.Clips = []primitive.ObjectID{}
 	modelNewUser.Online = false
 	return &modelNewUser
 }
 
+func (u *UserService) SaveUserRedis(newUser *domain.User) (string, error) {
+	code, err := u.roomRepository.SaveUserRedis(newUser)
+	return code, err
+}
+func (u *UserService) GetUserinRedis(code string) (*domain.User, error) {
+	user, err := u.roomRepository.GetUserByCodeFromRedis(code)
+	return user, err
+}
 func (u *UserService) SaveUser(newUser *domain.User) (primitive.ObjectID, error) {
-	id, err := u.roomRepository.SaveUserDB(newUser)
+	id, err := u.roomRepository.SaveUser(newUser)
 	return id, err
 }
 func (u *UserService) CreateStream(newUser *domain.User, ID primitive.ObjectID) error {

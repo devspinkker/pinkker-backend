@@ -9,6 +9,7 @@ import (
 	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/jwt"
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -26,8 +27,7 @@ func NewUserHandler(chatService *application.UserService) *UserHandler {
 	}
 }
 
-// signup
-func (h *UserHandler) Signup(c *fiber.Ctx) error {
+func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 	var newUser domain.UserModelValidator
 	fileHeader, _ := c.FormFile("avatar")
 	PostImageChanel := make(chan string)
@@ -35,11 +35,13 @@ func (h *UserHandler) Signup(c *fiber.Ctx) error {
 	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
 
 	if err := c.BodyParser(&newUser); err != nil {
+		fmt.Println(err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"messages": "Bad Request",
 		})
 	}
 	if err := newUser.ValidateUser(); err != nil {
+		fmt.Println(err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad Request",
 			"error":   err.Error(),
@@ -52,7 +54,6 @@ func (h *UserHandler) Signup(c *fiber.Ctx) error {
 
 	_, existUser := h.userService.FindNameUser(newUser.NameUser, newUser.Email)
 	if existUser != nil {
-		// si no exiaste crealo
 		if existUser == mongo.ErrNoDocuments {
 			passwordHash := <-passwordHashChan
 			if passwordHash == "error" {
@@ -64,14 +65,14 @@ func (h *UserHandler) Signup(c *fiber.Ctx) error {
 				select {
 				case avatarUrl := <-PostImageChanel:
 					userDomaion := h.userService.UserDomaionUpdata(&newUser, avatarUrl, passwordHash)
-					idInsert, err := h.userService.SaveUser(userDomaion)
+					code, err := h.userService.SaveUserRedis(userDomaion)
 					if err != nil {
 						return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 							"message": "Internal Server Error",
 							"err":     err,
 						})
 					}
-					err = h.userService.CreateStream(userDomaion, idInsert)
+					err = helpers.ResendConfirmMail(code, userDomaion.Email)
 					if err != nil {
 						return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 							"message": "Internal Server Error",
@@ -79,9 +80,8 @@ func (h *UserHandler) Signup(c *fiber.Ctx) error {
 						})
 					}
 					return c.Status(fiber.StatusOK).JSON(fiber.Map{
-						"message": "save user",
+						"message": "email to confirm",
 					})
-
 				case <-errChanel:
 					return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 						"message": "avatarUrl error",
@@ -99,25 +99,51 @@ func (h *UserHandler) Signup(c *fiber.Ctx) error {
 		})
 	}
 }
-func (h *UserHandler) ConfirmEmailSignup(c *fiber.Ctx) error {
-	token := c.Params("token")
 
-	nameUser, err := jwt.ExtractDataFromTokenConfirmEmail(token)
+type ReqCodeInRedisSignup struct {
+	Code string `json:"code"`
+}
+
+func (h *UserHandler) SaveUserCodeConfirm(c *fiber.Ctx) error {
+	var newUser ReqCodeInRedisSignup
+	if err := c.BodyParser(&newUser); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"messages": "Bad Request",
+		})
+	}
+	user, errGetUserinRedis := h.userService.GetUserinRedis(newUser.Code)
+	if errGetUserinRedis != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"messages": "StatusNotFound",
+			"data":     "not found code or not exist",
+		})
+	}
+	streamID, err := h.userService.SaveUser(user)
+	user.ID = streamID
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"message": "StatusUnauthorized",
-		})
-	}
-
-	errConfirmationEmailToken := h.userService.ConfirmationEmailToken(nameUser)
-	if errConfirmationEmailToken != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "StatusInternalServerError",
+			"messages": "StatusInternalServerError",
 		})
 	}
-
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"message": "StatusCreated",
+	err = h.userService.CreateStream(user, streamID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"messages": "Stream Create error",
+		})
+	}
+	tokenRequest, err := jwt.CreateToken(user)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "token error",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":         "token",
+		"data":            tokenRequest,
+		"_id":             user.ID,
+		"avatar":          user.Avatar,
+		"keyTransmission": user.KeyTransmission,
 	})
 
 }
@@ -159,10 +185,11 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		log.Fatal("Login,CreateTokenError", err)
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Token created",
-		"data":    token,
-		"_id":     user.ID,
-		"avatar":  user.Avatar,
+		"message":         "token",
+		"data":            token,
+		"_id":             user.ID,
+		"avatar":          user.Avatar,
+		"keyTransmission": user.KeyTransmission,
 	})
 }
 

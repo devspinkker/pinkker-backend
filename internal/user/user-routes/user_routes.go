@@ -17,7 +17,8 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	userService := application.NewChatService(userRepository)
 	UserHandler := interfaces.NewUserHandler(userService)
 
-	App.Post("/user/signup", UserHandler.Signup)
+	App.Post("/user/signupNotConfirmed", UserHandler.SignupSaveUserRedis)
+	App.Post("/user/SaveUserCodeConfirm", UserHandler.SaveUserCodeConfirm)
 	App.Post("/user/login", UserHandler.Login)
 
 	// oauth2

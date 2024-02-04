@@ -93,3 +93,9 @@ func FFmpegPath() string {
 	}
 	return os.Getenv("FFMPEG_PATH")
 }
+func ResendApi() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("RESENDAPI")
+}
