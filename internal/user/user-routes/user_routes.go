@@ -20,6 +20,8 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/user/signupNotConfirmed", UserHandler.SignupSaveUserRedis)
 	App.Post("/user/SaveUserCodeConfirm", UserHandler.SaveUserCodeConfirm)
 	App.Post("/user/login", UserHandler.Login)
+	// recuperacion
+	App.Post("/user/Get_Recover_lost_password", UserHandler.Get_Recover_lost_password)
 
 	// oauth2
 	App.Get("/user/google_login", UserHandler.GoogleLogin)
