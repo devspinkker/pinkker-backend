@@ -351,6 +351,17 @@ func (u *UserRepository) EditProfile(profile domain.EditProfile, id primitive.Ob
 	_, err := GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
 	return err
 }
+func (u *UserRepository) EditPasswordHast(passwordHash string, id primitive.ObjectID) error {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	filter := bson.M{"_id": id}
+	update := bson.M{
+		"$set": bson.M{
+			"PasswordHash": passwordHash,
+		},
+	}
+	_, err := GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
+	return err
+}
 func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error {
 	GoMongoDB := u.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollUsers := GoMongoDB.Collection("Users")

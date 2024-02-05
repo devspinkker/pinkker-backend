@@ -138,3 +138,8 @@ func (u *UserService) EditAvatar(avatarUrl string, IdUserTokenP primitive.Object
 	err := u.roomRepository.EditAvatar(avatarUrl, IdUserTokenP)
 	return err
 }
+
+func (u *UserService) EditPasswordHast(passwordHash string, id primitive.ObjectID) error {
+	err := u.roomRepository.EditPasswordHast(passwordHash, id)
+	return err
+}
