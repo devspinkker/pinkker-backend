@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -47,8 +48,11 @@ func (u *UserRepository) SaveUserRedis(User *domain.User) (string, error) {
 	return code, nil
 }
 func (u *UserRepository) GetUserByCodeFromRedis(code string) (*domain.User, error) {
+	fmt.Println(code)
+
 	userJSON, errGet := u.redisClient.Get(context.Background(), code).Result()
 	if errGet != nil {
+		fmt.Println("code 2")
 		return nil, errGet
 	}
 
@@ -57,11 +61,13 @@ func (u *UserRepository) GetUserByCodeFromRedis(code string) (*domain.User, erro
 	if errUnmarshal != nil {
 		return nil, errUnmarshal
 	}
+	fmt.Println("code 3")
+
 	_, errDel := u.redisClient.Del(context.Background(), code).Result()
 	if errDel != nil {
 		return &user, nil
 	}
-
+	fmt.Println("code 4")
 	return &user, nil
 }
 
@@ -382,6 +388,16 @@ func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error 
 	}
 
 	_, err = GoMongoDBCollStreams.UpdateOne(context.TODO(), filterStream, updateStream)
+
+	return err
+}
+func (u *UserRepository) RedisSaveAccountRecoveryCode(code string, user domain.User) error {
+	userJSON, errMarshal := json.Marshal(user)
+	if errMarshal != nil {
+		return errMarshal
+	}
+
+	err := u.redisClient.Set(context.Background(), code, userJSON, 5*time.Minute).Err()
 
 	return err
 }

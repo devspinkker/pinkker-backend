@@ -192,6 +192,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 		"keyTransmission": user.KeyTransmission,
 	})
 }
+
 func (h *UserHandler) Get_Recover_lost_password(c *fiber.Ctx) error {
 	var Get_new_password domain.Req_Recover_lost_password
 
@@ -214,26 +215,60 @@ func (h *UserHandler) Get_Recover_lost_password(c *fiber.Ctx) error {
 			})
 		}
 	}
+	passerdGenerateCodecharset := helpers.GenerateCodecharset(10)
+	err := helpers.ResendRecoverPassword(passerdGenerateCodecharset, Get_new_password.Mail)
+	err = h.userService.RedisSaveAccountRecoveryCode(passerdGenerateCodecharset, *user)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"data":    err,
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+	})
+}
+
+func (h *UserHandler) RestorePassword(c *fiber.Ctx) error {
+	var Get_new_password domain.ReqRestorePassword
+	fmt.Println("dsdsdss")
+
+	if err := c.BodyParser(&Get_new_password); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request",
+		})
+	}
+	user, errGetUserinRedis := h.userService.GetUserinRedis(Get_new_password.Code)
+	if errGetUserinRedis != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "User not found",
+		})
+	}
+	user, errGoMongoDBCollUsers := h.userService.FindNameUser("", user.Email)
+
+	if errGoMongoDBCollUsers != nil {
+		if errGoMongoDBCollUsers == mongo.ErrNoDocuments {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": "User not found",
+			})
+		} else {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Internal Server Error",
+			})
+		}
+	}
 	passwordHashChan := make(chan string)
-	passerdGenerateCodecharset := helpers.GenerateCodecharset(8)
-	go helpers.HashPassword(passerdGenerateCodecharset, passwordHashChan)
+	go helpers.HashPassword(Get_new_password.Password, passwordHashChan)
 	passwordHash := <-passwordHashChan
 
-	err := helpers.ResendRecoverPassword(passerdGenerateCodecharset, Get_new_password.Mail)
+	err := h.userService.EditPasswordHast(passwordHash, user.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"data":    err,
+		})
+	}
 
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Internal Server Error",
-			"data":    err,
-		})
-	}
-	err = h.userService.EditPasswordHast(passwordHash, user.ID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Internal Server Error",
-			"data":    err,
-		})
-	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "StatusOK",
 	})

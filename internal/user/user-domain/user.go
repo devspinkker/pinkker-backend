@@ -107,6 +107,10 @@ type LoginValidatorStruct struct {
 type Req_Recover_lost_password struct {
 	Mail string `json:"mail" validate:"required,max=70"`
 }
+type ReqRestorePassword struct {
+	Code     string `json:"code"`
+	Password string `json:"password" validate:"required,min=8"`
+}
 
 func (L *LoginValidatorStruct) LoginValidator() error {
 	validate := validator.New()
