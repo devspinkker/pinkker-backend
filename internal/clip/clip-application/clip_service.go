@@ -28,6 +28,7 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 	if err != nil {
 		return &clipdomain.Clip{}, err
 	}
+
 	CategorieStream, err := u.ClipRepository.FindCategorieStream(user.ID)
 	if err != nil {
 		return &clipdomain.Clip{}, err
