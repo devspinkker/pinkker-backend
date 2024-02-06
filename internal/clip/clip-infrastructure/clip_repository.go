@@ -169,16 +169,15 @@ func (c *ClipRepository) GetClipsCategory(page int, Category string, lastClipID 
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
 	options := options.Find()
-	options.SetSort(bson.D{{"_id", -1}}) // Ordenar por _id en orden descendente
+	options.SetSort(bson.D{{"_id", -1}})
 	options.SetSkip(int64((page - 1) * 10))
 	options.SetLimit(10)
 
-	var filter bson.D
+	filter := bson.D{}
 	if Category != "" {
 		filter = bson.D{{"Category", Category}}
 	}
 
-	// Si lastClipID no está vacío, añade un filtro para traer clips después de este _id
 	if !lastClipID.IsZero() {
 		filter = append(filter, bson.E{"_id", bson.M{"$lt": lastClipID}})
 	}

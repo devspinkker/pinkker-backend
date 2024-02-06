@@ -35,8 +35,8 @@ func (s *StreamService) GetStreamsByCategorie(Categorie string, page int) ([]str
 	return stream, err
 }
 
-func (s *StreamService) GetAllsStreamsOnline() ([]streamdomain.Stream, error) {
-	stream, err := s.StreamRepository.GetAllsStreamsOnline()
+func (s *StreamService) GetAllsStreamsOnline(page int) ([]streamdomain.Stream, error) {
+	stream, err := s.StreamRepository.GetAllsStreamsOnline(page)
 	return stream, err
 }
 func (s *StreamService) GetAllsStreamsOnlineThatUserFollows(idValueObj primitive.ObjectID) ([]streamdomain.Stream, error) {

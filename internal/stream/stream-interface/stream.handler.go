@@ -96,6 +96,7 @@ func (s *StreamHandler) GetStreamsByCategorie(c *fiber.Ctx) error {
 	if err != nil || page < 1 {
 		page = 1
 	}
+
 	stream, err := s.StreamServise.GetStreamsByCategorie(CategorierReq.Categorie, page)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -109,7 +110,13 @@ func (s *StreamHandler) GetStreamsByCategorie(c *fiber.Ctx) error {
 }
 
 func (s *StreamHandler) GetAllsStreamsOnline(c *fiber.Ctx) error {
-	stream, err := s.StreamServise.GetAllsStreamsOnline()
+
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	stream, err := s.StreamServise.GetAllsStreamsOnline(page)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),

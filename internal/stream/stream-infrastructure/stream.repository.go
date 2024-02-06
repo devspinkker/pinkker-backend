@@ -52,11 +52,11 @@ func (r *StreamRepository) GetStreamByNameUser(nameUser string) (*streamdomain.S
 // get streams by Categorie
 func (r *StreamRepository) GetStreamsByCategorie(Categorie string, page int) ([]streamdomain.Stream, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
-	skip := (page - 1) * 10
+	skip := (page - 1) * 15
 
 	findOptions := options.Find()
 	findOptions.SetSkip(int64(skip))
-	findOptions.SetLimit(int64(10))
+	findOptions.SetLimit(int64(15))
 
 	FindStreamsInDb := bson.D{
 		{Key: "StreamCategory", Value: Categorie},
@@ -84,10 +84,13 @@ func (r *StreamRepository) GetStreamsByCategorie(Categorie string, page int) ([]
 	return streams, nil
 }
 
-func (r *StreamRepository) GetAllsStreamsOnline() ([]streamdomain.Stream, error) {
+func (r *StreamRepository) GetAllsStreamsOnline(page int) ([]streamdomain.Stream, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
-
-	cursor, err := GoMongoDBCollStreams.Find(context.Background(), bson.D{{Key: "Online", Value: true}})
+	skip := (page - 1*15)
+	findOptions := options.Find()
+	findOptions.SetSkip(int64(skip))
+	findOptions.SetLimit(int64(15))
+	cursor, err := GoMongoDBCollStreams.Find(context.Background(), bson.D{{Key: "Online", Value: true}}, findOptions)
 	if err != nil {
 		return nil, err
 	}
