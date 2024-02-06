@@ -86,7 +86,7 @@ func (r *StreamRepository) GetStreamsByCategorie(Categorie string, page int) ([]
 
 func (r *StreamRepository) GetAllsStreamsOnline(page int) ([]streamdomain.Stream, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
-	skip := (page - 1*15)
+	skip := (page - 1) * 15
 	findOptions := options.Find()
 	findOptions.SetSkip(int64(skip))
 	findOptions.SetLimit(int64(15))

@@ -2,16 +2,18 @@ package helpers
 
 import (
 	"PINKKER-BACKEND/config"
+	"fmt"
 
 	"github.com/resend/resend-go/v2"
 )
 
 func ResendConfirmMail(code, To string) error {
+	fmt.Println(To)
 	apikey := config.ResendApi()
 	client := resend.NewClient(apikey)
 	params := &resend.SendEmailRequest{
 		From:    "onboarding@resend.dev",
-		To:      []string{"devspinnker@gmail.com"},
+		To:      []string{To},
 		Subject: "email confirmation code",
 		Html:    "<p>codigo de confirmacion</p>" + code,
 	}
@@ -19,14 +21,16 @@ func ResendConfirmMail(code, To string) error {
 	return err
 }
 
-func ResendRecoverPassword(newPassword, To string) error {
+func ResendRecoverPassword(code, To string) error {
+	fmt.Println(To)
+	html := "<a href='http://localhost:3000/user/password-reset?reset_token=" + code + "'target='_blank'><button style='background-color:blue; color:white;'>restablecer contraseña</button></a>"
 	apikey := config.ResendApi()
 	client := resend.NewClient(apikey)
 	params := &resend.SendEmailRequest{
 		From:    "onboarding@resend.dev",
-		To:      []string{"devspinnker@gmail.com"},
+		To:      []string{To},
 		Subject: "email confirmation code",
-		Html:    "<p>New Password</p>" + newPassword,
+		Html:    html,
 	}
 	_, err := client.Emails.Send(params)
 	return err

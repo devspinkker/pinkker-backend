@@ -22,7 +22,7 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/user/login", UserHandler.Login)
 	// recuperacion
 	App.Post("/user/Get_Recover_lost_password", UserHandler.Get_Recover_lost_password)
-
+	App.Post("/user/account-recovery", UserHandler.RestorePassword)
 	// oauth2
 	App.Get("/user/google_login", UserHandler.GoogleLogin)
 	App.Get("/user/google_callback", UserHandler.Google_callback)

@@ -143,3 +143,8 @@ func (u *UserService) EditPasswordHast(passwordHash string, id primitive.ObjectI
 	err := u.roomRepository.EditPasswordHast(passwordHash, id)
 	return err
 }
+
+func (u *UserService) RedisSaveAccountRecoveryCode(code string, user domain.User) error {
+	err := u.roomRepository.RedisSaveAccountRecoveryCode(code, user)
+	return err
+}
