@@ -80,7 +80,6 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 	}
 
 	if err := clipRequest.ValidateClipRequest(); err != nil {
-		fmt.Println(err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 			"data":    err.Error(),
@@ -115,7 +114,17 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
+	defer func() {
 
+		if _, err := os.Stat(videoDir); err == nil {
+			err := os.RemoveAll(videoDir)
+			if err != nil {
+				fmt.Println("Error removing directory:", err.Error())
+			}
+		} else if !os.IsNotExist(err) {
+			fmt.Println("Error checking directory:", err.Error())
+		}
+	}()
 	FFmpegPath := config.FFmpegPath()
 	cmdSS := strconv.Itoa(clipRequest.Start)
 	cmdT := strconv.Itoa(clipRequest.End - clipRequest.Start)
@@ -136,12 +145,6 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
-	if err != nil {
-		return c.Status(fiber.StatusInsufficientStorage).JSON(fiber.Map{
-			"message": "Error al recortar el video",
-			"data":    err.Error(),
-		})
-	}
 
 	idValue := c.Context().UserValue("_id").(string)
 	nameUser := c.Context().UserValue("nameUser").(string)
@@ -149,7 +152,7 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 	if errorID != nil {
 		return c.Status(fiber.StatusNetworkAuthenticationRequired).JSON(fiber.Map{
 			"message": "StatusNetworkAuthenticationRequired",
-			"data":    err.Error(),
+			"data":    err,
 		})
 	}
 	clipCreated, err := clip.ClipService.CreateClip(idValueObj, totalKey, nameUser, ClipTitle, outputFilePath)
