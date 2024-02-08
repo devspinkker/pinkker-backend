@@ -111,6 +111,38 @@ func (r *StreamRepository) GetAllsStreamsOnline(page int) ([]streamdomain.Stream
 
 	return streams, nil
 }
+func (r *StreamRepository) GetStreamsMostViewed(page int) ([]streamdomain.Stream, error) {
+	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+
+	findOptions := options.Find()
+	findOptions.SetSort(bson.D{{"ViewerCount", -1}})
+	findOptions.SetSkip(int64((page - 1) * 15))
+	findOptions.SetLimit(int64(15))
+
+	filter := bson.D{{Key: "Online", Value: true}}
+
+	cursor, err := GoMongoDBCollStreams.Find(context.Background(), filter, findOptions)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var streams []streamdomain.Stream
+	for cursor.Next(context.Background()) {
+		var stream streamdomain.Stream
+		if err := cursor.Decode(&stream); err != nil {
+			return nil, err
+		}
+		streams = append(streams, stream)
+	}
+
+	if len(streams) == 0 {
+		return nil, errors.New("no se encontraron streams")
+	}
+
+	return streams, nil
+}
+
 func (r *StreamRepository) GetAllStreamsOnlineThatUserFollows(idValueObj primitive.ObjectID) ([]streamdomain.Stream, error) {
 	GoMongoDBCollUsers := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")

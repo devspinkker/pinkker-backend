@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
@@ -216,6 +217,32 @@ func (c *ClipRepository) GetClipsMostViewed(page int) ([]clipdomain.Clip, error)
 		return nil, err
 	}
 
+	return clips, nil
+}
+func (c *ClipRepository) GetClipsMostViewedLast48Hours(page int) ([]clipdomain.Clip, error) {
+	twoDaysAgo := time.Now().Add(-48 * time.Hour)
+
+	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+
+	options := options.Find()
+	options.SetSort(bson.D{{Key: "Views", Value: -1}})
+	options.SetSkip(int64((page - 1) * 10))
+	options.SetLimit(10)
+
+	filter := bson.D{
+		{Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: twoDaysAgo}}},
+	}
+
+	cursor, err := GoMongoDBColl.Find(context.Background(), filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var clips []clipdomain.Clip
+	if err := cursor.All(context.Background(), &clips); err != nil {
+		return nil, err
+	}
 	return clips, nil
 }
 
