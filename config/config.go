@@ -99,3 +99,9 @@ func ResendApi() string {
 	}
 	return os.Getenv("RESENDAPI")
 }
+func ResendDominio() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("RESENDDOMINIO")
+}
