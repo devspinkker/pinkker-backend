@@ -39,6 +39,10 @@ func (s *StreamService) GetAllsStreamsOnline(page int) ([]streamdomain.Stream, e
 	stream, err := s.StreamRepository.GetAllsStreamsOnline(page)
 	return stream, err
 }
+func (s *StreamService) GetStreamsMostViewed(page int) ([]streamdomain.Stream, error) {
+	stream, err := s.StreamRepository.GetStreamsMostViewed(page)
+	return stream, err
+}
 func (s *StreamService) GetAllsStreamsOnlineThatUserFollows(idValueObj primitive.ObjectID) ([]streamdomain.Stream, error) {
 	stream, err := s.StreamRepository.GetAllStreamsOnlineThatUserFollows(idValueObj)
 	return stream, err

@@ -127,6 +127,24 @@ func (s *StreamHandler) GetAllsStreamsOnline(c *fiber.Ctx) error {
 		"data":    stream,
 	})
 }
+func (s *StreamHandler) GetStreamsMostViewed(c *fiber.Ctx) error {
+
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	stream, err := s.StreamServise.GetStreamsMostViewed(page)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    stream,
+	})
+}
 
 func (s *StreamHandler) GetAllsStreamsOnlineThatUserFollows(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
