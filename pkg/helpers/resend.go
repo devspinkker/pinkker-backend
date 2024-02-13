@@ -23,8 +23,7 @@ func ResendConfirmMail(code, To string) error {
 }
 
 func ResendRecoverPassword(code, To string) error {
-	// http://vps-acad4de5.vps.ovh.ca/
-	html := "<a href='http://localhost:3000/user/password-reset?reset_token=" + code + "'target='_blank'><button style='background-color:blue; color:white;'>restablecer contraseña</button></a>"
+	html := "<a href='https://www.pinkker.tv/user/password-reset?reset_token=" + code + "'target='_blank'><button style='background-color:blue; color:white;'>restablecer contraseña</button></a>"
 	apikey := config.ResendApi()
 	RESENDDOMINIO := config.ResendDominio()
 	client := resend.NewClient(apikey)
