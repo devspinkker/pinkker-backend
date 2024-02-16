@@ -21,14 +21,13 @@ import (
 )
 
 func main() {
-
 	redisClient := setupRedisClient()
 	newMongoDB := setupMongoDB()
 	// defer redisClient.Close()
 	defer newMongoDB.Disconnect(context.Background())
 
 	app := fiber.New(fiber.Config{
-		BodyLimit: 100 * 1024 * 1024,
+		BodyLimit: 200 * 1024 * 1024,
 	})
 	app.Use(cors.New())
 
