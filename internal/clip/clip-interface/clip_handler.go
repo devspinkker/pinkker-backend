@@ -71,7 +71,6 @@ func (clip *ClipHandler) GetClipId(c *fiber.Ctx) error {
 
 func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 	var clipRequest clipdomain.ClipRequest
-
 	if err := c.BodyParser(&clipRequest); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
@@ -165,13 +164,6 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 	cloudinaryResponse, err := helpers.UploadVideo(outputFilePath)
 	if err != nil {
 		fmt.Printf("Error al subir el video a Cloudinary: %v\n", err)
-	}
-
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "StatusInternalServerError",
-			"data":    err.Error(),
-		})
 	}
 	go func() {
 
