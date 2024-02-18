@@ -44,21 +44,24 @@ type User struct {
 		Youtube   string `json:"youtube,omitempty" bson:"youtube"`
 		Tiktok    string `json:"tiktok,omitempty" bson:"tiktok"`
 	} `json:"socialnetwork,omitempty" bson:"socialnetwork"`
-	Cmt                      string               `json:"cmt,omitempty" bson:"Cmt"`
-	Verified                 bool                 `json:"verified,omitempty" bson:"Verified"`
-	Website                  string               `json:"website,omitempty" bson:"Website"`
-	Phone                    string               `json:"phone,omitempty" bson:"Phone"`
-	Sex                      string               `json:"sex,omitempty" bson:"Sex"`
-	Situation                string               `json:"situation,omitempty" bson:"Situation"`
-	UserFriendsNotifications int                  `json:"userFriendsNotifications,omitempty" bson:"UserFriendsNotifications"`
-	Following                []primitive.ObjectID `json:"Following" bson:"Following"`
-	Followers                []primitive.ObjectID `json:"Followers" bson:"Followers"`
-	Timestamp                time.Time            `json:"Timestamp" bson:"Timestamp"`
-	Likes                    []primitive.ObjectID `json:"Likes" bson:"Likes"`
-	Wallet                   string               `json:"Wallet" bson:"Wallet"`
-	Online                   bool                 `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
+	Cmt                      string                            `json:"cmt,omitempty" bson:"Cmt"`
+	Verified                 bool                              `json:"verified,omitempty" bson:"Verified"`
+	Website                  string                            `json:"website,omitempty" bson:"Website"`
+	Phone                    string                            `json:"phone,omitempty" bson:"Phone"`
+	Sex                      string                            `json:"sex,omitempty" bson:"Sex"`
+	Situation                string                            `json:"situation,omitempty" bson:"Situation"`
+	UserFriendsNotifications int                               `json:"userFriendsNotifications,omitempty" bson:"UserFriendsNotifications"`
+	Following                map[primitive.ObjectID]FollowInfo `json:"Following" bson:"Following"`
+	Followers                map[primitive.ObjectID]FollowInfo `json:"Followers" bson:"Followers"`
+	Timestamp                time.Time                         `json:"Timestamp" bson:"Timestamp"`
+	Likes                    []primitive.ObjectID              `json:"Likes" bson:"Likes"`
+	Wallet                   string                            `json:"Wallet" bson:"Wallet"`
+	Online                   bool                              `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
 }
-
+type FollowInfo struct {
+	Since         time.Time `json:"since" bson:"since"`
+	Notifications bool      `json:"notifications" bson:"notifications"`
+}
 type UserModelValidator struct {
 	FullName      string    `json:"fullName" validate:"required,min=8,max=70"`
 	NameUser      string    `json:"NameUser" validate:"required,min=5,max=20"`
@@ -151,18 +154,18 @@ type GetUser struct {
 		Youtube   string `json:"youtube,omitempty" bson:"youtube"`
 		Tiktok    string `json:"tiktok,omitempty" bson:"tiktok"`
 	} `json:"socialnetwork,omitempty" bson:"socialnetwork"`
-	Verified                 bool                 `json:"verified,omitempty" bson:"Verified"`
-	Website                  string               `json:"website,omitempty" bson:"Website"`
-	Phone                    string               `json:"phone,omitempty" bson:"Phone"`
-	Sex                      string               `json:"sex,omitempty" bson:"Sex"`
-	Situation                string               `json:"situation,omitempty" bson:"Situation"`
-	UserFriendsNotifications int                  `json:"userFriendsNotifications,omitempty" bson:"UserFriendsNotifications"`
-	Following                []primitive.ObjectID `json:"Following" bson:"Following"`
-	Followers                []primitive.ObjectID `json:"Followers" bson:"Followers"`
-	Timestamp                time.Time            `json:"Timestamp" bson:"Timestamp"`
-	Likes                    []primitive.ObjectID `json:"Likes" bson:"Likes"`
-	Wallet                   string               `json:"Wallet" bson:"Wallet"`
-	Online                   bool                 `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
+	Verified                 bool                              `json:"verified,omitempty" bson:"Verified"`
+	Website                  string                            `json:"website,omitempty" bson:"Website"`
+	Phone                    string                            `json:"phone,omitempty" bson:"Phone"`
+	Sex                      string                            `json:"sex,omitempty" bson:"Sex"`
+	Situation                string                            `json:"situation,omitempty" bson:"Situation"`
+	UserFriendsNotifications int                               `json:"userFriendsNotifications,omitempty" bson:"UserFriendsNotifications"`
+	Following                map[primitive.ObjectID]FollowInfo `json:"Following" bson:"Following"`
+	Followers                map[primitive.ObjectID]FollowInfo `json:"Followers" bson:"Followers"`
+	Timestamp                time.Time                         `json:"Timestamp" bson:"Timestamp"`
+	Likes                    []primitive.ObjectID              `json:"Likes" bson:"Likes"`
+	Wallet                   string                            `json:"Wallet" bson:"Wallet"`
+	Online                   bool                              `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
 }
 type UserInfoOAuth2 struct {
 	ID      string `json:"id"`

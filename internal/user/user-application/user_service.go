@@ -41,8 +41,8 @@ func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avat
 	modelNewUser.Cmt = cmt
 	modelNewUser.Timestamp = time.Now()
 	modelNewUser.Likes = []primitive.ObjectID{}
-	modelNewUser.Followers = []primitive.ObjectID{}
-	modelNewUser.Following = []primitive.ObjectID{}
+	modelNewUser.Followers = make(map[primitive.ObjectID]domain.FollowInfo)
+	modelNewUser.Following = make(map[primitive.ObjectID]domain.FollowInfo)
 	modelNewUser.ClipsLikes = []primitive.ObjectID{}
 	modelNewUser.Verified = false
 	modelNewUser.Wallet = newUser.Wallet
