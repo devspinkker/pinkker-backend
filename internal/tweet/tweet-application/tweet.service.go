@@ -63,15 +63,22 @@ func (ts *TweetService) TweetDislike(idTweet primitive.ObjectID, idValueToken pr
 
 // find
 func (ts *TweetService) TweetGetFollow(idValueObj primitive.ObjectID, page int) ([]tweetdomain.TweetGetFollowReq, error) {
-
+	// Obtener los usuarios seguidos por el usuario específico
 	followedUsers, errGetFollowedUsers := ts.TweetRepository.GetFollowedUsers(idValueObj)
 	if errGetFollowedUsers != nil {
 		return nil, errGetFollowedUsers
 	}
 
-	Tweets, errGetTweetsLast24Hours := ts.TweetRepository.GetTweetsLast24HoursFollow(followedUsers.Following, page)
+	var followingIDs []primitive.ObjectID
+
+	for ids := range followedUsers.Following {
+		followingIDs = append(followingIDs, ids)
+	}
+
+	Tweets, errGetTweetsLast24Hours := ts.TweetRepository.GetTweetsLast24HoursFollow(followingIDs, page)
 	return Tweets, errGetTweetsLast24Hours
 }
+
 func (ts *TweetService) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, error) {
 
 	Tweets, errGetFollowedUsers := ts.TweetRepository.GetPost(page)

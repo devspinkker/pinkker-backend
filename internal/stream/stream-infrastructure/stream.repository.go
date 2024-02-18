@@ -151,12 +151,17 @@ func (r *StreamRepository) GetAllStreamsOnlineThatUserFollows(idValueObj primiti
 	if err := GoMongoDBCollUsers.FindOne(context.Background(), bson.D{{Key: "_id", Value: idValueObj}}).Decode(&user); err != nil {
 		return nil, err
 	}
+	var followingIDs []primitive.ObjectID
+
+	for ids := range user.Following {
+		followingIDs = append(followingIDs, ids)
+	}
 
 	cursor, err := GoMongoDBCollStreams.Find(
 		context.Background(),
 		bson.D{
 			{Key: "Online", Value: true},
-			{Key: "StreamerID", Value: bson.D{{Key: "$in", Value: user.Following}}},
+			{Key: "StreamerID", Value: bson.D{{Key: "$in", Value: followingIDs}}},
 		},
 	)
 	if err != nil {

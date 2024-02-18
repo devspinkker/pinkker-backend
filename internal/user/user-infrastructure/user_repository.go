@@ -234,22 +234,41 @@ func (u *UserRepository) CreateStreamUser(user *domain.User, id primitive.Object
 func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.ObjectID) error {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
-	// Agregar el followedUserID al campo Following del usuario que sigue
-	updateFollowing := bson.D{
-		{Key: "$addToSet", Value: bson.D{{Key: "Following", Value: followedUserID}}},
-	}
-	_, errUpdateFollowing := GoMongoDBCollUsers.UpdateOne(context.Background(), bson.D{{Key: "_id", Value: IdUserTokenP}}, updateFollowing)
-	if errUpdateFollowing != nil {
-		return errUpdateFollowing
+	Followingadd := domain.FollowInfo{
+		Since:         time.Now(),
+		Notifications: true,
 	}
 
-	// Agregar el IdUserTokenP al campo Followers del usuario seguido
-	updateFollowers := bson.D{
-		{Key: "$addToSet", Value: bson.D{{Key: "Followers", Value: IdUserTokenP}}},
+	var user domain.User
+	err := GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": IdUserTokenP}).Decode(&user)
+	if err != nil {
+		return err
 	}
-	_, errUpdateFollowers := GoMongoDBCollUsers.UpdateOne(context.Background(), bson.D{{Key: "_id", Value: followedUserID}}, updateFollowers)
-	if errUpdateFollowers != nil {
-		return errUpdateFollowers
+
+	// Agregar el followedUserID al mapa Following
+	user.Following[followedUserID] = Followingadd
+
+	_, err = GoMongoDBCollUsers.ReplaceOne(context.Background(), bson.M{"_id": IdUserTokenP}, user)
+	if err != nil {
+		return err
+	}
+
+	// Agregar el IdUserTokenP al mapa Followers del usuario seguido
+	Followersadd := domain.FollowInfo{
+		Since:         time.Now(),
+		Notifications: true,
+	}
+
+	err = GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": followedUserID}).Decode(&user)
+	if err != nil {
+		return err
+	}
+
+	user.Followers[IdUserTokenP] = Followersadd
+
+	_, err = GoMongoDBCollUsers.ReplaceOne(context.Background(), bson.M{"_id": followedUserID}, user)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -258,20 +277,31 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectID) error {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
-	updateFollowing := bson.D{
-		{Key: "$pull", Value: bson.D{{Key: "Following", Value: unfollowedUserID}}},
-	}
-	_, errUpdateFollowing := GoMongoDBCollUsers.UpdateOne(context.Background(), bson.D{{Key: "_id", Value: userID}}, updateFollowing)
-	if errUpdateFollowing != nil {
-		return errUpdateFollowing
+	var user domain.User
+	err := GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		return err
 	}
 
-	updateFollowers := bson.D{
-		{Key: "$pull", Value: bson.D{{Key: "Followers", Value: userID}}},
+	// Eliminar unfollowedUserID del mapa Following
+	delete(user.Following, unfollowedUserID)
+
+	_, err = GoMongoDBCollUsers.ReplaceOne(context.Background(), bson.M{"_id": userID}, user)
+	if err != nil {
+		return err
 	}
-	_, errUpdateFollowers := GoMongoDBCollUsers.UpdateOne(context.Background(), bson.D{{Key: "_id", Value: unfollowedUserID}}, updateFollowers)
-	if errUpdateFollowers != nil {
-		return errUpdateFollowers
+
+	// Eliminar userID del mapa Followers del usuario que está siendo seguido
+	err = GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": unfollowedUserID}).Decode(&user)
+	if err != nil {
+		return err
+	}
+
+	delete(user.Followers, userID)
+
+	_, err = GoMongoDBCollUsers.ReplaceOne(context.Background(), bson.M{"_id": unfollowedUserID}, user)
+	if err != nil {
+		return err
 	}
 
 	return nil
