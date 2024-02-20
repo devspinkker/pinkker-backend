@@ -427,3 +427,16 @@ func (r *SubscriptionRepository) GetSubsChat(id primitive.ObjectID) ([]subscript
 	}
 	return Subscriber, nil
 }
+func (r *SubscriptionRepository) UpdataSubsChat(id, ToUserID primitive.ObjectID) error {
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+
+	var subscriber streamdomain.Stream
+	collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&subscriber)
+	var ToUser streamdomain.Stream
+	collection.FindOne(context.Background(), bson.M{"_id": ToUserID}).Decode(&ToUser)
+
+	userHashKey := "userInformation:" + subscriber.Streamer + ":inTheRoom:" + ToUser.ID.Hex()
+	err := r.redisClient.Del(context.Background(), userHashKey)
+
+	return err.Err()
+}
