@@ -87,7 +87,10 @@ func (u *UserRepository) FindNameUser(NameUser string, Email string) (*domain.Us
 	var FindUserInDb primitive.D
 	if Email == "" {
 		FindUserInDb = bson.D{
-			{Key: "NameUser", Value: NameUser},
+			{Key: "$or", Value: bson.A{
+				bson.D{{Key: "NameUser", Value: NameUser}},
+				bson.D{{Key: "NameUser", Value: primitive.Regex{Pattern: NameUser, Options: "i"}}},
+			}},
 		}
 	} else {
 		FindUserInDb = bson.D{
@@ -109,7 +112,10 @@ func (u *UserRepository) FindNameUserNoSensitiveInformation(NameUser string, Ema
 	var FindUserInDb primitive.D
 	if Email == "" {
 		FindUserInDb = bson.D{
-			{Key: "NameUser", Value: NameUser},
+			{Key: "$or", Value: bson.A{
+				bson.D{{Key: "NameUser", Value: NameUser}},
+				bson.D{{Key: "NameUser", Value: primitive.Regex{Pattern: NameUser, Options: "i"}}},
+			}},
 		}
 	} else {
 		FindUserInDb = bson.D{

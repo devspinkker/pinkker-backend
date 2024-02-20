@@ -26,3 +26,8 @@ func (D *SubscriptionService) GetSubsChat(id primitive.ObjectID) ([]subscription
 
 	return Donations, err
 }
+func (D *SubscriptionService) UpdataSubsChat(id, ToUser primitive.ObjectID) error {
+	err := D.roomRepository.UpdataSubsChat(id, ToUser)
+
+	return err
+}

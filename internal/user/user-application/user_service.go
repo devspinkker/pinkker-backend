@@ -86,15 +86,13 @@ func (u *UserService) ConfirmationEmailToken(nameUser string) error {
 
 // find
 func (u *UserService) FindNameUser(NameUser string, Email string) (*domain.User, error) {
-	NameUserLower := strings.ToLower(NameUser)
 
-	user, err := u.roomRepository.FindNameUser(NameUserLower, Email)
+	user, err := u.roomRepository.FindNameUser(NameUser, Email)
 	return user, err
 }
 func (u *UserService) FindNameUserNoSensitiveInformationApli(NameUser string, Email string) (*domain.GetUser, error) {
-	NameUserLower := strings.ToLower(NameUser)
 
-	user, err := u.roomRepository.FindNameUserNoSensitiveInformation(NameUserLower, Email)
+	user, err := u.roomRepository.FindNameUserNoSensitiveInformation(NameUser, Email)
 	return user, err
 }
 func (u *UserService) GetUserByNameUserIndex(NameUser string) ([]*domain.GetUser, error) {

@@ -46,6 +46,13 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 			"message": errdonatePixels.Error(),
 		})
 	}
+
+	errupdataSubsChat := h.subscriptionService.UpdataSubsChat(FromUser, idReq.ToUser)
+	if errupdataSubsChat != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": errupdataSubsChat.Error(),
+		})
+	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})
