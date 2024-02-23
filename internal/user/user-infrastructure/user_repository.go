@@ -223,7 +223,7 @@ func (u *UserRepository) CreateStreamUser(user *domain.User, id primitive.Object
 		StreamerID:         id,
 		Streamer:           user.NameUser,
 		StreamTitle:        "Your Title",
-		StreamCategory:     "Just Chatting",
+		StreamCategory:     "IRL",
 		StreamNotification: user.NameUser + " is live!",
 		StreamerAvatar:     user.Avatar,
 		StreamTag:          []string{"Español"},
