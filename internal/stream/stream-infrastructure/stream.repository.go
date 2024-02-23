@@ -345,19 +345,19 @@ func (r *StreamRepository) Update_start_date(req streamdomain.Update_start_date)
 	return err
 }
 func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStreamInfo, id primitive.ObjectID) error {
-	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
-
-	GoMongoDBCollUser := GoMongoDB.Collection("Users")
-	var userCmt *userdomain.User
-	filterUser := bson.D{
-		{Key: "_id", Value: id},
+	userFilter := bson.M{"_id": id}
+	var user userdomain.User
+	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users").FindOne(context.Background(), userFilter).Decode(&user); err != nil {
+		return err
 	}
-	err := GoMongoDBCollUser.FindOne(context.Background(), filterUser).Decode(&userCmt)
-	if err != nil {
+	streamerName := user.NameUser
+
+	var previousStream streamdomain.Stream
+	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").FindOne(context.Background(), bson.M{"Streamer": streamerName}).Decode(&previousStream); err != nil {
 		return err
 	}
 
-	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
+	streamFilter := bson.M{"Streamer": streamerName}
 	update := bson.M{
 		"$set": bson.M{
 			"StreamTitle":        updateInfo.Title,
@@ -368,15 +368,21 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 			"StartDate":          updateInfo.Date,
 		},
 	}
-
-	updata, err := GoMongoDBCollStreams.UpdateOne(context.Background(), bson.M{"Streamer": userCmt.NameUser}, update)
-	if err != nil {
+	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").UpdateOne(context.Background(), streamFilter, update); err != nil {
 		return err
 	}
 
-	if updata.MatchedCount == 0 {
-		return errors.New("Not Found")
+	categoryFilter := bson.M{"Name": previousStream.StreamCategory}
+	categoryUpdate := bson.M{"$inc": bson.M{"Spectators": -previousStream.ViewerCount}}
+	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Categorias").UpdateOne(context.Background(), categoryFilter, categoryUpdate); err != nil {
+		return err
 	}
+
+	categoryUpdate = bson.M{"$inc": bson.M{"Spectators": previousStream.ViewerCount}}
+	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Categorias").UpdateOne(context.Background(), bson.M{"Name": updateInfo.Category}, categoryUpdate); err != nil {
+		return err
+	}
+
 	return nil
 }
 
