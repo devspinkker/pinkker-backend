@@ -235,6 +235,27 @@ func (u *UserRepository) CreateStreamUser(user *domain.User, id primitive.Object
 	_, errInsertOne := GoMongoDBCollUsers.InsertOne(context.Background(), newStream)
 	return errInsertOne
 }
+func (u *UserRepository) EditSocialNetworks(SocialNetwork domain.SocialNetwork, id primitive.ObjectID) error {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	filter := bson.M{"_id": id}
+	update := bson.M{
+		"$set": bson.M{
+			"socialnetwork.facebook":  SocialNetwork.Facebook,
+			"socialnetwork.twitter":   SocialNetwork.Twitter,
+			"socialnetwork.instagram": SocialNetwork.Instagram,
+			"socialnetwork.youtube":   SocialNetwork.Youtube,
+			"socialnetwork.tiktok":    SocialNetwork.Tiktok,
+		},
+	}
+
+	_, err := GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 // follow
 func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.ObjectID) error {
@@ -242,37 +263,28 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 
 	Followingadd := domain.FollowInfo{
 		Since:         time.Now(),
-		Notifications: true,
+		Notifications: false,
 	}
 
-	var user domain.User
-	err := GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": IdUserTokenP}).Decode(&user)
+	// Agregar followedUserID al mapa Following de IdUserTokenP
+	filter := bson.M{"_id": IdUserTokenP}
+	update := bson.M{"$set": bson.M{"Following." + followedUserID.Hex(): Followingadd}}
+
+	_, err := GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		return err
 	}
 
-	// Agregar el followedUserID al mapa Following
-	user.Following[followedUserID] = Followingadd
-
-	_, err = GoMongoDBCollUsers.ReplaceOne(context.Background(), bson.M{"_id": IdUserTokenP}, user)
-	if err != nil {
-		return err
-	}
-
-	// Agregar el IdUserTokenP al mapa Followers del usuario seguido
+	// Agregar IdUserTokenP al mapa Followers de followedUserID
 	Followersadd := domain.FollowInfo{
 		Since:         time.Now(),
-		Notifications: true,
+		Notifications: false,
 	}
 
-	err = GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": followedUserID}).Decode(&user)
-	if err != nil {
-		return err
-	}
+	filter = bson.M{"_id": followedUserID}
+	update = bson.M{"$set": bson.M{"Followers." + IdUserTokenP.Hex(): Followersadd}}
 
-	user.Followers[IdUserTokenP] = Followersadd
-
-	_, err = GoMongoDBCollUsers.ReplaceOne(context.Background(), bson.M{"_id": followedUserID}, user)
+	_, err = GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		return err
 	}

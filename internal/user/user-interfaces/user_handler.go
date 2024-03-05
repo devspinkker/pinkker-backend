@@ -630,3 +630,29 @@ func (h *UserHandler) EditAvatar(c *fiber.Ctx) error {
 	}
 
 }
+
+func (h *UserHandler) EditSocialNetworks(c *fiber.Ctx) error {
+	var SocialNetwork domain.SocialNetwork
+	if err := c.BodyParser(&SocialNetwork); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	errUpdateUserFollow := h.userService.EditSocialNetworks(SocialNetwork, IdUserTokenP)
+	if errUpdateUserFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+	})
+
+}
