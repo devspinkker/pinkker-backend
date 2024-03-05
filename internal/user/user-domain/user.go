@@ -77,13 +77,14 @@ type UserModelValidator struct {
 	BirthDateTime time.Time `json:"-" bson:"BirthDate"`
 }
 
-type  SocialNetwork struct {
+type SocialNetwork struct {
 	Facebook  string `json:"facebook,omitempty" bson:"facebook"`
 	Twitter   string `json:"twitter,omitempty" bson:"twitter"`
 	Instagram string `json:"instagram,omitempty" bson:"instagram"`
 	Youtube   string `json:"youtube,omitempty" bson:"youtube"`
 	Tiktok    string `json:"tiktok,omitempty" bson:"tiktok"`
-} 
+}
+
 func (u *UserModelValidator) ValidateUser() error {
 	validate := validator.New()
 	if u.BirthDate != "" {
