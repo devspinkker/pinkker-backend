@@ -48,5 +48,5 @@ type Categoria struct {
 	Img        string   `json:"img,omitempty"`
 	Spectators int      `json:"spectators,omitempty"`
 	Tags       []string `json:"tags,omitempty"`
-	TopColor   []string `json:"TopColor,omitempty"`
+	TopColor   string   `json:"TopColor,omitempty"`
 }

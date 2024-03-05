@@ -146,3 +146,7 @@ func (u *UserService) RedisSaveAccountRecoveryCode(code string, user domain.User
 	err := u.roomRepository.RedisSaveAccountRecoveryCode(code, user)
 	return err
 }
+func (u *UserService) EditSocialNetworks(SocialNetwork userdomain.SocialNetwork, id primitive.ObjectID) error {
+	err := u.roomRepository.EditSocialNetworks(SocialNetwork, id)
+	return err
+}
