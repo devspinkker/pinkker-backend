@@ -16,6 +16,7 @@ type Stream struct {
 	Online             bool               `json:"online" bson:"Online,default:false"`
 	StreamTitle        string             `json:"stream_title" bson:"StreamTitle"`
 	StreamCategory     string             `json:"stream_category" bson:"StreamCategory"`
+	ImageCategorie     string             `json:"ImageCategorie" bson:"ImageCategorie"`
 	StreamNotification string             `json:"stream_notification" bson:"StreamNotification"`
 	StreamTag          []string           `json:"stream_tag"  bson:"StreamTag,default:['Español']"`
 	StreamLikes        []string           `json:"stream_likes" bson:"StreamLikes"`
