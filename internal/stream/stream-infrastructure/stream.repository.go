@@ -356,7 +356,13 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").FindOne(context.Background(), bson.M{"Streamer": streamerName}).Decode(&previousStream); err != nil {
 		return err
 	}
-
+	categoriaImgUpdateFilter := bson.M{"Name": updateInfo.Category}
+	var categoriaImgUpdate streamdomain.Categoria
+	dbColeccionCategorias := r.mongoClient.Database("PINKKER-BACKEND").Collection("Categorias")
+	err := dbColeccionCategorias.FindOne(context.Background(), categoriaImgUpdateFilter).Decode(&categoriaImgUpdate)
+	if err != nil {
+		return err
+	}
 	streamFilter := bson.M{"Streamer": streamerName}
 	update := bson.M{
 		"$set": bson.M{
@@ -366,6 +372,7 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 			"StreamTag":          updateInfo.Tag,
 			"StreamIdiom":        updateInfo.Idiom,
 			"StartDate":          updateInfo.Date,
+			"ImageCategorie":     categoriaImgUpdate.Img,
 		},
 	}
 	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").UpdateOne(context.Background(), streamFilter, update); err != nil {
@@ -374,12 +381,12 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 
 	categoryFilter := bson.M{"Name": previousStream.StreamCategory}
 	categoryUpdate := bson.M{"$inc": bson.M{"Spectators": -previousStream.ViewerCount}}
-	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Categorias").UpdateOne(context.Background(), categoryFilter, categoryUpdate); err != nil {
+	if _, err := dbColeccionCategorias.UpdateOne(context.Background(), categoryFilter, categoryUpdate); err != nil {
 		return err
 	}
 
 	categoryUpdate = bson.M{"$inc": bson.M{"Spectators": previousStream.ViewerCount}}
-	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Categorias").UpdateOne(context.Background(), bson.M{"Name": updateInfo.Category}, categoryUpdate); err != nil {
+	if _, err := dbColeccionCategorias.UpdateOne(context.Background(), bson.M{"Name": updateInfo.Category}, categoryUpdate); err != nil {
 		return err
 	}
 
