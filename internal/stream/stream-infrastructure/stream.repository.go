@@ -3,6 +3,7 @@ package streaminfrastructure
 import (
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
+	"PINKKER-BACKEND/pkg/helpers"
 	"context"
 	"errors"
 	"time"
@@ -274,7 +275,18 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		session.AbortTransaction(ctx)
 		return err
 	}
+	notifyOnlineStreamer := []string{}
 
+	for userID, followInfo := range userFind.Followers {
+		if followInfo.Notifications {
+			notifyOnlineStreamer = append(notifyOnlineStreamer, userID.Hex())
+		}
+	}
+	err = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
+	if err != nil {
+		session.AbortTransaction(ctx)
+		return err
+	}
 	err = session.CommitTransaction(ctx)
 	if err != nil {
 		return err
