@@ -33,6 +33,8 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	App.Post("/stream/update_start_date", streamHandler.Update_start_date)
 
 	App.Post("/stream/update_stream_info", middleware.UseExtractor(), streamHandler.UpdateStreamInfo)
+	App.Post("/stream/updateModChat", middleware.UseExtractor(), streamHandler.UpdateModChat)
+
 	// claudinary, push modificar el map, request
 	App.Post("/stream/update_Emotes", streamHandler.Update_Emotes)
 
@@ -43,7 +45,5 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	App.Get("/stream/get_streamings_online", streamHandler.Streamings_online)
 	// esto se tiene que mover a una carpeta especifica
 	App.Get("/categorie/GetCategories", streamHandler.GetCategories)
-
-	////
 
 }

@@ -236,3 +236,22 @@ type InfoUserInRoom struct {
 	Color    string                   `json:"Color" bson:"Color"`
 	Rooms    []map[string]interface{} `json:"rooms" bson:"Rooms"`
 }
+
+type InfoUser struct {
+	ID       primitive.ObjectID       `bson:"_id,omitempty"`
+	Nameuser string                   `bson:"NameUser"`
+	Color    string                   `bson:"Color"`
+	Rooms    []map[string]interface{} `bson:"Rooms"`
+}
+
+type SubscriptionInfo struct {
+	ID                   primitive.ObjectID `bson:"_id,omitempty"`
+	SubscriptionNameUser string             `bson:"SubscriptionNameUser"`
+	SourceUserID         primitive.ObjectID `bson:"sourceUserID"`
+	DestinationUserID    primitive.ObjectID `bson:"destinationUserID"`
+	SubscriptionStart    time.Time          `bson:"SubscriptionStart"`
+	SubscriptionEnd      time.Time          `bson:"SubscriptionEnd"`
+	MonthsSubscribed     int                `bson:"MonthsSubscribed"`
+	Notified             bool               `bson:"Notified"`
+	Text                 string             `bson:"Text"`
+}

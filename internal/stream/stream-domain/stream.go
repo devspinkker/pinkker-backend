@@ -25,6 +25,7 @@ type Stream struct {
 	StartDate          time.Time          `json:"start_date" bson:"StartDate"`
 	Timestamp          time.Time          `json:"Timestamp" bson:"Timestamp"`
 	EmotesChat         map[string]string  `json:"EmotesChat" bson:"EmotesChat"`
+	ModChat            string             `json:"ModChat" bson:"ModChat"`
 }
 type UpdateStreamInfo struct {
 	Date         int64    `json:"date"`
@@ -36,6 +37,15 @@ type UpdateStreamInfo struct {
 }
 
 func (u *UpdateStreamInfo) Validate() error {
+	validate := validator.New()
+	return validate.Struct(u)
+}
+
+type UpdateModChat struct {
+	Mod string `json:"title" validate:"min=5,max=30"`
+}
+
+func (u *UpdateModChat) Validate() error {
 	validate := validator.New()
 	return validate.Struct(u)
 }
