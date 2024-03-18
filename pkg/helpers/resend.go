@@ -14,7 +14,7 @@ func ResendConfirmMail(code, To string) error {
 	params := &resend.SendEmailRequest{
 		From:    RESENDDOMINIO,
 		To:      []string{To},
-		Subject: "email confirmation code",
+		Subject: "confirmacion de mail - pinkker",
 		Html:    "<p>codigo de confirmacion</p>" + code,
 	}
 	_, err := client.Emails.Send(params)
@@ -30,9 +30,24 @@ func ResendRecoverPassword(code, To string) error {
 	params := &resend.SendEmailRequest{
 		From:    RESENDDOMINIO,
 		To:      []string{To},
-		Subject: "email confirmation code",
+		Subject: "recuperación de contraseña - pinkker",
 		Html:    html,
 	}
 	_, err := client.Emails.Send(params)
 	return err
+}
+func ResendNotificationStreamerOnline(nameUser string, To []string) error {
+	html := "<h1>" + nameUser + " Online<h1/>"
+	apikey := config.ResendApi()
+	RESENDDOMINIO := config.ResendDominio()
+	client := resend.NewClient(apikey)
+	params := &resend.SendEmailRequest{
+		From:    RESENDDOMINIO,
+		To:      To,
+		Subject: nameUser + " acaba de prender en pinkker !!!",
+		Html:    html,
+	}
+	_, err := client.Emails.Send(params)
+	return err
+
 }
