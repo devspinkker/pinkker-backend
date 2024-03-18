@@ -79,6 +79,11 @@ func (s *StreamService) UpdateStreamInfo(data streamdomain.UpdateStreamInfo, id 
 	err := s.StreamRepository.UpdateStreamInfo(data, id)
 	return err
 }
+
+func (s *StreamService) UpdateModChat(data streamdomain.UpdateModChat, id primitive.ObjectID) error {
+	err := s.StreamRepository.UpdateModChat(data, id)
+	return err
+}
 func (s *StreamService) Update_Emotes(idUser primitive.ObjectID, date int) error {
 	err := s.StreamRepository.Update_Emotes(idUser, date)
 	return err

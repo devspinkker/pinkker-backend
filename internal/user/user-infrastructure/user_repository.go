@@ -261,7 +261,8 @@ func (u *UserRepository) EditSocialNetworks(SocialNetwork domain.SocialNetwork, 
 
 // follow
 func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.ObjectID) error {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := db.Collection("Users")
 
 	filterFollowe := bson.M{"_id": followedUserID}
 
@@ -305,12 +306,89 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 	if err != nil {
 		return err
 	}
+	GoMongoDBCollInformationInAllRooms := db.Collection("UserInformationInAllRooms")
+
+	var StreamInfo streamdomain.Stream
+	filter = bson.M{"NameUser": usertoken.NameUser}
+	GoMongoDBCollStreams := db.Collection("Streams")
+	err = GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&StreamInfo)
+	if err != nil {
+		return err
+	}
+	filter = bson.M{"NameUser": usertoken.NameUser}
+	var userInfo domain.InfoUser
+	err = GoMongoDBCollInformationInAllRooms.FindOne(context.Background(), filter).Decode(&userInfo)
+	if err == mongo.ErrNoDocuments {
+		defaultUserFields := map[string]interface{}{
+			"Room":             StreamInfo.ID,
+			"Color":            "#00ccb3",
+			"Vip":              false,
+			"Verified":         false,
+			"Moderator":        false,
+			"Subscription":     primitive.ObjectID{},
+			"SubscriptionInfo": domain.SubscriptionInfo{},
+			"Baneado":          false,
+			"TimeOut":          time.Now(),
+			"EmblemasChat": map[string]string{
+				"Vip":       "",
+				"Moderator": "",
+				"Verified":  "",
+			},
+		}
+		userInfo = domain.InfoUser{
+			Nameuser: usertoken.NameUser,
+			Color:    "#00ccb3",
+			Rooms:    []map[string]interface{}{defaultUserFields},
+		}
+		_, err := GoMongoDBCollInformationInAllRooms.InsertOne(context.Background(), userInfo)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
+	roomExists := false
+	for _, room := range userInfo.Rooms {
+		if room["Room"] == StreamInfo.ID {
+			roomExists = true
+			room["Following"] = Followingadd
+			break
+		}
+	}
+
+	if !roomExists {
+		newRoom := map[string]interface{}{
+			"Room":         StreamInfo.ID,
+			"Vip":          false,
+			"Color":        "#00ccb3",
+			"Moderator":    false,
+			"Verified":     false,
+			"Subscription": primitive.ObjectID{},
+			"Baneado":      false,
+			"TimeOut":      time.Now(),
+			"EmblemasChat": map[string]string{
+				"Vip":       "",
+				"Moderator": "",
+				"Verified":  "",
+			},
+			"Following": Followingadd,
+		}
+
+		userInfo.Rooms = append(userInfo.Rooms, newRoom)
+	}
+
+	_, err = GoMongoDBCollInformationInAllRooms.UpdateOne(context.Background(), filter, bson.M{"$set": userInfo})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
-
 func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectID) error {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+
+	GoMongoDBCollUsers := db.Collection("Users")
 
 	var user domain.User
 	err := GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
@@ -335,6 +413,29 @@ func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectI
 	delete(user.Followers, userID)
 
 	_, err = GoMongoDBCollUsers.ReplaceOne(context.Background(), bson.M{"_id": unfollowedUserID}, user)
+	if err != nil {
+		return err
+	}
+
+	var StreamInfo streamdomain.Stream
+	filter := bson.M{"NameUser": user.NameUser}
+	GoMongoDBCollStreams := db.Collection("Streams")
+	err = GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&StreamInfo)
+	if err != nil {
+		return err
+	}
+	GoMongoDBCollInformationInAllRooms := db.Collection("UserInformationInAllRooms")
+
+	filter = bson.M{"NameUser": user.NameUser}
+	update := bson.M{"$set": bson.M{"Rooms.$[elem].Following": domain.FollowInfo{}}}
+	arrayFilters := options.ArrayFilters{
+		Filters: []interface{}{bson.M{"elem.Room": StreamInfo.ID}},
+	}
+	opts := options.UpdateOptions{
+		ArrayFilters: &arrayFilters,
+	}
+
+	_, err = GoMongoDBCollInformationInAllRooms.UpdateOne(context.Background(), filter, update, &opts)
 	if err != nil {
 		return err
 	}
