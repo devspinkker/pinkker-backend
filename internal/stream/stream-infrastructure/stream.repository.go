@@ -277,9 +277,9 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 	}
 	notifyOnlineStreamer := []string{}
 
-	for userID, followInfo := range userFind.Followers {
+	for _, followInfo := range userFind.Followers {
 		if followInfo.Notifications {
-			notifyOnlineStreamer = append(notifyOnlineStreamer, userID.Hex())
+			notifyOnlineStreamer = append(notifyOnlineStreamer, followInfo.Email)
 		}
 	}
 	err = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)

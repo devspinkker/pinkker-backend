@@ -263,16 +263,30 @@ func (u *UserRepository) EditSocialNetworks(SocialNetwork domain.SocialNetwork, 
 func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.ObjectID) error {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
+	filterFollowe := bson.M{"_id": followedUserID}
+
+	var userFolloer domain.User
+	err := GoMongoDBCollUsers.FindOne(context.Background(), filterFollowe).Decode(&userFolloer)
+	if err != nil {
+		return err
+	}
+	filterToken := bson.M{"_id": IdUserTokenP}
+	var usertoken domain.User
+	err = GoMongoDBCollUsers.FindOne(context.Background(), filterToken).Decode(&usertoken)
+	if err != nil {
+		return err
+	}
 	Followingadd := domain.FollowInfo{
 		Since:         time.Now(),
 		Notifications: false,
+		Email:         userFolloer.Email,
 	}
 
 	// Agregar followedUserID al mapa Following de IdUserTokenP
 	filter := bson.M{"_id": IdUserTokenP}
 	update := bson.M{"$set": bson.M{"Following." + followedUserID.Hex(): Followingadd}}
 
-	_, err := GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
+	_, err = GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		return err
 	}
@@ -281,6 +295,7 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 	Followersadd := domain.FollowInfo{
 		Since:         time.Now(),
 		Notifications: false,
+		Email:         usertoken.Email,
 	}
 
 	filter = bson.M{"_id": followedUserID}
