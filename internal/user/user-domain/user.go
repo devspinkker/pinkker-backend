@@ -61,6 +61,7 @@ type User struct {
 type FollowInfo struct {
 	Since         time.Time `json:"since" bson:"since"`
 	Notifications bool      `json:"notifications" bson:"notifications"`
+	Email         string    `json:"Email" bson:"Email"`
 }
 type UserModelValidator struct {
 	FullName      string    `json:"fullName" validate:"required,min=8,max=70"`
