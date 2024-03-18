@@ -6,6 +6,7 @@ import (
 	"PINKKER-BACKEND/pkg/helpers"
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -276,16 +277,14 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		return err
 	}
 	notifyOnlineStreamer := []string{}
-
-	for _, followInfo := range userFind.Followers {
-		if followInfo.Notifications {
-			notifyOnlineStreamer = append(notifyOnlineStreamer, followInfo.Email)
+	if state {
+		for _, followInfo := range userFind.Followers {
+			if followInfo.Notifications {
+				notifyOnlineStreamer = append(notifyOnlineStreamer, followInfo.Email)
+			}
 		}
-	}
-	err = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
-	if err != nil {
-		session.AbortTransaction(ctx)
-		return err
+		err = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
+		fmt.Println(err)
 	}
 	err = session.CommitTransaction(ctx)
 	if err != nil {

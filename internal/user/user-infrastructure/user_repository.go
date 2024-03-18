@@ -278,7 +278,7 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 	}
 	Followingadd := domain.FollowInfo{
 		Since:         time.Now(),
-		Notifications: false,
+		Notifications: true,
 		Email:         userFolloer.Email,
 	}
 
@@ -294,7 +294,7 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 	// Agregar IdUserTokenP al mapa Followers de followedUserID
 	Followersadd := domain.FollowInfo{
 		Since:         time.Now(),
-		Notifications: false,
+		Notifications: true,
 		Email:         usertoken.Email,
 	}
 
