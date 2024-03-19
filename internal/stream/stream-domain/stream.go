@@ -42,7 +42,8 @@ func (u *UpdateStreamInfo) Validate() error {
 }
 
 type UpdateModChat struct {
-	Mod string `json:"title" validate:"min=5,max=30"`
+	// cambiar de title a Mod el json
+	Mod string `json:"title" validate:"max=30"`
 }
 
 func (u *UpdateModChat) Validate() error {

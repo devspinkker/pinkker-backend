@@ -85,3 +85,29 @@ func (d *SubscriptionHandler) GetSubsChat(c *fiber.Ctx) error {
 		"data":    donations,
 	})
 }
+
+func (h *SubscriptionHandler) GetSubsAct(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenVer, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	var idReq ReqChatSubs
+	if err := c.BodyParser(&idReq); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	sub, err := h.subscriptionService.GetSubsAct(IdUserTokenVer, idReq.Id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"data":    sub,
+		"message": "ok",
+	})
+}

@@ -19,5 +19,6 @@ func SubsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 
 	App.Post("/Subs/suscribirse", middleware.UseExtractor(), UserHandler.Suscribirse)
 	App.Get("/Subs/GetSubsChat", UserHandler.GetSubsChat)
+	App.Get("/Subs/GetSubsAct", middleware.UseExtractor(), UserHandler.GetSubsAct)
 
 }
