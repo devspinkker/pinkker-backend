@@ -440,3 +440,8 @@ func (r *SubscriptionRepository) UpdataSubsChat(id, ToUserID primitive.ObjectID)
 
 	return err.Err()
 }
+
+func (r *SubscriptionRepository) GetSubsAct(Source, Destination primitive.ObjectID) (subscriptiondomain.Subscription, error) {
+	subs, err := r.getSubscriptionByUserIDs(Source, Destination)
+	return subs, err
+}

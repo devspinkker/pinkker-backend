@@ -31,3 +31,8 @@ func (D *SubscriptionService) UpdataSubsChat(id, ToUser primitive.ObjectID) erro
 
 	return err
 }
+
+func (s *SubscriptionService) GetSubsAct(Source, Destination primitive.ObjectID) (subscriptiondomain.Subscription, error) {
+	subs, err := s.roomRepository.GetSubsAct(Source, Destination)
+	return subs, err
+}
