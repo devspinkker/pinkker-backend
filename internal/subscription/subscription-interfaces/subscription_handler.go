@@ -86,21 +86,20 @@ func (d *SubscriptionHandler) GetSubsChat(c *fiber.Ctx) error {
 	})
 }
 
+type ReqGetSubsAct struct {
+	Source primitive.ObjectID `json:"-" query:"Source"`
+	Desti  primitive.ObjectID `json:"-" query:"Desti"`
+}
+
 func (h *SubscriptionHandler) GetSubsAct(c *fiber.Ctx) error {
-	IdUserToken := c.Context().UserValue("_id").(string)
-	IdUserTokenVer, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
-	if errinObjectID != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "StatusInternalServerError",
-		})
-	}
-	var idReq ReqChatSubs
+
+	var idReq ReqGetSubsAct
 	if err := c.BodyParser(&idReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})
 	}
-	sub, err := h.subscriptionService.GetSubsAct(IdUserTokenVer, idReq.Id)
+	sub, err := h.subscriptionService.GetSubsAct(idReq.Source, idReq.Desti)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
