@@ -114,10 +114,19 @@ func (u *UserService) GetUserBykey(key string) (*domain.User, error) {
 // follow
 func (u *UserService) FollowUser(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) error {
 	err := u.roomRepository.FollowUser(IdUserTokenP, IdUser)
+
 	return err
 }
 func (u *UserService) Unfollow(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) error {
 	err := u.roomRepository.UnfollowUser(IdUserTokenP, IdUser)
+	if err != nil {
+		return err
+	}
+	return err
+}
+func (u *UserService) DeleteRedisUserChatInOneRoom(userToDelete primitive.ObjectID, IdRoom primitive.ObjectID) error {
+	err := u.roomRepository.DeleteRedisUserChatInOneRoom(userToDelete, IdRoom)
+
 	return err
 }
 

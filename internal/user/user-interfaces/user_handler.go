@@ -323,6 +323,14 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 	if errUpdateUserFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
+			"data":    errUpdateUserFollow,
+		})
+	}
+	errdeleteUser := h.userService.DeleteRedisUserChatInOneRoom(IdUserTokenP, IdUser)
+	if errdeleteUser != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errdeleteUser,
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -352,6 +360,13 @@ func (h *UserHandler) Unfollow(c *fiber.Ctx) error {
 	if errUpdateUserFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
+		})
+	}
+	errdeleteUser := h.userService.DeleteRedisUserChatInOneRoom(IdUserTokenP, IdUser)
+	if errdeleteUser != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errdeleteUser,
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
