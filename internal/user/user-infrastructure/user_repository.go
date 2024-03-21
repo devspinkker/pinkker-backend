@@ -442,7 +442,22 @@ func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectI
 
 	return nil
 }
-
+func (u *UserRepository) DeleteRedisUserChatInOneRoom(userToDelete primitive.ObjectID, IdRoom primitive.ObjectID) error {
+	GoMongoDBColl := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollStreams := GoMongoDBColl.Collection("Streams")
+	filter := bson.M{"StreamerID": IdRoom}
+	var stream streamdomain.Stream
+	err := GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&stream)
+	if err != nil {
+		return err
+	}
+	userHashKey := "userInformation:" + userToDelete.Hex() + ":inTheRoom:" + stream.ID.Hex()
+	_, err = u.redisClient.Del(context.Background(), userHashKey).Result()
+	if err != nil {
+		return err
+	}
+	return err
+}
 func (u *UserRepository) FindEmailForOauth2Updata(user *domain.Google_callback_Complete_Profile_And_Username) (*domain.User, error) {
 	NameUserLower := strings.ToLower(user.NameUser)
 	_, err := u.FindNameUser(NameUserLower, "")

@@ -53,6 +53,12 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 			"message": errupdataSubsChat.Error(),
 		})
 	}
+	errdDeleteRedisUserChatInOneRoom := h.subscriptionService.DeleteRedisUserChatInOneRoom(FromUser, idReq.ToUser)
+	if errdDeleteRedisUserChatInOneRoom != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": errupdataSubsChat,
+		})
+	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})
@@ -94,7 +100,7 @@ type ReqGetSubsAct struct {
 func (h *SubscriptionHandler) GetSubsAct(c *fiber.Ctx) error {
 
 	var idReq ReqGetSubsAct
-	if err := c.BodyParser(&idReq); err != nil {
+	if err := c.QueryParser(&idReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})

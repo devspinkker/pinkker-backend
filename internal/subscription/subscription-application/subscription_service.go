@@ -36,3 +36,9 @@ func (s *SubscriptionService) GetSubsAct(Source, Destination primitive.ObjectID)
 	subs, err := s.roomRepository.GetSubsAct(Source, Destination)
 	return subs, err
 }
+
+func (u *SubscriptionService) DeleteRedisUserChatInOneRoom(userToDelete primitive.ObjectID, IdRoom primitive.ObjectID) error {
+	err := u.roomRepository.DeleteRedisUserChatInOneRoom(userToDelete, IdRoom)
+
+	return err
+}

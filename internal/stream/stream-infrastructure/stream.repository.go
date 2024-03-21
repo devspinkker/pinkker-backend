@@ -247,15 +247,16 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 	filterStreams := bson.D{
 		{Key: "StreamerID", Value: userFind.ID},
 	}
-
+	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
 	updateStreams := bson.D{
 		{Key: "$set", Value: bson.D{
 			{Key: "Online", Value: state},
 			{Key: "StartDate", Value: time.Now()},
 		}},
 	}
+	var StreamFind streamdomain.Stream
 
-	_, err = GoMongoDBCollStreams.UpdateOne(ctx, filterStreams, updateStreams)
+	err = GoMongoDBCollStreams.FindOneAndUpdate(ctx, filterStreams, updateStreams, options).Decode(&StreamFind)
 	if err != nil {
 		session.AbortTransaction(ctx)
 		return err
@@ -285,7 +286,29 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		}
 		err = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
 		fmt.Println(err)
+		exist, err := r.redisClient.Exists(context.Background(), StreamFind.ID.Hex()).Result()
+		if err != nil {
+			return err
+		}
+		if exist == 1 {
+			err := r.redisClient.Set(context.Background(), StreamFind.ID.Hex(), StreamFind.ModChat, 0).Err()
+			if err != nil {
+				return err
+			}
+			fmt.Println("Clave actualizada exitosamente")
+		} else {
+			err := r.redisClient.Set(context.Background(), StreamFind.ID.Hex(), StreamFind.ModChat, 0).Err()
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		_, err := r.redisClient.Del(context.Background(), StreamFind.ID.Hex()).Result()
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
+
 	err = session.CommitTransaction(ctx)
 	if err != nil {
 		return err
@@ -424,7 +447,22 @@ func (r *StreamRepository) UpdateModChat(updateInfo streamdomain.UpdateModChat, 
 	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").UpdateOne(context.Background(), streamFilter, update); err != nil {
 		return err
 	}
-
+	exist, err := r.redisClient.Exists(context.Background(), previousStream.ID.Hex()).Result()
+	if err != nil {
+		return err
+	}
+	if exist == 1 {
+		err := r.redisClient.Set(context.Background(), previousStream.ID.Hex(), updateInfo.Mod, 0).Err()
+		if err != nil {
+			return err
+		}
+		fmt.Println("Clave actualizada exitosamente")
+	} else {
+		err := r.redisClient.Set(context.Background(), previousStream.ID.Hex(), updateInfo.Mod, 0).Err()
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 func (r *StreamRepository) Update_Emotes(idUser primitive.ObjectID, date int) error {
