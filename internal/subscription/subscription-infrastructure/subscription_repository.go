@@ -446,7 +446,7 @@ func (r *SubscriptionRepository) GetSubsAct(Source, Destination primitive.Object
 	return subs, err
 }
 
-func (u *SubscriptionRepository) DeleteRedisUserChatInOneRoom(userToDelete primitive.ObjectID, IdRoom primitive.ObjectID) error {
+func (u *SubscriptionRepository) DeleteRedisUserChatInOneRoom(userToDelete, IdRoom primitive.ObjectID) error {
 	GoMongoDBColl := u.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollStreams := GoMongoDBColl.Collection("Streams")
 	filter := bson.M{"StreamerID": IdRoom}
@@ -455,10 +455,16 @@ func (u *SubscriptionRepository) DeleteRedisUserChatInOneRoom(userToDelete primi
 	if err != nil {
 		return err
 	}
-	userHashKey := "userInformation:" + userToDelete.Hex() + ":inTheRoom:" + stream.ID.Hex()
-	_, err = u.redisClient.Del(context.Background(), userHashKey).Result()
+	GoMongoDBCollUsers := GoMongoDBColl.Collection("Users")
+
+	filter = bson.M{"_id": userToDelete}
+
+	var userFolloer userdomain.User
+	err = GoMongoDBCollUsers.FindOne(context.Background(), filter).Decode(&userFolloer)
 	if err != nil {
 		return err
 	}
+	userHashKey := "userInformation:" + userFolloer.NameUser + ":inTheRoom:" + stream.ID.Hex()
+	_, err = u.redisClient.Del(context.Background(), userHashKey).Result()
 	return err
 }

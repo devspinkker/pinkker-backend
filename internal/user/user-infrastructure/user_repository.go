@@ -309,7 +309,7 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 	GoMongoDBCollInformationInAllRooms := db.Collection("UserInformationInAllRooms")
 
 	var StreamInfo streamdomain.Stream
-	filter = bson.M{"NameUser": usertoken.NameUser}
+	filter = bson.M{"Streamer": usertoken.NameUser}
 	GoMongoDBCollStreams := db.Collection("Streams")
 	err = GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&StreamInfo)
 	if err != nil {
@@ -347,7 +347,6 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 	} else if err != nil {
 		return err
 	}
-
 	roomExists := false
 	for _, room := range userInfo.Rooms {
 		if room["Room"] == StreamInfo.ID {
@@ -376,6 +375,7 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 		}
 
 		userInfo.Rooms = append(userInfo.Rooms, newRoom)
+
 	}
 
 	_, err = GoMongoDBCollInformationInAllRooms.UpdateOne(context.Background(), filter, bson.M{"$set": userInfo})
@@ -418,7 +418,7 @@ func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectI
 	}
 
 	var StreamInfo streamdomain.Stream
-	filter := bson.M{"NameUser": user.NameUser}
+	filter := bson.M{"Streamer": user.NameUser}
 	GoMongoDBCollStreams := db.Collection("Streams")
 	err = GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&StreamInfo)
 	if err != nil {
@@ -442,7 +442,7 @@ func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectI
 
 	return nil
 }
-func (u *UserRepository) DeleteRedisUserChatInOneRoom(userToDelete primitive.ObjectID, IdRoom primitive.ObjectID) error {
+func (u *UserRepository) DeleteRedisUserChatInOneRoom(userToDelete, IdRoom primitive.ObjectID) error {
 	GoMongoDBColl := u.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollStreams := GoMongoDBColl.Collection("Streams")
 	filter := bson.M{"StreamerID": IdRoom}
@@ -451,11 +451,17 @@ func (u *UserRepository) DeleteRedisUserChatInOneRoom(userToDelete primitive.Obj
 	if err != nil {
 		return err
 	}
-	userHashKey := "userInformation:" + userToDelete.Hex() + ":inTheRoom:" + stream.ID.Hex()
-	_, err = u.redisClient.Del(context.Background(), userHashKey).Result()
+	GoMongoDBCollUsers := GoMongoDBColl.Collection("Users")
+
+	filter = bson.M{"_id": userToDelete}
+
+	var userFolloer domain.User
+	err = GoMongoDBCollUsers.FindOne(context.Background(), filter).Decode(&userFolloer)
 	if err != nil {
 		return err
 	}
+	userHashKey := "userInformation:" + userFolloer.NameUser + ":inTheRoom:" + stream.ID.Hex()
+	_, err = u.redisClient.Del(context.Background(), userHashKey).Result()
 	return err
 }
 func (u *UserRepository) FindEmailForOauth2Updata(user *domain.Google_callback_Complete_Profile_And_Username) (*domain.User, error) {
