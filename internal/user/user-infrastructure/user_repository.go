@@ -309,7 +309,7 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 	GoMongoDBCollInformationInAllRooms := db.Collection("UserInformationInAllRooms")
 
 	var StreamInfo streamdomain.Stream
-	filter = bson.M{"Streamer": usertoken.NameUser}
+	filter = bson.M{"Streamer": userFolloer.NameUser}
 	GoMongoDBCollStreams := db.Collection("Streams")
 	err = GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&StreamInfo)
 	if err != nil {
@@ -390,35 +390,36 @@ func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectI
 
 	GoMongoDBCollUsers := db.Collection("Users")
 
-	var user domain.User
-	err := GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
+	var userToken domain.User
+	err := GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&userToken)
 	if err != nil {
 		return err
 	}
 
 	// Eliminar unfollowedUserID del mapa Following
-	delete(user.Following, unfollowedUserID)
+	delete(userToken.Following, unfollowedUserID)
 
-	_, err = GoMongoDBCollUsers.ReplaceOne(context.Background(), bson.M{"_id": userID}, user)
+	_, err = GoMongoDBCollUsers.ReplaceOne(context.Background(), bson.M{"_id": userID}, userToken)
 	if err != nil {
 		return err
 	}
 
 	// Eliminar userID del mapa Followers del usuario que está siendo seguido
-	err = GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": unfollowedUserID}).Decode(&user)
+	var userUnf domain.User
+	err = GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": unfollowedUserID}).Decode(&userUnf)
 	if err != nil {
 		return err
 	}
 
-	delete(user.Followers, userID)
+	delete(userUnf.Followers, userID)
 
-	_, err = GoMongoDBCollUsers.ReplaceOne(context.Background(), bson.M{"_id": unfollowedUserID}, user)
+	_, err = GoMongoDBCollUsers.ReplaceOne(context.Background(), bson.M{"_id": unfollowedUserID}, userUnf)
 	if err != nil {
 		return err
 	}
 
 	var StreamInfo streamdomain.Stream
-	filter := bson.M{"Streamer": user.NameUser}
+	filter := bson.M{"Streamer": userUnf.NameUser}
 	GoMongoDBCollStreams := db.Collection("Streams")
 	err = GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&StreamInfo)
 	if err != nil {
@@ -426,7 +427,7 @@ func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectI
 	}
 	GoMongoDBCollInformationInAllRooms := db.Collection("UserInformationInAllRooms")
 
-	filter = bson.M{"NameUser": user.NameUser}
+	filter = bson.M{"NameUser": userToken.NameUser}
 	update := bson.M{"$set": bson.M{"Rooms.$[elem].Following": domain.FollowInfo{}}}
 	arrayFilters := options.ArrayFilters{
 		Filters: []interface{}{bson.M{"elem.Room": StreamInfo.ID}},
@@ -434,7 +435,6 @@ func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectI
 	opts := options.UpdateOptions{
 		ArrayFilters: &arrayFilters,
 	}
-
 	_, err = GoMongoDBCollInformationInAllRooms.UpdateOne(context.Background(), filter, update, &opts)
 	if err != nil {
 		return err
