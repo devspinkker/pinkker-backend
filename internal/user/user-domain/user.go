@@ -65,7 +65,7 @@ type FollowInfo struct {
 }
 type UserModelValidator struct {
 	FullName      string    `json:"fullName" validate:"required,min=8,max=70"`
-	NameUser      string    `json:"NameUser" validate:"required,min=5,max=20"`
+	NameUser      string    `json:"NameUser" validate:"min=5,max=20"`
 	Password      string    `json:"password" validate:"required,min=8"`
 	Pais          string    `json:"Pais" `
 	Ciudad        string    `json:"Ciudad"`
