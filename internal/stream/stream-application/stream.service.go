@@ -88,7 +88,7 @@ func (s *StreamService) Update_Emotes(idUser primitive.ObjectID, date int) error
 	err := s.StreamRepository.Update_Emotes(idUser, date)
 	return err
 }
-func (s *StreamService) GetCategories() (error, []streamdomain.Categoria) {
+func (s *StreamService) GetCategories() ([]streamdomain.Categoria, error) {
 	Categorias, err := s.StreamRepository.GetCategories()
-	return err, Categorias
+	return Categorias, err
 }
