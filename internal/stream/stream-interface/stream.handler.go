@@ -395,7 +395,7 @@ func (s *StreamHandler) Update_Emotes(c *fiber.Ctx) error {
 
 func (s *StreamHandler) GetCategories(c *fiber.Ctx) error {
 
-	err, Categorias := s.StreamServise.GetCategories()
+	Categorias, err := s.StreamServise.GetCategories()
 	if err != nil {
 		fmt.Println(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
