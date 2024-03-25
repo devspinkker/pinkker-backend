@@ -52,7 +52,6 @@ func (u *UserRepository) GetUserByCodeFromRedis(code string) (*domain.User, erro
 
 	userJSON, errGet := u.redisClient.Get(context.Background(), code).Result()
 	if errGet != nil {
-		fmt.Println("code 2")
 		return nil, errGet
 	}
 
@@ -61,13 +60,11 @@ func (u *UserRepository) GetUserByCodeFromRedis(code string) (*domain.User, erro
 	if errUnmarshal != nil {
 		return nil, errUnmarshal
 	}
-	fmt.Println("code 3")
 
 	_, errDel := u.redisClient.Del(context.Background(), code).Result()
 	if errDel != nil {
 		return &user, nil
 	}
-	fmt.Println("code 4")
 	return &user, nil
 }
 
@@ -232,7 +229,7 @@ func (u *UserRepository) CreateStreamUser(user *domain.User, id primitive.Object
 		StreamLikes:        []string{},
 		Timestamp:          time.Now(),
 		EmotesChat:         map[string]string{},
-		StreamThumbnail:    "https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png",
+		StreamThumbnail:    "https://res.cloudinary.com/dcj8krp42/image/upload/v1711393933/gvnemflnz904jeawxwd7.png",
 	}
 	_, errInsertOne := GoMongoDBCollUsers.InsertOne(context.Background(), newStream)
 	return errInsertOne

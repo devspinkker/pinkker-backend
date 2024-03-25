@@ -5,6 +5,7 @@ import (
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"PINKKER-BACKEND/pkg/helpers"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -456,7 +457,6 @@ func (r *StreamRepository) UpdateModChat(updateInfo streamdomain.UpdateModChat, 
 		if err != nil {
 			return err
 		}
-		fmt.Println("Clave actualizada exitosamente")
 	} else {
 		err := r.redisClient.Set(context.Background(), previousStream.ID.Hex(), updateInfo.Mod, 0).Err()
 		if err != nil {
@@ -508,25 +508,46 @@ func (r *StreamRepository) Streamings_online() (int, error) {
 
 }
 
-func (r *StreamRepository) GetCategories() (error, []streamdomain.Categoria) {
+func (r *StreamRepository) GetCategories() ([]streamdomain.Categoria, error) {
+	ctx := context.Background()
+
+	jsonData, err := r.redisClient.Get(ctx, "categorias").Bytes()
+	if err == nil {
+		var categorias []streamdomain.Categoria
+		if err := json.Unmarshal(jsonData, &categorias); err != nil {
+			return nil, err
+		}
+		return categorias, nil
+	} else if err != redis.Nil {
+		return nil, err
+	}
+
 	GoMongoDBCollCategorias := r.mongoClient.Database("PINKKER-BACKEND").Collection("Categorias")
 	FindCategoriasInDb := bson.D{}
-
-	cursor, err := GoMongoDBCollCategorias.Find(context.Background(), FindCategoriasInDb)
+	cursor, err := GoMongoDBCollCategorias.Find(ctx, FindCategoriasInDb)
 	if err != nil {
-		return err, []streamdomain.Categoria{}
+		return nil, err
 	}
-	defer cursor.Close(context.Background())
+	defer cursor.Close(ctx)
 
-	var Categorias []streamdomain.Categoria
-	for cursor.Next(context.Background()) {
-		var caregorie streamdomain.Categoria
-		if err := cursor.Decode(&caregorie); err != nil {
-			return err, []streamdomain.Categoria{}
+	var categorias []streamdomain.Categoria
+	for cursor.Next(ctx) {
+		var categoria streamdomain.Categoria
+		if err := cursor.Decode(&categoria); err != nil {
+			return nil, err
 		}
-		Categorias = append(Categorias, caregorie)
+		categorias = append(categorias, categoria)
 	}
 
-	return err, Categorias
+	jsonData, err = json.Marshal(categorias)
+	if err != nil {
+		return nil, err
+	}
 
+	err = r.redisClient.Set(ctx, "categorias", jsonData, 30*time.Second).Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return categorias, nil
 }
