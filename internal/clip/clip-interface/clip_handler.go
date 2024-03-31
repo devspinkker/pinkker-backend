@@ -379,3 +379,173 @@ func (clip *ClipHandler) MoreViewOfTheClip(c *fiber.Ctx) error {
 		"message": "Dislike",
 	})
 }
+func (clip *ClipHandler) ClipsRecommended(c *fiber.Ctx) error {
+
+	var req clipdomain.GetRecommended
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusNetworkAuthenticationRequired).JSON(fiber.Map{
+			"message": "StatusNetworkAuthenticationRequired",
+			"data":    errorID,
+		})
+	}
+	clips, errLike := clip.ClipService.ClipsRecommended(idValueObj, req.ExcludeIDs)
+	if errLike != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errLike.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    clips,
+	})
+}
+
+func (clip *ClipHandler) CommentClip(c *fiber.Ctx) error {
+
+	var req clipdomain.CommentClip
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+
+	idValue := c.Context().UserValue("_id").(string)
+	nameuser := c.Context().UserValue("nameuser").(string)
+
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errorID.Error(),
+		})
+	}
+
+	errLike := clip.ClipService.CommentClip(req.IdClip, idValueToken, nameuser, req.CommentClip)
+	if errLike != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errLike.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "commented",
+	})
+}
+func (clip *ClipHandler) LikeCommentClip(c *fiber.Ctx) error {
+
+	var IDClipReq IDClipT
+	if err := c.BodyParser(&IDClipReq); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+
+	IDClip, err := primitive.ObjectIDFromHex(IDClipReq.IDClip)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errorID.Error(),
+		})
+	}
+
+	errLike := clip.ClipService.LikeCommentClip(IDClip, idValueToken)
+	if errLike != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errLike.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "LikeCommentClip",
+	})
+}
+
+func (clip *ClipHandler) UnlikeComment(c *fiber.Ctx) error {
+
+	var IDClipReq IDClipT
+	if err := c.BodyParser(&IDClipReq); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+
+	IDClip, err := primitive.ObjectIDFromHex(IDClipReq.IDClip)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errorID.Error(),
+		})
+	}
+
+	errLike := clip.ClipService.UnlikeComment(IDClip, idValueToken)
+	if errLike != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errLike.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "LikeCommentClip",
+	})
+}
+
+func (clip *ClipHandler) GetClipComments(c *fiber.Ctx) error {
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	IdClipStr := c.Query("IdClip", "")
+	if IdClipStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "IdClip parameter is required",
+		})
+	}
+
+	IdClip, err := primitive.ObjectIDFromHex(IdClipStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid IdClip parameter",
+		})
+	}
+
+	Clips, err := clip.ClipService.GetClipComments(IdClip, page)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Clips,
+	})
+}

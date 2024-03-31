@@ -1,6 +1,7 @@
 package clipdomain
 
 import (
+	"reflect"
 	"time"
 
 	"github.com/go-playground/validator"
@@ -68,4 +69,53 @@ type GetClipId struct {
 func (u *GetClipId) GetClipIdValidate() error {
 	validate := validator.New()
 	return validate.Struct(u)
+}
+
+type GetRecommended struct {
+	ExcludeIDs []primitive.ObjectID `json:"ExcludeIDs" validate:"required"`
+}
+
+func (u *GetRecommended) GetRecommended() error {
+	validate := validator.New()
+	if reflect.TypeOf(u.ExcludeIDs).Elem() != reflect.TypeOf(primitive.ObjectID{}) {
+		return errors.New("Clip debe ser del tipo primitive.ObjectID")
+	}
+	return validate.Struct(u)
+}
+
+type ClipComment struct {
+	ID        primitive.ObjectID   `json:"_id,omitempty" bson:"_id,omitempty"`
+	ClipID    primitive.ObjectID   `json:"clipId,omitempty" bson:"clipId,omitempty"`
+	UserID    primitive.ObjectID   `json:"userId,omitempty" bson:"userId,omitempty"`
+	NameUser  string               `json:"username,omitempty" bson:"nameUser,omitempty"`
+	Comment   string               `json:"comment,omitempty" bson:"comment,omitempty"`
+	CreatedAt time.Time            `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
+	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
+}
+
+type CommentClip struct {
+	CommentClip string             `json:"CommentClip" validate:"required,min=2,max=100"`
+	IdClip      primitive.ObjectID `json:"IdClip" validate:"required"`
+}
+
+func (u *CommentClip) ValidateCommentClip() error {
+
+	validate := validator.New()
+	return validate.Struct(u)
+}
+
+type ClipCommentGet struct {
+	ID        primitive.ObjectID   `json:"_id,omitempty" bson:"_id,omitempty"`
+	ClipID    primitive.ObjectID   `json:"clipId,omitempty" bson:"clipId,omitempty"`
+	UserID    primitive.ObjectID   `json:"userId,omitempty" bson:"userId,omitempty"`
+	NameUser  string               `json:"username,omitempty" bson:"nameUser,omitempty"`
+	Comment   string               `json:"comment,omitempty" bson:"comment,omitempty"`
+	CreatedAt time.Time            `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
+	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
+	UserInfo  UserInfo             `json:"userInfo,omitempty" bson:"-"`
+}
+
+type UserInfo struct {
+	FullName string `json:"fullName,omitempty" bson:"fullName,omitempty"`
+	Avatar   string `json:"avatar,omitempty" bson:"avatar,omitempty"`
 }

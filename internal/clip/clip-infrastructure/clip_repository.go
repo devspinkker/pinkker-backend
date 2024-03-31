@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -246,37 +247,74 @@ func (c *ClipRepository) GetClipsMostViewedLast48Hours(page int) ([]clipdomain.C
 	return clips, nil
 }
 
-func (c *ClipRepository) LikeClip(ClipId, idValueToken primitive.ObjectID) error {
+func (c *ClipRepository) LikeClip(clipID, userID primitive.ObjectID) error {
+	ctx := context.Background()
 	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBColl := GoMongoDB.Collection("Clips")
+	GoMongoDBCollClips := GoMongoDB.Collection("Clips")
 
-	count, err := GoMongoDBColl.CountDocuments(context.Background(), bson.D{{Key: "_id", Value: ClipId}})
+	var clip clipdomain.Clip
+	err := GoMongoDBCollClips.FindOne(ctx, bson.M{"_id": clipID}).Decode(&clip)
 	if err != nil {
 		return err
 	}
 
-	if count == 0 {
-		return fmt.Errorf("el ClipId no existe")
-	}
-	filter := bson.D{{Key: "_id", Value: ClipId}}
-	update := bson.D{{Key: "$addToSet", Value: bson.D{{Key: "Likes", Value: idValueToken}}}}
-
-	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
+	// Incrementar el contador de likes del clip
+	filter := bson.M{"_id": clipID}
+	update := bson.M{"$addToSet": bson.M{"Likes": userID}}
+	_, err = GoMongoDBCollClips.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}
-	GoMongoDBColl = GoMongoDB.Collection("Users")
 
-	filter = bson.D{{Key: "_id", Value: idValueToken}}
-	update = bson.D{{Key: "$addToSet", Value: bson.D{{Key: "ClipsLikes", Value: ClipId}}}}
+	// Incrementar el puntaje de la categoría del usuario y sumarle el like dado
+	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
+	userFilter := bson.M{"_id": userID}
+	userUpdate := bson.M{
+		"$inc":      bson.M{"categoryPreferences." + clip.Category: 0.01},
+		"$addToSet": bson.M{"ClipsLikes": clipID},
+	}
 
-	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
+	_, err = GoMongoDBCollUsers.UpdateOne(ctx, userFilter, userUpdate)
+	if err != nil {
+		return err
+	}
+
+	// Actualizar las categoryPreferences del usuario para que estén ordenadas según los puntajes
+	err = updateCategoryPreferences(ctx, GoMongoDBCollUsers, userID)
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
+
+func updateCategoryPreferences(ctx context.Context, collection *mongo.Collection, userID primitive.ObjectID) error {
+	// Obtener el usuario
+	var user userdomain.User
+	err := collection.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		return err
+	}
+
+	// Ordenar las categorías en la propiedad categoryPreferences
+	sortedCategories := make([]string, 0, len(user.CategoryPreferences))
+	for category := range user.CategoryPreferences {
+		sortedCategories = append(sortedCategories, category)
+	}
+	sort.Slice(sortedCategories, func(i, j int) bool {
+		return user.CategoryPreferences[sortedCategories[i]] > user.CategoryPreferences[sortedCategories[j]]
+	})
+
+	// Actualizar la propiedad categoryPreferences con las categorías ordenadas
+	update := bson.M{"$set": bson.M{"categoryPreferences": user.CategoryPreferences}}
+	_, err = collection.UpdateOne(ctx, bson.M{"_id": userID}, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *ClipRepository) ClipDislike(ClipId, idValueToken primitive.ObjectID) error {
 	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBColl := GoMongoDB.Collection("Clips")
@@ -319,4 +357,223 @@ func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID) error {
 
 	_, err := GoMongoDBColl.UpdateOne(context.Background(), filter, update)
 	return err
+}
+func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, excludeIDs []primitive.ObjectID) ([]clipdomain.Clip, error) {
+	ctx := context.Background()
+	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollClip := GoMongoDB.Collection("Clips")
+	GoMongoDBCollUser := GoMongoDB.Collection("Users")
+
+	// Obtener el usuario
+	var findUser *userdomain.User
+	err := GoMongoDBCollUser.FindOne(ctx, bson.D{{Key: "_id", Value: idT}}).Decode(&findUser)
+	if err != nil {
+		return nil, err
+	}
+
+	// Crear un filtro para excluir los clips especificados
+	var excludeFilter []bson.E
+	for _, id := range excludeIDs {
+		excludeFilter = append(excludeFilter, bson.E{Key: "_id", Value: bson.D{{Key: "$ne", Value: id}}})
+	}
+
+	// Obtener las primeras 4 categorías del usuario
+	firstFourCategories := make([]string, 0, 4)
+	for category := range findUser.CategoryPreferences {
+		firstFourCategories = append(firstFourCategories, category)
+		if len(firstFourCategories) == 4 {
+			break
+		}
+	}
+
+	// Crear el pipeline de agregación para los clips de las primeras 4 categorías del usuario
+	pipelineFirstFour := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "likes", Value: bson.D{{Key: "$in", Value: findUser.Following}}},
+			{Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: time.Now().Add(-23 * time.Hour)}}},
+			{Key: "category", Value: bson.D{{Key: "$in", Value: firstFourCategories}}}, // Filtrar por las primeras 4 categorías
+			bson.E{Key: "$nor", Value: excludeFilter},                                  // Excluir los clips especificados
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "relevanceFactor", Value: bson.D{
+				{Key: "$multiply", Value: []interface{}{
+					bson.D{{Key: "$log10", Value: "$views"}}, // Aplicar logaritmo a las vistas para suavizar el efecto
+					bson.D{{Key: "$size", Value: bson.D{{Key: "$setIntersection", Value: []interface{}{"$likes", findUser.Following}}}}}, // Obtener la cantidad de likes compartidos
+				}},
+			}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
+		bson.D{{Key: "$limit", Value: limit}},
+	}
+
+	// Ejecutar el pipeline de agregación para obtener los clips de las primeras 4 categorías
+	cursorFirstFour, err := GoMongoDBCollClip.Aggregate(ctx, pipelineFirstFour)
+	if err != nil {
+		return nil, err
+	}
+	defer cursorFirstFour.Close(ctx)
+
+	// Recopilar los clips de las primeras 4 categorías
+	var recommendedClips []clipdomain.Clip
+	for cursorFirstFour.Next(ctx) {
+		var clip clipdomain.Clip
+		err := cursorFirstFour.Decode(&clip)
+		if err != nil {
+			return nil, err
+		}
+		recommendedClips = append(recommendedClips, clip)
+	}
+
+	// Crear el pipeline de agregación para obtener clips de categorías distintas a las primeras 4 categorías
+	pipelineRandom := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{
+			// {Key: "likes", Value: bson.D{{Key: "$in", Value: findUser.Following}}},
+			// {Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: time.Now().Add(-23 * time.Hour)}}},
+			{Key: "category", Value: bson.D{{Key: "$nin", Value: firstFourCategories}}}, // Filtrar por categorías distintas a las primeras 4
+			bson.E{Key: "$nor", Value: excludeFilter},                                   // Excluir los clips especificados
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "relevanceFactor", Value: bson.D{
+				{Key: "$multiply", Value: []interface{}{
+					bson.D{{Key: "$log10", Value: "$views"}},
+					bson.D{{Key: "$size", Value: bson.D{{Key: "$setIntersection", Value: []interface{}{"$likes", findUser.Following}}}}},
+				}},
+			}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
+		bson.D{{Key: "$limit", Value: limit - len(recommendedClips)}}, // Limitar la cantidad de clips devueltos por categorías distintas
+	}
+
+	// Ejecutar el pipeline de agregación para obtener clips de categorías distintas
+	cursorRandom, err := GoMongoDBCollClip.Aggregate(ctx, pipelineRandom)
+	if err != nil {
+		return nil, err
+	}
+	defer cursorRandom.Close(ctx)
+
+	// Recopilar los clips de categorías distintas
+	for cursorRandom.Next(ctx) {
+		var clip clipdomain.Clip
+		err := cursorRandom.Decode(&clip)
+		if err != nil {
+			return nil, err
+		}
+		recommendedClips = append(recommendedClips, clip)
+	}
+
+	return recommendedClips, nil
+}
+
+func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username, comment string) error {
+	ctx := context.Background()
+	db := c.mongoClient.Database("PINKKER-BACKEND")
+
+	clipCollection := db.Collection("Clips")
+	count, err := clipCollection.CountDocuments(ctx, bson.M{"_id": clipID})
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return errors.New("el clip no existe")
+	}
+
+	commentCollection := db.Collection("CommentsClips")
+	commentDoc := clipdomain.ClipComment{
+		ClipID:    clipID,
+		UserID:    userID,
+		NameUser:  username,
+		Comment:   comment,
+		CreatedAt: time.Now(),
+		Likes:     []primitive.ObjectID{},
+	}
+	insertResult, err := commentCollection.InsertOne(ctx, commentDoc)
+	if err != nil {
+		return err
+	}
+
+	// Actualizar la información del usuario con el ID del comentario creado
+	userCollection := db.Collection("Users")
+	update := bson.D{{Key: "$addToSet", Value: bson.D{{Key: "ClipsComment", Value: insertResult.InsertedID}}}}
+	_, err = userCollection.UpdateOne(ctx, bson.M{"_id": userID}, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *ClipRepository) LikeComment(commentID, userID primitive.ObjectID) error {
+	ctx := context.Background()
+	db := c.mongoClient.Database("PINKKER-BACKEND")
+
+	commentCollection := db.Collection("CommentsClips")
+	filter := bson.M{"_id": commentID}
+	update := bson.M{"$addToSet": bson.M{"Likes": userID}}
+
+	_, err := commentCollection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (c *ClipRepository) UnlikeComment(commentID, userID primitive.ObjectID) error {
+	ctx := context.Background()
+	db := c.mongoClient.Database("PINKKER-BACKEND")
+
+	commentCollection := db.Collection("CommentsClips")
+	filter := bson.M{"_id": commentID}
+	update := bson.M{"$pull": bson.M{"Likes": userID}}
+	_, err := commentCollection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (c *ClipRepository) GetClipComments(clipID primitive.ObjectID, page int) ([]clipdomain.ClipCommentGet, error) {
+	ctx := context.Background()
+	db := c.mongoClient.Database("PINKKER-BACKEND")
+
+	// Colección de comentarios de clips
+	commentCollection := db.Collection("CommentsClips")
+
+	// Filtrar comentarios por ID de clip
+	filter := bson.M{"clipId": clipID}
+
+	// Calcular la cantidad de documentos para omitir
+	skip := (page - 1) * 15
+
+	// Consultar la base de datos para obtener los comentarios del clip, paginados
+	cursor, err := commentCollection.Aggregate(ctx, mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "userId"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$skip", Value: skip}},
+		bson.D{{Key: "$limit", Value: 15}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Iterar sobre los documentos devueltos y decodificarlos en la estructura ClipComment
+	var comments []clipdomain.ClipCommentGet
+	for cursor.Next(ctx) {
+		var comment clipdomain.ClipCommentGet
+		if err := cursor.Decode(&comment); err != nil {
+			return nil, err
+		}
+		comments = append(comments, comment)
+	}
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return comments, nil
 }

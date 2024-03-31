@@ -57,6 +57,8 @@ type User struct {
 	Likes                    []primitive.ObjectID              `json:"Likes" bson:"Likes"`
 	Wallet                   string                            `json:"Wallet" bson:"Wallet"`
 	Online                   bool                              `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
+	ClipsComment             []primitive.ObjectID              `json:"ClipsComment" bson:"ClipsComment,omitempty"`
+	CategoryPreferences      map[string]float64                `json:"categoryPreferences" bson:"categoryPreferences"`
 }
 type FollowInfo struct {
 	Since         time.Time `json:"since" bson:"since"`
@@ -175,6 +177,7 @@ type GetUser struct {
 	Likes                    []primitive.ObjectID              `json:"Likes" bson:"Likes"`
 	Wallet                   string                            `json:"Wallet" bson:"Wallet"`
 	Online                   bool                              `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
+	ClipsComment             []primitive.ObjectID              `json:"ClipsComment" bson:"ClipsComment"`
 }
 type UserInfoOAuth2 struct {
 	ID      string `json:"id"`

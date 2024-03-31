@@ -105,6 +105,29 @@ func (u *ClipService) MoreViewOfTheClip(idClip primitive.ObjectID) error {
 	err := u.ClipRepository.MoreViewOfTheClip(idClip)
 	return err
 }
+func (u *ClipService) ClipsRecommended(idT primitive.ObjectID, excludeIDs []primitive.ObjectID) ([]clipdomain.Clip, error) {
+	limit := 10
+	clips, err := u.ClipRepository.ClipsRecommended(idT, limit, excludeIDs)
+	return clips, err
+}
+func (u *ClipService) CommentClip(clipID, userID primitive.ObjectID, username, comment string) error {
+	err := u.ClipRepository.CommentClip(clipID, userID, username, comment)
+	return err
+}
+
+func (u *ClipService) LikeCommentClip(idClip primitive.ObjectID, idValueToken primitive.ObjectID) error {
+	err := u.ClipRepository.LikeComment(idClip, idValueToken)
+	return err
+}
+
+func (u *ClipService) UnlikeComment(idClip primitive.ObjectID, idValueToken primitive.ObjectID) error {
+	err := u.ClipRepository.UnlikeComment(idClip, idValueToken)
+	return err
+}
+func (u *ClipService) GetClipComments(idClip primitive.ObjectID, page int) ([]clipdomain.ClipCommentGet, error) {
+	clips, err := u.ClipRepository.GetClipComments(idClip, page)
+	return clips, err
+}
 
 // func (u *ClipService) ExtractFrameFromVideo(videoPath, outputPath, ffmpegPath string) error {
 // 	transcoder.FFmpegBin = ffmpegPath
