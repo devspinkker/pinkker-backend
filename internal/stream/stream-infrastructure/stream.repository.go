@@ -5,7 +5,6 @@ import (
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"PINKKER-BACKEND/pkg/helpers"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -509,45 +508,24 @@ func (r *StreamRepository) Streamings_online() (int, error) {
 }
 
 func (r *StreamRepository) GetCategories() ([]streamdomain.Categoria, error) {
-	ctx := context.Background()
-
-	jsonData, err := r.redisClient.Get(ctx, "categorias").Bytes()
-	if err == nil {
-		var categorias []streamdomain.Categoria
-		if err := json.Unmarshal(jsonData, &categorias); err != nil {
-			return nil, err
-		}
-		return categorias, nil
-	} else if err != redis.Nil {
-		return nil, err
-	}
-
 	GoMongoDBCollCategorias := r.mongoClient.Database("PINKKER-BACKEND").Collection("Categorias")
 	FindCategoriasInDb := bson.D{}
-	cursor, err := GoMongoDBCollCategorias.Find(ctx, FindCategoriasInDb)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
 
-	var categorias []streamdomain.Categoria
-	for cursor.Next(ctx) {
-		var categoria streamdomain.Categoria
-		if err := cursor.Decode(&categoria); err != nil {
-			return nil, err
+	cursor, err := GoMongoDBCollCategorias.Find(context.Background(), FindCategoriasInDb)
+	if err != nil {
+		return []streamdomain.Categoria{}, err
+	}
+	defer cursor.Close(context.Background())
+
+	var Categorias []streamdomain.Categoria
+	for cursor.Next(context.Background()) {
+		var caregorie streamdomain.Categoria
+		if err := cursor.Decode(&caregorie); err != nil {
+			return []streamdomain.Categoria{}, err
 		}
-		categorias = append(categorias, categoria)
+		Categorias = append(Categorias, caregorie)
 	}
 
-	jsonData, err = json.Marshal(categorias)
-	if err != nil {
-		return nil, err
-	}
+	return Categorias, err
 
-	err = r.redisClient.Set(ctx, "categorias", jsonData, 30*time.Second).Err()
-	if err != nil {
-		return nil, err
-	}
-
-	return categorias, nil
 }

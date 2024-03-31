@@ -1,6 +1,8 @@
 package tweetdomain
 
 import (
+	"errors"
+	"reflect"
 	"time"
 
 	"github.com/go-playground/validator"
@@ -113,4 +115,16 @@ type TweetCommentsGetReq struct {
 		Avatar   string `json:"Avatar"`
 		NameUser string `json:"NameUser"`
 	} `json:"UserInfo"`
+}
+
+type GetRecommended struct {
+	ExcludeIDs []primitive.ObjectID `json:"ExcludeIDs" validate:"required"`
+}
+
+func (u *GetRecommended) GetRecommended() error {
+	validate := validator.New()
+	if reflect.TypeOf(u.ExcludeIDs).Elem() != reflect.TypeOf(primitive.ObjectID{}) {
+		return errors.New("Clip debe ser del tipo primitive.ObjectID")
+	}
+	return validate.Struct(u)
 }
