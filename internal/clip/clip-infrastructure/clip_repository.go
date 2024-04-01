@@ -554,6 +554,15 @@ func (c *ClipRepository) GetClipComments(clipID primitive.ObjectID, page int) ([
 			{Key: "as", Value: "UserInfo"},
 		}}},
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "clipId", Value: 1},
+			{Key: "userId", Value: 1},
+			{Key: "FullName", Value: 1},
+			{Key: "Avatar", Value: 1},
+			{Key: "comment", Value: 1},
+			{Key: "createdAt", Value: 1},
+			{Key: "likes", Value: 1},
+		}}},
 		bson.D{{Key: "$skip", Value: skip}},
 		bson.D{{Key: "$limit", Value: 15}},
 	})
