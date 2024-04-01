@@ -112,10 +112,9 @@ type ClipCommentGet struct {
 	Comment   string               `json:"comment,omitempty" bson:"comment,omitempty"`
 	CreatedAt time.Time            `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
-	UserInfo  UserInfo             `json:"userInfo,omitempty" bson:"-"`
-}
-
-type UserInfo struct {
-	FullName string `json:"fullName,omitempty" bson:"fullName,omitempty"`
-	Avatar   string `json:"avatar,omitempty" bson:"avatar,omitempty"`
+	UserInfo  struct {
+		FullName string `json:"FullName"`
+		Avatar   string `json:"Avatar"`
+		NameUser string `json:"NameUser"`
+	} `json:"UserInfo"`
 }

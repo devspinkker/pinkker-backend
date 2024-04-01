@@ -420,7 +420,7 @@ func (clip *ClipHandler) CommentClip(c *fiber.Ctx) error {
 	}
 
 	idValue := c.Context().UserValue("_id").(string)
-	nameuser := c.Context().UserValue("nameuser").(string)
+	nameuser := c.Context().UserValue("nameUser").(string)
 
 	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
 	if errorID != nil {
