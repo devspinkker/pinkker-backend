@@ -87,10 +87,10 @@ type ClipComment struct {
 	ID        primitive.ObjectID   `json:"_id,omitempty" bson:"_id,omitempty"`
 	ClipID    primitive.ObjectID   `json:"clipId,omitempty" bson:"clipId,omitempty"`
 	UserID    primitive.ObjectID   `json:"UserID,omitempty" bson:"UserID,omitempty"`
-	NameUser  string               `json:"username,omitempty" bson:"nameUser,omitempty"`
+	NameUser  string               `json:"NameUser,omitempty" bson:"nameUser,omitempty"`
 	Comment   string               `json:"comment,omitempty" bson:"comment,omitempty"`
 	CreatedAt time.Time            `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
-	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
+	Likes     []primitive.ObjectID `json:"likes" bson:"likes"`
 }
 
 type CommentClip struct {
@@ -108,10 +108,10 @@ type ClipCommentGet struct {
 	ID        primitive.ObjectID   `json:"_id,omitempty" bson:"_id,omitempty"`
 	ClipID    primitive.ObjectID   `json:"clipId,omitempty" bson:"clipId,omitempty"`
 	UserID    primitive.ObjectID   `json:"UserID" bson:"UserID"`
-	NameUser  string               `json:"username,omitempty" bson:"nameUser,omitempty"`
+	NameUser  string               `json:"NameUser" bson:"nameUser"`
 	Comment   string               `json:"comment,omitempty" bson:"comment,omitempty"`
 	CreatedAt time.Time            `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
-	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
+	Likes     []primitive.ObjectID `json:"likes" bson:"likes"`
 	FullName  string               `json:"FullName"`
 	Avatar    string               `json:"Avatar"`
 }
