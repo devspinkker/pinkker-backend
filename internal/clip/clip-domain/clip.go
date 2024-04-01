@@ -16,7 +16,7 @@ type Clip struct {
 	NameUser        string               `json:"streamerId" bson:"StreamerID"`
 	StreamThumbnail string               `json:"streamThumbnail" bson:"StreamThumbnail"`
 	Category        string               `json:"category" bson:"Category"`
-	UserID          primitive.ObjectID   `json:"userId" bson:"UserID"`
+	UserID          primitive.ObjectID   `json:"UserID" bson:"UserID"`
 	Avatar          string               `json:"Avatar" bson:"Avatar"`
 	ClipTitle       string               `json:"clipTitle" bson:"ClipTitle"`
 	URL             string               `json:"url" bson:"url"`
@@ -86,7 +86,7 @@ func (u *GetRecommended) GetRecommended() error {
 type ClipComment struct {
 	ID        primitive.ObjectID   `json:"_id,omitempty" bson:"_id,omitempty"`
 	ClipID    primitive.ObjectID   `json:"clipId,omitempty" bson:"clipId,omitempty"`
-	UserID    primitive.ObjectID   `json:"userId,omitempty" bson:"userId,omitempty"`
+	UserID    primitive.ObjectID   `json:"UserID,omitempty" bson:"UserID,omitempty"`
 	NameUser  string               `json:"username,omitempty" bson:"nameUser,omitempty"`
 	Comment   string               `json:"comment,omitempty" bson:"comment,omitempty"`
 	CreatedAt time.Time            `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
@@ -107,14 +107,11 @@ func (u *CommentClip) ValidateCommentClip() error {
 type ClipCommentGet struct {
 	ID        primitive.ObjectID   `json:"_id,omitempty" bson:"_id,omitempty"`
 	ClipID    primitive.ObjectID   `json:"clipId,omitempty" bson:"clipId,omitempty"`
-	UserID    primitive.ObjectID   `json:"userId,omitempty" bson:"userId,omitempty"`
+	UserID    primitive.ObjectID   `json:"UserID" bson:"UserID"`
 	NameUser  string               `json:"username,omitempty" bson:"nameUser,omitempty"`
 	Comment   string               `json:"comment,omitempty" bson:"comment,omitempty"`
 	CreatedAt time.Time            `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
-	UserInfo  struct {
-		FullName string `json:"FullName"`
-		Avatar   string `json:"Avatar"`
-		NameUser string `json:"NameUser"`
-	} `json:"UserInfo"`
+	FullName  string               `json:"FullName"`
+	Avatar    string               `json:"Avatar"`
 }
