@@ -29,7 +29,116 @@ func NewClipRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Cl
 		mongoClient: mongoClient,
 	}
 }
+func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, excludeIDs []primitive.ObjectID) ([]clipdomain.Clip, error) {
+	ctx := context.Background()
+	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollClip := GoMongoDB.Collection("Clips")
+	GoMongoDBCollUser := GoMongoDB.Collection("Users")
 
+	// Obtener el usuario
+	var findUser *userdomain.User
+	err := GoMongoDBCollUser.FindOne(ctx, bson.D{{Key: "_id", Value: idT}}).Decode(&findUser)
+	if err != nil {
+		return nil, err
+	}
+
+	if findUser.Following == nil || len(findUser.Following) == 0 {
+		findUser.Following = map[primitive.ObjectID]userdomain.FollowInfo{}
+	}
+
+	if len(excludeIDs) == 0 {
+		excludeIDs = []primitive.ObjectID{}
+	}
+	var excludeFilter []bson.E
+	for _, id := range excludeIDs {
+		excludeFilter = append(excludeFilter, bson.E{Key: "_id", Value: bson.D{{Key: "$ne", Value: id}}})
+	}
+
+	// Obtener las primeras 4 categorías del usuario
+	firstFourCategories := make([]string, 0, 4)
+	for category := range findUser.CategoryPreferences {
+		firstFourCategories = append(firstFourCategories, category)
+		if len(firstFourCategories) == 4 {
+			break
+		}
+	}
+
+	pipelineFirstFour := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "likes", Value: bson.D{{Key: "$in", Value: findUser.Following}}},
+			{Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: time.Now().Add(-23 * time.Hour)}}},
+			{Key: "category", Value: bson.D{{Key: "$in", Value: firstFourCategories}}}, // Filtrar por las primeras 4 categorías
+			bson.E{Key: "$nor", Value: excludeFilter},                                  // Excluir los clips especificados
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "relevanceFactor", Value: bson.D{
+				{Key: "$multiply", Value: []interface{}{
+					bson.D{{Key: "$log10", Value: "$views"}}, // Aplicar logaritmo a las vistas para suavizar el efecto
+					bson.D{{Key: "$size", Value: bson.D{{Key: "$setIntersection", Value: []interface{}{"$likes", findUser.Following}}}}}, // Obtener la cantidad de likes compartidos
+				}},
+			}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
+		bson.D{{Key: "$limit", Value: limit}},
+	}
+
+	// Ejecutar el pipeline de agregación para obtener los clips de las primeras 4 categorías
+	cursorFirstFour, err := GoMongoDBCollClip.Aggregate(ctx, pipelineFirstFour)
+	if err != nil {
+		return nil, err
+	}
+	defer cursorFirstFour.Close(ctx)
+
+	// Recopilar los clips de las primeras 4 categorías
+	var recommendedClips []clipdomain.Clip
+	for cursorFirstFour.Next(ctx) {
+		var clip clipdomain.Clip
+		err := cursorFirstFour.Decode(&clip)
+		if err != nil {
+			return nil, err
+		}
+		recommendedClips = append(recommendedClips, clip)
+	}
+
+	// Crear el pipeline de agregación para obtener clips de categorías distintas a las primeras 4 categorías
+	pipelineRandom := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{
+			// {Key: "likes", Value: bson.D{{Key: "$in", Value: findUser.Following}}},
+			// {Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: time.Now().Add(-23 * time.Hour)}}},
+			{Key: "category", Value: bson.D{{Key: "$nin", Value: firstFourCategories}}}, // Filtrar por categorías distintas a las primeras 4
+			bson.E{Key: "$nor", Value: excludeFilter},                                   // Excluir los clips especificados
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "relevanceFactor", Value: bson.D{
+				{Key: "$multiply", Value: []interface{}{
+					bson.D{{Key: "$log10", Value: "$views"}},
+					bson.D{{Key: "$size", Value: bson.D{{Key: "$setIntersection", Value: []interface{}{"$likes", findUser.Following}}}}},
+				}},
+			}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
+		bson.D{{Key: "$limit", Value: limit - len(recommendedClips)}}, // Limitar la cantidad de clips devueltos por categorías distintas
+	}
+
+	// Ejecutar el pipeline de agregación para obtener clips de categorías distintas
+	cursorRandom, err := GoMongoDBCollClip.Aggregate(ctx, pipelineRandom)
+	if err != nil {
+		return nil, err
+	}
+	defer cursorRandom.Close(ctx)
+
+	// Recopilar los clips de categorías distintas
+	for cursorRandom.Next(ctx) {
+		var clip clipdomain.Clip
+		err := cursorRandom.Decode(&clip)
+		if err != nil {
+			return nil, err
+		}
+		recommendedClips = append(recommendedClips, clip)
+	}
+
+	return recommendedClips, nil
+}
 func (c *ClipRepository) SaveClip(clip *clipdomain.Clip) (*clipdomain.Clip, error) {
 	database := c.mongoClient.Database("PINKKER-BACKEND")
 	clipCollection := database.Collection("Clips")
@@ -358,111 +467,6 @@ func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID) error {
 	_, err := GoMongoDBColl.UpdateOne(context.Background(), filter, update)
 	return err
 }
-func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, excludeIDs []primitive.ObjectID) ([]clipdomain.Clip, error) {
-	ctx := context.Background()
-	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBCollClip := GoMongoDB.Collection("Clips")
-	GoMongoDBCollUser := GoMongoDB.Collection("Users")
-
-	// Obtener el usuario
-	var findUser *userdomain.User
-	err := GoMongoDBCollUser.FindOne(ctx, bson.D{{Key: "_id", Value: idT}}).Decode(&findUser)
-	if err != nil {
-		return nil, err
-	}
-
-	// Crear un filtro para excluir los clips especificados
-	var excludeFilter []bson.E
-	for _, id := range excludeIDs {
-		excludeFilter = append(excludeFilter, bson.E{Key: "_id", Value: bson.D{{Key: "$ne", Value: id}}})
-	}
-
-	// Obtener las primeras 4 categorías del usuario
-	firstFourCategories := make([]string, 0, 4)
-	for category := range findUser.CategoryPreferences {
-		firstFourCategories = append(firstFourCategories, category)
-		if len(firstFourCategories) == 4 {
-			break
-		}
-	}
-
-	// Crear el pipeline de agregación para los clips de las primeras 4 categorías del usuario
-	pipelineFirstFour := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: bson.D{
-			{Key: "likes", Value: bson.D{{Key: "$in", Value: findUser.Following}}},
-			{Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: time.Now().Add(-23 * time.Hour)}}},
-			{Key: "category", Value: bson.D{{Key: "$in", Value: firstFourCategories}}}, // Filtrar por las primeras 4 categorías
-			bson.E{Key: "$nor", Value: excludeFilter},                                  // Excluir los clips especificados
-		}}},
-		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "relevanceFactor", Value: bson.D{
-				{Key: "$multiply", Value: []interface{}{
-					bson.D{{Key: "$log10", Value: "$views"}}, // Aplicar logaritmo a las vistas para suavizar el efecto
-					bson.D{{Key: "$size", Value: bson.D{{Key: "$setIntersection", Value: []interface{}{"$likes", findUser.Following}}}}}, // Obtener la cantidad de likes compartidos
-				}},
-			}},
-		}}},
-		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
-		bson.D{{Key: "$limit", Value: limit}},
-	}
-
-	// Ejecutar el pipeline de agregación para obtener los clips de las primeras 4 categorías
-	cursorFirstFour, err := GoMongoDBCollClip.Aggregate(ctx, pipelineFirstFour)
-	if err != nil {
-		return nil, err
-	}
-	defer cursorFirstFour.Close(ctx)
-
-	// Recopilar los clips de las primeras 4 categorías
-	var recommendedClips []clipdomain.Clip
-	for cursorFirstFour.Next(ctx) {
-		var clip clipdomain.Clip
-		err := cursorFirstFour.Decode(&clip)
-		if err != nil {
-			return nil, err
-		}
-		recommendedClips = append(recommendedClips, clip)
-	}
-
-	// Crear el pipeline de agregación para obtener clips de categorías distintas a las primeras 4 categorías
-	pipelineRandom := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: bson.D{
-			// {Key: "likes", Value: bson.D{{Key: "$in", Value: findUser.Following}}},
-			// {Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: time.Now().Add(-23 * time.Hour)}}},
-			{Key: "category", Value: bson.D{{Key: "$nin", Value: firstFourCategories}}}, // Filtrar por categorías distintas a las primeras 4
-			bson.E{Key: "$nor", Value: excludeFilter},                                   // Excluir los clips especificados
-		}}},
-		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "relevanceFactor", Value: bson.D{
-				{Key: "$multiply", Value: []interface{}{
-					bson.D{{Key: "$log10", Value: "$views"}},
-					bson.D{{Key: "$size", Value: bson.D{{Key: "$setIntersection", Value: []interface{}{"$likes", findUser.Following}}}}},
-				}},
-			}},
-		}}},
-		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
-		bson.D{{Key: "$limit", Value: limit - len(recommendedClips)}}, // Limitar la cantidad de clips devueltos por categorías distintas
-	}
-
-	// Ejecutar el pipeline de agregación para obtener clips de categorías distintas
-	cursorRandom, err := GoMongoDBCollClip.Aggregate(ctx, pipelineRandom)
-	if err != nil {
-		return nil, err
-	}
-	defer cursorRandom.Close(ctx)
-
-	// Recopilar los clips de categorías distintas
-	for cursorRandom.Next(ctx) {
-		var clip clipdomain.Clip
-		err := cursorRandom.Decode(&clip)
-		if err != nil {
-			return nil, err
-		}
-		recommendedClips = append(recommendedClips, clip)
-	}
-
-	return recommendedClips, nil
-}
 
 func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username, comment string) error {
 	ctx := context.Background()
@@ -508,7 +512,7 @@ func (c *ClipRepository) LikeComment(commentID, userID primitive.ObjectID) error
 
 	commentCollection := db.Collection("CommentsClips")
 	filter := bson.M{"_id": commentID}
-	update := bson.M{"$addToSet": bson.M{"Likes": userID}}
+	update := bson.M{"$addToSet": bson.M{"likes": userID}}
 
 	_, err := commentCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
@@ -523,7 +527,7 @@ func (c *ClipRepository) UnlikeComment(commentID, userID primitive.ObjectID) err
 
 	commentCollection := db.Collection("CommentsClips")
 	filter := bson.M{"_id": commentID}
-	update := bson.M{"$pull": bson.M{"Likes": userID}}
+	update := bson.M{"$pull": bson.M{"likes": userID}}
 	_, err := commentCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err

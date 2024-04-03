@@ -27,7 +27,7 @@ func ClipRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/clips/ClipLike", middleware.UseExtractor(), clipHandler.CliptLike)
 	App.Post("/clips/DisLike", middleware.UseExtractor(), clipHandler.ClipDislike)
 	App.Post("/clips/MoreViewOfTheClip", clipHandler.MoreViewOfTheClip)
-	App.Post("/clips/ClipsRecommended", clipHandler.ClipsRecommended)
+	App.Post("/clips/ClipsRecommended", middleware.UseExtractor(), clipHandler.ClipsRecommended)
 
 	App.Post("/clips/CommentClip", middleware.UseExtractor(), clipHandler.CommentClip)
 	App.Post("/clips/LikeCommentClip", middleware.UseExtractor(), clipHandler.LikeCommentClip)
