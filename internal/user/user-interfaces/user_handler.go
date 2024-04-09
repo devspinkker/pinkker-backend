@@ -405,6 +405,29 @@ func (h *UserHandler) GetUserBykey(c *fiber.Ctx) error {
 		"data":    user,
 	})
 }
+func (h *UserHandler) GetUserByCmt(c *fiber.Ctx) error {
+	type ReqGetUserByCmt struct {
+		Cmt string `json:"Cmt" query:"Cmt"`
+	}
+
+	var Req ReqGetUserByCmt
+	if err := c.QueryParser(&Req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	user, errGetUserBykey := h.userService.GetUserByCmt(Req.Cmt)
+	if errGetUserBykey != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    user,
+	})
+}
 
 type ReqGetUserByNameUser struct {
 	NameUser string `json:"nameUser" query:"nameUser"`

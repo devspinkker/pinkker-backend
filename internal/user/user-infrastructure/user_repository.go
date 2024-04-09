@@ -173,11 +173,19 @@ func (u *UserRepository) FindUserById(id primitive.ObjectID) (*domain.User, erro
 	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&FindUserById)
 	return FindUserById, errCollUsers
 }
-func (u *UserRepository) GetUserBykey(key string) (*domain.User, error) {
+func (u *UserRepository) GetUserBykey(key string) (*domain.GetUser, error) {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	var FindUserInDb primitive.D
-	FindUserInDb = bson.D{
+	FindUserInDb := bson.D{
 		{Key: "KeyTransmission", Value: key},
+	}
+	var FindUserById *domain.GetUser
+	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&FindUserById)
+	return FindUserById, errCollUsers
+}
+func (u *UserRepository) GetUserByCmt(Cmt string) (*domain.User, error) {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	FindUserInDb := bson.D{
+		{Key: "Cmt", Value: Cmt},
 	}
 	var FindUserById *domain.User
 	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&FindUserById)
@@ -220,7 +228,7 @@ func (u *UserRepository) CreateStreamUser(user *domain.User, id primitive.Object
 		StreamerID:         id,
 		Streamer:           user.NameUser,
 		StreamTitle:        "Your Title",
-		StreamCategory:     "IRL",
+		StreamCategory:     "Just Chatting",
 		ImageCategorie:     "https://res.cloudinary.com/dcj8krp42/image/upload/v1708649172/categorias/IRL_aiusyf.jpg",
 		StreamNotification: user.NameUser + " is live!",
 		StreamerAvatar:     user.Avatar,

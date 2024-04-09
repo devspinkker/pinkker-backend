@@ -30,7 +30,7 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 
 	App.Get("/user/getUserByNameUser", UserHandler.GetUserByNameUser)
 	App.Get("/user/getUserByNameUserIndex", UserHandler.GetUserByNameUserIndex)
-
+	App.Get("/user/get_user_cmt", UserHandler.GetUserByCmt)
 	App.Get("/user/get_user_by_key", UserHandler.GetUserBykey)
 	App.Get("/user/getUserById", middleware.UseExtractor(), UserHandler.GetUserByIdTheToken)
 

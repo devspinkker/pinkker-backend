@@ -106,8 +106,12 @@ func (u *UserService) FindUserById(id primitive.ObjectID) (*domain.User, error) 
 	return user, err
 }
 
-func (u *UserService) GetUserBykey(key string) (*domain.User, error) {
+func (u *UserService) GetUserBykey(key string) (*domain.GetUser, error) {
 	user, err := u.roomRepository.GetUserBykey(key)
+	return user, err
+}
+func (u *UserService) GetUserByCmt(key string) (*domain.User, error) {
+	user, err := u.roomRepository.GetUserByCmt(key)
 	return user, err
 }
 
