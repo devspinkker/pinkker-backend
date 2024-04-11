@@ -538,6 +538,5 @@ func (r *StreamRepository) GetCategia(cate string) (streamdomain.Categoria, erro
 	}
 	var FindStreamsById streamdomain.Categoria
 	errCollStreams := GoMongoDBCollCategorias.FindOne(context.Background(), Find).Decode(&FindStreamsById)
-
 	return FindStreamsById, errCollStreams
 }

@@ -47,16 +47,28 @@ func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, exc
 	}
 
 	// Obtener las primeras 4 categorías del usuario
+
 	firstFourCategories := make([]string, 0, 4)
+	found := false
+
 	for category := range findUser.CategoryPreferences {
 		firstFourCategories = append(firstFourCategories, category)
 		if len(firstFourCategories) == 4 {
+			found = true
 			break
 		}
 	}
+
+	if !found {
+		firstFourCategories = append(firstFourCategories, "nothing")
+	}
 	var followingIDs []primitive.ObjectID
-	for userID := range findUser.Following {
-		followingIDs = append(followingIDs, userID)
+	if len(findUser.Following) == 0 {
+		followingIDs = make([]primitive.ObjectID, 0)
+	} else {
+		for userID := range findUser.Following {
+			followingIDs = append(followingIDs, userID)
+		}
 	}
 
 	pipelineFirstFour := mongo.Pipeline{
