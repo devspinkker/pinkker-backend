@@ -45,5 +45,5 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	App.Get("/stream/get_streamings_online", streamHandler.Streamings_online)
 	// esto se tiene que mover a una carpeta especifica
 	App.Get("/categorie/GetCategories", streamHandler.GetCategories)
-
+	App.Get("/categorie/GetCategoria", streamHandler.GetCategoria)
 }

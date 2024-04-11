@@ -408,3 +408,27 @@ func (s *StreamHandler) GetCategories(c *fiber.Ctx) error {
 	})
 
 }
+
+type Categoria struct {
+	Categoria string `json:"Categoria" query:"Categoria"`
+}
+
+func (s *StreamHandler) GetCategoria(c *fiber.Ctx) error {
+	var CategoriaReq Categoria
+	if err := c.QueryParser(&CategoriaReq); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	Categorias, err := s.StreamServise.GetCategoria(CategoriaReq.Categoria)
+	if err != nil {
+		fmt.Println(err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Categorias,
+	})
+}

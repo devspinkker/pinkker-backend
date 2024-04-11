@@ -529,3 +529,15 @@ func (r *StreamRepository) GetCategories() ([]streamdomain.Categoria, error) {
 	return Categorias, err
 
 }
+
+func (r *StreamRepository) GetCategia(cate string) (streamdomain.Categoria, error) {
+	GoMongoDBCollCategorias := r.mongoClient.Database("PINKKER-BACKEND").Collection("Categorias")
+
+	Find := bson.D{
+		{Key: "Name", Value: cate},
+	}
+	var FindStreamsById streamdomain.Categoria
+	errCollStreams := GoMongoDBCollCategorias.FindOne(context.Background(), Find).Decode(&FindStreamsById)
+
+	return FindStreamsById, errCollStreams
+}

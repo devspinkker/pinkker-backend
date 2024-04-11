@@ -92,3 +92,8 @@ func (s *StreamService) GetCategories() ([]streamdomain.Categoria, error) {
 	Categorias, err := s.StreamRepository.GetCategories()
 	return Categorias, err
 }
+
+func (s *StreamService) GetCategoria(Cate string) (streamdomain.Categoria, error) {
+	Categorias, err := s.StreamRepository.GetCategia(Cate)
+	return Categorias, err
+}
