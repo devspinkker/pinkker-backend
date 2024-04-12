@@ -333,23 +333,20 @@ func (th *TweetHandler) CommentPost(c *fiber.Ctx) error {
 // 	})
 // }
 
-type reqCommentPost struct {
-	IdPost primitive.ObjectID `json:"IdPost"`
-}
-
 func (th *TweetHandler) GetCommentPost(c *fiber.Ctx) error {
-	var req reqCommentPost
-	err := c.BodyParser(&req)
+	idStr := c.Query("id", "")
+	id, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "StatusBadRequest",
+			"message": "StatusInternalServerError",
+			"data":    "name error",
 		})
 	}
 	page, err := strconv.Atoi(c.Query("page", "1"))
 	if err != nil || page < 1 {
 		page = 1
 	}
-	GetCommentPost, errTweetGetFollow := th.TweetServise.GetCommentPost(req.IdPost, page)
+	GetCommentPost, errTweetGetFollow := th.TweetServise.GetCommentPost(id, page)
 	if errTweetGetFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
