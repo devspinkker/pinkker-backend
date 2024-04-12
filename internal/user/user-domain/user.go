@@ -215,6 +215,7 @@ func (u *EditProfile) ValidateEditProfile() error {
 type Google_callback_Complete_Profile_And_Username struct {
 	NameUser   string    `json:"nameUser" validate:"required,min=5,max=20"`
 	Email      string    `json:"email" validate:"required,email"`
+	Password   string    `json:"password" validate:"required,min=8"`
 	Pais       string    `json:"pais" bson:"Pais"`
 	Ciudad     string    `json:"ciudad" bson:"Ciudad"`
 	Biography  string    `json:"biography" validate:"max=600"`

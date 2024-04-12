@@ -573,6 +573,10 @@ func (h *UserHandler) Google_callback_Complete_Profile_And_Username(c *fiber.Ctx
 			"data":    err.Error(),
 		})
 	}
+	passwordHashChan := make(chan string)
+	go helpers.HashPassword(req.Password, passwordHashChan)
+	passwordHash := <-passwordHashChan
+	req.Password = passwordHash
 	user, err := h.userService.FindEmailForOauth2Updata(&req)
 	if err != nil {
 
