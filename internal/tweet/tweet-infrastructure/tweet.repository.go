@@ -275,6 +275,51 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 
 	return tweetsWithUserInfo, nil
 }
+func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGetFollowReq, error) {
+	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+
+	pipeline := []bson.D{
+		{{Key: "$match", Value: bson.D{{Key: "_id", Value: id}}}}, // Filtrar por el _id proporcionado
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		{{Key: "$unwind", Value: "$UserInfo"}},
+		{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: "$Status"},
+			{Key: "PostImage", Value: "$PostImage"},
+			{Key: "Type", Value: "$Type"},
+			{Key: "TimeStamp", Value: "$TimeStamp"},
+			{Key: "UserID", Value: "$UserID"},
+			{Key: "Likes", Value: "$Likes"},
+			{Key: "Comments", Value: "$Comments"},
+			{Key: "RePosts", Value: "$RePosts"},
+			{Key: "OriginalPost", Value: "$OriginalPost"},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
+		}}},
+	}
+
+	cursor, err := GoMongoDBCollTweets.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return tweetdomain.TweetGetFollowReq{}, err
+	}
+	defer cursor.Close(context.Background())
+
+	var tweetWithUserInfo tweetdomain.TweetGetFollowReq
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
+			return tweetdomain.TweetGetFollowReq{}, err
+		}
+	}
+
+	return tweetWithUserInfo, nil
+}
+
 func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
 
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
