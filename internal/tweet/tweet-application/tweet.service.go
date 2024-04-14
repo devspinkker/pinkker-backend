@@ -79,7 +79,8 @@ func (ts *TweetService) TweetGetFollow(idValueObj primitive.ObjectID, page int) 
 	return Tweets, errGetTweetsLast24Hours
 }
 func (ts *TweetService) GetTweetsRecommended(idT primitive.ObjectID, excludeIDs []primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
-	Tweets, err := ts.TweetRepository.GetTweetsRecommended(idT, excludeIDs)
+	limit := 15
+	Tweets, err := ts.TweetRepository.GetTweetsRecommended(idT, excludeIDs, limit)
 	return Tweets, err
 }
 func (ts *TweetService) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, error) {

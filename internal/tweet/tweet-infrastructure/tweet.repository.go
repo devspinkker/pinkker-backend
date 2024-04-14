@@ -652,7 +652,7 @@ func (t *TweetRepository) CitaPost(rePost *tweetdomain.CitaPost) error {
 	_, err := GoMongoDBColl.InsertOne(context.Background(), rePost)
 	return err
 }
-func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeIDs []primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeIDs []primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
 	ctx := context.Background()
 	GoMongoDB := t.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollTweets := GoMongoDB.Collection("Post")
@@ -665,21 +665,78 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 		return nil, err
 	}
 
-	followingUserIDs := followingUser.Following
+	var followingIDs []primitive.ObjectID
+	if len(followingUser.Following) == 0 {
+		followingIDs = make([]primitive.ObjectID, 0)
+	} else {
+		for userID := range followingUser.Following {
+			followingIDs = append(followingIDs, userID)
+		}
+	}
 
 	last24Hours := time.Now().Add(-24 * time.Hour)
 
 	pipeline := bson.A{
 		// Etapa de coincidencia para encontrar los tweets que han sido dados like por los usuarios seguidos en las últimas 24 horas
 		bson.D{{Key: "$match", Value: bson.D{
-			{Key: "Likes", Value: bson.D{{Key: "$in", Value: followingUserIDs}}},
+			{Key: "Likes", Value: bson.D{{Key: "$in", Value: followingIDs}}},
 			{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
 		}}},
-		// Etapa de coincidencia para excluir los posts especificados
-		bson.D{{Key: "$match", Value: bson.D{
-			{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludeIDs}}},
-		}}},
 		// Etapa para agregar información del usuario
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		// Desenrollar la información del usuario
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		// Ordenar los tweets por timestamp
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "TimeStamp", Value: -1}}}},
+		// Limitar la cantidad de tweets devueltos
+		// Proyectar los campos deseados
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: 1},
+			{Key: "PostImage", Value: 1},
+			{Key: "Type", Value: 1},
+			{Key: "TimeStamp", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Likes", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "RePosts", Value: 1},
+			{Key: "OriginalPost", Value: 1},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
+		}}},
+		bson.D{{Key: "$limit", Value: limit}},
+	}
+	excludedIDs := make([]interface{}, len(excludeIDs))
+	for i, id := range excludeIDs {
+		excludedIDs[i] = id
+	}
+	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
+	pipeline = append(pipeline, bson.D{{Key: "$match", Value: excludeFilter}})
+
+	cursor, err := GoMongoDBCollTweets.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Recopilar los tweets con información del usuario
+	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
+	for cursor.Next(ctx) {
+		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
+		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
+			return nil, err
+		}
+
+		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
+	}
+
+	pipelineRandom := bson.A{
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
@@ -708,19 +765,19 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
 		}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
+		bson.D{{Key: "$limit", Value: limit - len(tweetsWithUserInfo)}}, // Limitar la cantidad de clips devueltos por categorías distintas
 	}
-	// Ejecutar el pipeline de agregación
-	cursor, err := GoMongoDBCollTweets.Aggregate(ctx, pipeline)
+	pipelineRandom = append(pipelineRandom, bson.D{{Key: "$match", Value: excludeFilter}})
+
+	cursorRandom, err := GoMongoDBCollTweets.Aggregate(ctx, pipelineRandom)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
-
-	// Recopilar los tweets con información del usuario
-	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
-	for cursor.Next(ctx) {
+	defer cursorRandom.Close(ctx)
+	for cursorRandom.Next(ctx) {
 		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
-		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
+		if err := cursorRandom.Decode(&tweetWithUserInfo); err != nil {
 			return nil, err
 		}
 
