@@ -34,7 +34,6 @@ func Processimage(fileHeader *multipart.FileHeader, PostImageChanel chan string,
 		}
 		PostImageChanel <- resp.SecureURL
 	} else {
-		// si fileHeader esta vacio quiero que devuelva esto
 		PostImageChanel <- ""
 	}
 }
