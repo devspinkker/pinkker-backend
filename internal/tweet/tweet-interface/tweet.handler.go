@@ -24,6 +24,7 @@ func NewTweetService(TweetServise *tweetapplication.TweetService) *TweetHandler 
 func (th *TweetHandler) CreatePost(c *fiber.Ctx) error {
 
 	fileHeader, _ := c.FormFile("imgPost")
+
 	PostImageChanel := make(chan string)
 	errChanel := make(chan error)
 	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
