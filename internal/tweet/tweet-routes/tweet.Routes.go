@@ -33,4 +33,8 @@ func TweetdRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.C
 	App.Get("/post/GetCommentPost", tweetHandler.GetCommentPost)
 	App.Post("/post/GetTweetsRecommended", middleware.UseExtractor(), tweetHandler.GetTweetsRecommended)
 
+	App.Get("/post/GetTrends", tweetHandler.GetTrends)
+	App.Get("/post/GetTweetsByHashtag", tweetHandler.GetTweetsByHashtag)
+	App.Get("/post/GetTrendsByPrefix", tweetHandler.GetTrendsByPrefix)
+
 }

@@ -3,6 +3,7 @@ package tweetapplication
 import (
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	tweetinfrastructure "PINKKER-BACKEND/internal/tweet/tweet-infrastructure"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -29,9 +30,30 @@ func (ts *TweetService) SaveTweet(status string, img string, user primitive.Obje
 	modelNewTweet.TimeStamp = time.Now()
 	modelNewTweet.RePosts = []primitive.ObjectID{}
 	modelNewTweet.Type = "Post"
-	err := ts.TweetRepository.TweetSave(modelNewTweet)
+	Hashtags := extractHashtags(status)
+	modelNewTweet.Hashtags = Hashtags
 
+	err := ts.TweetRepository.TweetSave(modelNewTweet)
+	if err != nil {
+		return err
+
+	}
+	if len(Hashtags) > 0 {
+		err = ts.TweetRepository.UpdateTrends(Hashtags)
+	}
 	return err
+}
+
+func extractHashtags(status string) []string {
+	hashtags := []string{}
+	words := strings.Fields(status)
+	for _, word := range words {
+		if strings.HasPrefix(word, "#") {
+			hashtag := strings.ToLower(strings.Trim(word, "#"))
+			hashtags = append(hashtags, hashtag)
+		}
+	}
+	return hashtags
 }
 func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID, img string, user primitive.ObjectID) error {
 	var modelNewTweet tweetdomain.PostComment
@@ -135,4 +157,19 @@ func (ts *TweetService) CitaPost(userid primitive.ObjectID, IdPost primitive.Obj
 
 	err := ts.TweetRepository.CitaPost(&CitaPost)
 	return err
+}
+func (t *TweetService) GetTrends(page int) ([]tweetdomain.Trend, error) {
+	Trend, err := t.TweetRepository.GetTrends(page, 10)
+	return Trend, err
+}
+func (t *TweetService) GetTweetsByHashtag(page int, hashtag string) ([]tweetdomain.TweetGetFollowReq, error) {
+	post, err := t.TweetRepository.GetTweetsByHashtag(hashtag, page, 10)
+	return post, err
+
+}
+
+func (t *TweetService) GetTrendsByPrefix(prefix string) ([]tweetdomain.Trend, error) {
+	post, err := t.TweetRepository.GetTrendsByPrefix(prefix, 10)
+	return post, err
+
 }
