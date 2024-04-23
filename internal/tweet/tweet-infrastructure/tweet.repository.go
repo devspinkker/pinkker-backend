@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type TweetRepository struct {
@@ -37,7 +38,37 @@ func (t *TweetRepository) TweetSave(Tweet tweetdomain.Post) error {
 	}
 	return nil
 }
-
+func (t *TweetRepository) UpdateTrends(hashtags []string) error {
+	GoMongoDB := t.mongoClient.Database("PINKKER-BACKEND").Collection("Trends")
+	for _, hashtag := range hashtags {
+		filter := bson.M{"hashtag": hashtag}
+		// Comprueba si el hashtag ya existe en la base de datos
+		var existingTrend tweetdomain.Trend
+		err := GoMongoDB.FindOne(context.Background(), filter).Decode(&existingTrend)
+		if err == mongo.ErrNoDocuments {
+			// Si el hashtag no existe, lo inserta en la base de datos
+			trend := tweetdomain.Trend{
+				Hashtag:  hashtag,
+				Count:    1,
+				LastSeen: time.Now(),
+			}
+			_, err := GoMongoDB.InsertOne(context.Background(), trend)
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		} else {
+			update := bson.M{"$inc": bson.M{"count": 1}, "$set": bson.M{"last_seen": time.Now()}}
+			opts := options.Update().SetUpsert(true)
+			_, err := GoMongoDB.UpdateOne(context.Background(), filter, update, opts)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
 func (t *TweetRepository) SaveComment(tweetComment *tweetdomain.PostComment) error {
 	GoMongoDBCollComments := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
@@ -852,4 +883,91 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 	}
 
 	return tweetsWithUserInfo, nil
+}
+func (t *TweetRepository) GetTrends(page int, limit int) ([]tweetdomain.Trend, error) {
+	GoMongoDB := t.mongoClient.Database("PINKKER-BACKEND").Collection("Trends")
+	opts := options.Find().SetSkip(int64((page - 1) * limit)).SetLimit(int64(limit))
+	cursor, err := GoMongoDB.Find(context.Background(), bson.M{}, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var trends []tweetdomain.Trend
+	if err := cursor.All(context.Background(), &trends); err != nil {
+		return nil, err
+	}
+
+	return trends, nil
+}
+
+func (t *TweetRepository) GetTweetsByHashtag(hashtag string, page int, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+
+	pipeline := []bson.D{
+		{{Key: "$match", Value: bson.D{{Key: "Hashtags", Value: hashtag}}}},
+		{{Key: "$sort", Value: bson.D{{Key: "Likes", Value: -1}}}},
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		{{Key: "$unwind", Value: "$UserInfo"}},
+		{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: "$Status"},
+			{Key: "PostImage", Value: "$PostImage"},
+			{Key: "Type", Value: "$Type"},
+			{Key: "TimeStamp", Value: "$TimeStamp"},
+			{Key: "UserID", Value: "$UserID"},
+			{Key: "Likes", Value: "$Likes"},
+			{Key: "Comments", Value: "$Comments"},
+			{Key: "RePosts", Value: "$RePosts"},
+			{Key: "OriginalPost", Value: "$OriginalPost"},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
+		}}},
+		{{Key: "$skip", Value: int64((page - 1) * limit)}}, // Saltar resultados según la paginación
+		{{Key: "$limit", Value: int64(limit)}},             // Limitar resultados según la paginación
+	}
+
+	cursor, err := GoMongoDBCollTweets.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var tweets []tweetdomain.TweetGetFollowReq
+	if err := cursor.All(context.Background(), &tweets); err != nil {
+		return nil, err
+	}
+
+	return tweets, nil
+}
+
+func (t *TweetRepository) GetTrendsByPrefix(prefix string, limit int) ([]tweetdomain.Trend, error) {
+	GoMongoDB := t.mongoClient.Database("PINKKER-BACKEND").Collection("Trends")
+
+	regex := primitive.Regex{Pattern: "^" + prefix, Options: "i"}
+
+	pipeline := []bson.D{
+		{{Key: "$match", Value: bson.D{{Key: "hashtag", Value: regex}}}},
+		{{Key: "$sort", Value: bson.D{{Key: "count", Value: -1}}}},
+		{{Key: "$limit", Value: limit}},
+	}
+
+	cursor, err := GoMongoDB.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var trends []tweetdomain.Trend
+	if err := cursor.All(context.Background(), &trends); err != nil {
+		return nil, err
+	}
+
+	return trends, nil
 }

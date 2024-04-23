@@ -9,6 +9,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type Trend struct {
+	Hashtag  string    `json:"hashtag" bson:"hashtag"`
+	Count    int       `json:"count"  bson:"count"`
+	LastSeen time.Time `json:"last_seen" bson:"last_seen"`
+}
 type Post struct {
 	ID        primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
 	Type      string               `json:"Type" default:"Post" bson:"Type"`
@@ -19,6 +24,7 @@ type Post struct {
 	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
 	Comments  []primitive.ObjectID `json:"Comments" bson:"Comments"`
 	RePosts   []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
+	Hashtags  []string             `json:"hashtags" bson:"hashtags"`
 }
 type PostComment struct {
 	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
@@ -31,6 +37,7 @@ type PostComment struct {
 	UserID       primitive.ObjectID   `json:"UserID" bson:"UserID"`
 	Likes        []primitive.ObjectID `json:"Likes" bson:"Likes"`
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
+	Hashtags     []string             `json:"hashtags" bson:"hashtags"`
 }
 type RePost struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
@@ -50,6 +57,7 @@ type CitaPost struct {
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
 	PostImage    string               `json:"PostImage" bson:"PostImage"`
+	Hashtags     []string             `json:"hashtags" bson:"hashtags"`
 }
 type TweetModelValidator struct {
 	Status string `json:"status" validate:"required,min=3,max=100"`
@@ -92,6 +100,7 @@ type TweetGetFollowReq struct {
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 	OriginalPost primitive.ObjectID   `json:"OriginalPost"`
 	Type         string               `json:"Type" bson:"Type"`
+	Hashtags     []string             `json:"hashtags" bson:"hashtags"`
 	UserInfo     struct {
 		FullName string `json:"FullName"`
 		Avatar   string `json:"Avatar"`
@@ -110,6 +119,7 @@ type TweetCommentsGetReq struct {
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 	OriginalPost primitive.ObjectID   `json:"OriginalPost"`
 	Type         string               `json:"Type" bson:"Type"`
+	Hashtags     []string             `json:"hashtags" bson:"hashtags"`
 	UserInfo     struct {
 		FullName string `json:"FullName"`
 		Avatar   string `json:"Avatar"`

@@ -435,3 +435,60 @@ func (th *TweetHandler) CitaPost(c *fiber.Ctx) error {
 	}
 
 }
+
+func (th *TweetHandler) GetTrends(c *fiber.Ctx) error {
+
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	Tweet, errTweetGetFollow := th.TweetServise.GetTrends(page)
+	if errTweetGetFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errTweetGetFollow.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Tweet,
+	})
+}
+
+func (th *TweetHandler) GetTweetsByHashtag(c *fiber.Ctx) error {
+
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	hashtag := c.Query("hashtag", "")
+
+	Tweet, errTweetGetFollow := th.TweetServise.GetTweetsByHashtag(page, hashtag)
+	if errTweetGetFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errTweetGetFollow.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Tweet,
+	})
+}
+
+func (th *TweetHandler) GetTrendsByPrefix(c *fiber.Ctx) error {
+	hashtag := c.Query("hashtag", "")
+
+	Trend, err := th.TweetServise.GetTrendsByPrefix(hashtag)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Trend,
+	})
+}
