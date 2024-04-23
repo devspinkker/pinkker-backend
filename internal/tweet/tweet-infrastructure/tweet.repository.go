@@ -928,6 +928,7 @@ func (t *TweetRepository) GetTweetsByHashtag(hashtag string, page int, limit int
 			{Key: "Likes", Value: "$Likes"},
 			{Key: "Comments", Value: "$Comments"},
 			{Key: "RePosts", Value: "$RePosts"},
+			{Key: "Hashtags", Value: "$Hashtags"},
 			{Key: "OriginalPost", Value: "$OriginalPost"},
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},

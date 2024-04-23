@@ -10,7 +10,7 @@ import (
 )
 
 type Trend struct {
-	Hashtag  string    `json:"hashtag" bson:"hashtag"`
+	Hashtag  string    `json:"hashtag" bson:"Hashtags"`
 	Count    int       `json:"count"  bson:"count"`
 	LastSeen time.Time `json:"last_seen" bson:"last_seen"`
 }
@@ -37,7 +37,7 @@ type PostComment struct {
 	UserID       primitive.ObjectID   `json:"UserID" bson:"UserID"`
 	Likes        []primitive.ObjectID `json:"Likes" bson:"Likes"`
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
-	Hashtags     []string             `json:"hashtags" bson:"hashtags"`
+	Hashtags     []string             `json:"hashtags" bson:"Hashtags"`
 }
 type RePost struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
@@ -57,7 +57,7 @@ type CitaPost struct {
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
 	PostImage    string               `json:"PostImage" bson:"PostImage"`
-	Hashtags     []string             `json:"hashtags" bson:"hashtags"`
+	Hashtags     []string             `json:"hashtags" bson:"Hashtags"`
 }
 type TweetModelValidator struct {
 	Status string `json:"status" validate:"required,min=3,max=100"`
@@ -100,7 +100,7 @@ type TweetGetFollowReq struct {
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 	OriginalPost primitive.ObjectID   `json:"OriginalPost"`
 	Type         string               `json:"Type" bson:"Type"`
-	Hashtags     []string             `json:"hashtags" bson:"hashtags"`
+	Hashtags     []string             `json:"hashtags" bson:"Hashtags"`
 	UserInfo     struct {
 		FullName string `json:"FullName"`
 		Avatar   string `json:"Avatar"`
