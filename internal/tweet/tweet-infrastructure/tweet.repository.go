@@ -886,8 +886,9 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 }
 func (t *TweetRepository) GetTrends(page int, limit int) ([]tweetdomain.Trend, error) {
 	GoMongoDB := t.mongoClient.Database("PINKKER-BACKEND").Collection("Trends")
-	opts := options.Find().SetSkip(int64((page - 1) * limit)).SetLimit(int64(limit))
-	cursor, err := GoMongoDB.Find(context.Background(), bson.M{}, opts)
+
+	options := options.Find().SetSort(bson.D{{Key: "count", Value: -1}}).SetSkip(int64((page - 1) * limit)).SetLimit(int64(limit))
+	cursor, err := GoMongoDB.Find(context.Background(), bson.M{}, options)
 	if err != nil {
 		return nil, err
 	}
