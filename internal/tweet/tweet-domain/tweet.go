@@ -24,7 +24,7 @@ type Post struct {
 	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
 	Comments  []primitive.ObjectID `json:"Comments" bson:"Comments"`
 	RePosts   []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
-	Hashtags  []string             `json:"hashtags" bson:"hashtags"`
+	Hashtags  []string             `json:"hashtags" bson:"Hashtags"`
 }
 type PostComment struct {
 	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
