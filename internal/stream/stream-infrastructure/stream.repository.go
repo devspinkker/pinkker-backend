@@ -40,6 +40,45 @@ func (r *StreamRepository) GetStreamById(id primitive.ObjectID) (*streamdomain.S
 	return FindStreamsById, errCollStreams
 }
 
+func (r *StreamRepository) UpdateModChatSlowMode(updateInfo streamdomain.UpdateModChatSlowMode, id primitive.ObjectID) error {
+	userFilter := bson.M{"_id": id}
+	var user userdomain.User
+	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users").FindOne(context.Background(), userFilter).Decode(&user); err != nil {
+		return err
+	}
+	streamerName := user.NameUser
+
+	var previousStream streamdomain.Stream
+	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").FindOne(context.Background(), bson.M{"Streamer": streamerName}).Decode(&previousStream); err != nil {
+		return err
+	}
+	streamFilter := bson.M{"Streamer": streamerName}
+	update := bson.M{
+		"$set": bson.M{
+			"ModSlowMode": updateInfo.ModSlowMode,
+		},
+	}
+	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").UpdateOne(context.Background(), streamFilter, update); err != nil {
+		return err
+	}
+	exist, err := r.redisClient.Exists(context.Background(), previousStream.ID.Hex()+"ModSlowMode").Result()
+	if err != nil {
+		return err
+	}
+	if exist == 1 {
+		err := r.redisClient.Set(context.Background(), previousStream.ID.Hex()+"ModSlowMode", updateInfo.ModSlowMode, 0).Err()
+		if err != nil {
+			return err
+		}
+	} else {
+		err := r.redisClient.Set(context.Background(), previousStream.ID.Hex(), updateInfo.ModSlowMode, 0).Err()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // get stream by name user
 func (r *StreamRepository) GetStreamByNameUser(nameUser string) (*streamdomain.Stream, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
@@ -464,6 +503,7 @@ func (r *StreamRepository) UpdateModChat(updateInfo streamdomain.UpdateModChat, 
 	}
 	return nil
 }
+
 func (r *StreamRepository) Update_Emotes(idUser primitive.ObjectID, date int) error {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 

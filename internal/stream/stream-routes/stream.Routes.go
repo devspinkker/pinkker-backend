@@ -34,7 +34,7 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 
 	App.Post("/stream/update_stream_info", middleware.UseExtractor(), streamHandler.UpdateStreamInfo)
 	App.Post("/stream/updateModChat", middleware.UseExtractor(), streamHandler.UpdateModChat)
-
+	App.Post("/stream/updateModChatSlowMode", middleware.UseExtractor(), streamHandler.UpdateModChatSlowMode)
 	// claudinary, push modificar el map, request
 	App.Post("/stream/update_Emotes", streamHandler.Update_Emotes)
 

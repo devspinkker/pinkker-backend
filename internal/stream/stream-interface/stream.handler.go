@@ -367,6 +367,38 @@ func (s *StreamHandler) UpdateModChat(c *fiber.Ctx) error {
 		"message": "ok",
 	})
 }
+func (s *StreamHandler) UpdateModChatSlowMode(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var requestBody streamdomain.UpdateModChatSlowMode
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+	if err := requestBody.Validate(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	if err := s.StreamServise.UpdateModChatSlowMode(requestBody, IdUserTokenP); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
 func (s *StreamHandler) Update_Emotes(c *fiber.Ctx) error {
 
 	var requestBody Update_start_date // #############

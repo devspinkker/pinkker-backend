@@ -1,6 +1,7 @@
 package streamdomain
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-playground/validator"
@@ -26,6 +27,7 @@ type Stream struct {
 	Timestamp          time.Time          `json:"Timestamp" bson:"Timestamp"`
 	EmotesChat         map[string]string  `json:"EmotesChat" bson:"EmotesChat"`
 	ModChat            string             `json:"ModChat" bson:"ModChat"`
+	ModSlowMode        int                `json:"ModSlowMode" bson:"ModSlowMode"`
 }
 type UpdateStreamInfo struct {
 	Date         int64    `json:"date"`
@@ -42,13 +44,37 @@ func (u *UpdateStreamInfo) Validate() error {
 }
 
 type UpdateModChat struct {
-	// cambiar de title a Mod el json
 	Mod string `json:"title" validate:"max=30"`
 }
 
 func (u *UpdateModChat) Validate() error {
 	validate := validator.New()
 	return validate.Struct(u)
+}
+
+type UpdateModChatSlowMode struct {
+	ModSlowMode int `json:"ModSlowMode" validate:"min=0,max=30"`
+}
+
+func (u *UpdateModChatSlowMode) Validate() error {
+	validate := validator.New()
+	if err := validate.Struct(u); err != nil {
+		return err
+	}
+
+	if err := u.customModSlowModeValidator(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *UpdateModChatSlowMode) customModSlowModeValidator() error {
+	allowedValues := map[int]bool{2: true, 5: true, 15: true, 30: true, 45: true, 60: true, 120: true}
+	if !allowedValues[u.ModSlowMode] {
+		return fmt.Errorf("ModSlowMode debe ser uno de los valores permitidos: 2, 5, 15, 30, 45, 60, 120")
+	}
+	return nil
 }
 
 type Update_start_date struct {

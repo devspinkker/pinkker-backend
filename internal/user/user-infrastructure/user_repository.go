@@ -238,6 +238,8 @@ func (u *UserRepository) CreateStreamUser(user *domain.User, id primitive.Object
 		Timestamp:          time.Now(),
 		EmotesChat:         map[string]string{},
 		StreamThumbnail:    "https://res.cloudinary.com/dcj8krp42/image/upload/v1711393933/gvnemflnz904jeawxwd7.png",
+		ModChat:            "",
+		ModSlowMode:        0,
 	}
 	_, errInsertOne := GoMongoDBCollUsers.InsertOne(context.Background(), newStream)
 	return errInsertOne
