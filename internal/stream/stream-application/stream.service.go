@@ -84,6 +84,10 @@ func (s *StreamService) UpdateModChat(data streamdomain.UpdateModChat, id primit
 	err := s.StreamRepository.UpdateModChat(data, id)
 	return err
 }
+func (s *StreamService) UpdateModChatSlowMode(data streamdomain.UpdateModChatSlowMode, id primitive.ObjectID) error {
+	err := s.StreamRepository.UpdateModChatSlowMode(data, id)
+	return err
+}
 func (s *StreamService) Update_Emotes(idUser primitive.ObjectID, date int) error {
 	err := s.StreamRepository.Update_Emotes(idUser, date)
 	return err
