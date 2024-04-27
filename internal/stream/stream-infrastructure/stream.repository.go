@@ -41,6 +41,7 @@ func (r *StreamRepository) GetStreamById(id primitive.ObjectID) (*streamdomain.S
 }
 
 func (r *StreamRepository) UpdateModChatSlowMode(updateInfo streamdomain.UpdateModChatSlowMode, id primitive.ObjectID) error {
+
 	userFilter := bson.M{"_id": id}
 	var user userdomain.User
 	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users").FindOne(context.Background(), userFilter).Decode(&user); err != nil {
@@ -52,6 +53,10 @@ func (r *StreamRepository) UpdateModChatSlowMode(updateInfo streamdomain.UpdateM
 	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").FindOne(context.Background(), bson.M{"Streamer": streamerName}).Decode(&previousStream); err != nil {
 		return err
 	}
+	err := r.RedisDeleteKey(previousStream.ID.Hex() + "ModSlowMode")
+	if err != nil {
+		return err
+	}
 	streamFilter := bson.M{"Streamer": streamerName}
 	update := bson.M{
 		"$set": bson.M{
@@ -61,20 +66,13 @@ func (r *StreamRepository) UpdateModChatSlowMode(updateInfo streamdomain.UpdateM
 	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").UpdateOne(context.Background(), streamFilter, update); err != nil {
 		return err
 	}
-	exist, err := r.redisClient.Exists(context.Background(), previousStream.ID.Hex()+"ModSlowMode").Result()
+
+	return nil
+}
+func (r *StreamRepository) RedisDeleteKey(key string) error {
+	err := r.redisClient.Del(context.Background(), key).Err()
 	if err != nil {
 		return err
-	}
-	if exist == 1 {
-		err := r.redisClient.Set(context.Background(), previousStream.ID.Hex()+"ModSlowMode", updateInfo.ModSlowMode, 0).Err()
-		if err != nil {
-			return err
-		}
-	} else {
-		err := r.redisClient.Set(context.Background(), previousStream.ID.Hex(), updateInfo.ModSlowMode, 0).Err()
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
