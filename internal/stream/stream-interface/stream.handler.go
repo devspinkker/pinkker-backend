@@ -25,6 +25,65 @@ type IDStream struct {
 	IdStream primitive.ObjectID `json:"IdStream" `
 }
 
+func (s *StreamHandler) CommercialInStream(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	idUser, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var requestBody streamdomain.CommercialInStream
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+
+	if err := requestBody.Validate(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	Stream, err := s.StreamServise.GetStreamById(idUser)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	err = s.NotifyCommercialInStreamToRoomClients(Stream.ID.String(), "https://cdn-a.amazon-adsystem.com/video/aab52b48-039b-4d0c-aa96-5991067d4927/10000-1920x1080.mp4")
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
+func (s *StreamHandler) NotifyCommercialInStreamToRoomClients(roomID, Commercial string) error {
+	clients, err := s.StreamServise.GetWebSocketClientsInRoom(roomID)
+	if err != nil {
+		return err
+	}
+	notification := map[string]interface{}{
+		"Commercial": Commercial,
+	}
+	for _, client := range clients {
+		err = client.WriteJSON(notification)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // get stream by id
 func (s *StreamHandler) GetStreamById(c *fiber.Ctx) error {
 	var idStream IDStream

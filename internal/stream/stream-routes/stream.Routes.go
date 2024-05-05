@@ -5,8 +5,10 @@ import (
 	streaminfrastructure "PINKKER-BACKEND/internal/stream/stream-infrastructure"
 	streaminterfaces "PINKKER-BACKEND/internal/stream/stream-interface"
 	"PINKKER-BACKEND/pkg/middleware"
+	"PINKKER-BACKEND/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -16,7 +18,13 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	streamRepository := streaminfrastructure.NewStreamRepository(redisClient, newMongoDB)
 	streamService := streamapplication.NewStreamService(streamRepository)
 	streamHandler := streaminterfaces.NewStreamService(streamService)
-
+	App.Use("/ws", func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			c.Locals("allowed", true)
+			return c.Next()
+		}
+		return c.Status(fiber.StatusUpgradeRequired).SendString("Upgrade required")
+	})
 	App.Post("/stream/getStreamById", streamHandler.GetStreamById)
 	App.Get("/stream/getStreamByNameUser", streamHandler.GetStreamByNameUser)
 	App.Get("/stream/getStreamsByCategorie", streamHandler.GetStreamsByCategorie)
@@ -38,12 +46,29 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	// claudinary, push modificar el map, request
 	App.Post("/stream/update_Emotes", streamHandler.Update_Emotes)
 
-	// addHistoryViewers
-
-	// resumeStream falta
-
 	App.Get("/stream/get_streamings_online", streamHandler.Streamings_online)
+	App.Post("/stream/commercialInStream", middleware.UseExtractor(), streamHandler.CommercialInStream)
+
+	App.Get("/ws/commercialInStream/:roomID", websocket.New(func(c *websocket.Conn) {
+		roomID := c.Params("roomID")
+		chatService := utils.NewChatService()
+		client := &utils.Client{Connection: c}
+		chatService.AddClientToRoom(roomID, client)
+
+		defer func() {
+			chatService.RemoveClientFromRoom(roomID, client)
+			_ = c.Close()
+		}()
+
+		for {
+			_, _, err := c.ReadMessage()
+			if err != nil {
+				break
+			}
+		}
+	}))
 	// esto se tiene que mover a una carpeta especifica
 	App.Get("/categorie/GetCategories", streamHandler.GetCategories)
 	App.Get("/categorie/GetCategoria", streamHandler.GetCategoria)
+
 }
