@@ -29,6 +29,17 @@ type Stream struct {
 	ModChat            string             `json:"ModChat" bson:"ModChat"`
 	ModSlowMode        int                `json:"ModSlowMode" bson:"ModSlowMode"`
 }
+type StreamSummary struct {
+	ID               primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	StreamDuration   int                `json:"StreamDuration" bson:"StreamDuration"`
+	AverageViewers   int                `json:"AverageViewers" bson:"AverageViewers"`
+	MaxViewers       int                `json:"MaxViewers" bson:"MaxViewers"`
+	NewFollowers     int                `json:"NewFollowers" bson:"NewFollowers"`
+	NewSubscriptions int                `json:"NewSubscriptions" bson:"NewSubscriptions"`
+	Advertisements   int                `json:"Advertisements" bson:"Advertisements"`
+	Date             time.Time          `json:"Date" bson:"Date"`
+	StreamerID       primitive.ObjectID `json:"StreamerID" bson:"StreamerID"`
+}
 type UpdateStreamInfo struct {
 	Date         int64    `json:"date"`
 	Title        string   `json:"title" validate:"min=5,max=30"`
@@ -55,16 +66,23 @@ func (u *UpdateModChat) Validate() error {
 type UpdateModChatSlowMode struct {
 	ModSlowMode int `json:"ModSlowMode" validate:"min=0,max=30"`
 }
+type CommercialInStream struct {
+	CommercialInStream int `json:"CommercialInStream"`
+}
 
+func (u *CommercialInStream) Validate() error {
+	validate := validator.New()
+	return validate.Struct(u)
+}
 func (u *UpdateModChatSlowMode) Validate() error {
 	validate := validator.New()
 	if err := validate.Struct(u); err != nil {
 		return err
 	}
 
-	if err := u.customModSlowModeValidator(); err != nil {
-		return err
-	}
+	// if err := u.customModSlowModeValidator(); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }

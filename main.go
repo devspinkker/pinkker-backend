@@ -2,6 +2,7 @@ package main
 
 import (
 	"PINKKER-BACKEND/config"
+	StreamSummaryroutes "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-routes"
 	cliproutes "PINKKER-BACKEND/internal/clip/clip-routes"
 	donationroutes "PINKKER-BACKEND/internal/donation/donation-routes"
 	streamroutes "PINKKER-BACKEND/internal/stream/stream-routes"
@@ -36,7 +37,7 @@ func main() {
 	// 	AllowHeaders:     "Origin, Content-Type, Accept, Accept-Language, Content-Length",
 	// 	AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
 	// })
-))
+	))
 	// users
 	userroutes.UserRoutes(app, redisClient, newMongoDB)
 	// tweet
@@ -49,6 +50,9 @@ func main() {
 	cliproutes.ClipRoutes(app, redisClient, newMongoDB)
 	//subs
 	subscriptionroutes.SubsRoutes(app, redisClient, newMongoDB)
+	//StreamSummary
+	StreamSummaryroutes.StreamSummaryRoutes(app, redisClient, newMongoDB)
+
 	PORT := config.PORT()
 	if PORT == "" {
 		PORT = "8081"

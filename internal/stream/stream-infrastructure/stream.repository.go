@@ -39,6 +39,15 @@ func (r *StreamRepository) GetStreamById(id primitive.ObjectID) (*streamdomain.S
 	errCollStreams := GoMongoDBCollStreams.FindOne(context.Background(), FindStreamInDb).Decode(&FindStreamsById)
 	return FindStreamsById, errCollStreams
 }
+func (r *StreamRepository) GetStreamSummaryById(id primitive.ObjectID) (*streamdomain.StreamSummary, error) {
+	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("StreamSummary")
+	FindStreamInDb := bson.D{
+		{Key: "StreamerID", Value: id},
+	}
+	var FindStreamsById *streamdomain.StreamSummary
+	errCollStreams := GoMongoDBCollStreams.FindOne(context.Background(), FindStreamInDb).Decode(&FindStreamsById)
+	return FindStreamsById, errCollStreams
+}
 
 func (r *StreamRepository) UpdateModChatSlowMode(updateInfo streamdomain.UpdateModChatSlowMode, id primitive.ObjectID) error {
 
@@ -61,6 +70,36 @@ func (r *StreamRepository) UpdateModChatSlowMode(updateInfo streamdomain.UpdateM
 	update := bson.M{
 		"$set": bson.M{
 			"ModSlowMode": updateInfo.ModSlowMode,
+		},
+	}
+	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").UpdateOne(context.Background(), streamFilter, update); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *StreamRepository) AddCommercialInStream(CommercialInStream int, id primitive.ObjectID) error {
+
+	userFilter := bson.M{"_id": id}
+	var user userdomain.User
+	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users").FindOne(context.Background(), userFilter).Decode(&user); err != nil {
+		return err
+	}
+	streamerName := user.NameUser
+
+	var previousStream streamdomain.Stream
+	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").FindOne(context.Background(), bson.M{"Streamer": streamerName}).Decode(&previousStream); err != nil {
+		return err
+	}
+	err := r.RedisDeleteKey(previousStream.ID.Hex() + "ModSlowMode")
+	if err != nil {
+		return err
+	}
+	streamFilter := bson.M{"Streamer": streamerName}
+	update := bson.M{
+		"$set": bson.M{
+			"ModSlowMode": CommercialInStream,
 		},
 	}
 	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").UpdateOne(context.Background(), streamFilter, update); err != nil {
@@ -321,8 +360,9 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 				notifyOnlineStreamer = append(notifyOnlineStreamer, followInfo.Email)
 			}
 		}
-		err = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
-		fmt.Println(err)
+		_ = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
+
+		// modo de chat cuandos se prende
 		exist, err := r.redisClient.Exists(context.Background(), StreamFind.ID.Hex()).Result()
 		if err != nil {
 			return err
@@ -332,12 +372,28 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 			if err != nil {
 				return err
 			}
-			fmt.Println("Clave actualizada exitosamente")
 		} else {
 			err := r.redisClient.Set(context.Background(), StreamFind.ID.Hex(), StreamFind.ModChat, 0).Err()
 			if err != nil {
 				return err
 			}
+		}
+		// aqui quiero crear el resumen del Stream con valores predeterminnados
+		summary := streamdomain.StreamSummary{
+			StreamDuration:   0,
+			AverageViewers:   0,
+			MaxViewers:       0,
+			NewFollowers:     0,
+			NewSubscriptions: 0,
+			Advertisements:   0,
+			Date:             time.Now(),
+			StreamerID:       userFind.ID,
+		}
+		GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
+
+		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
+		if err != nil {
+			return err
 		}
 	} else {
 		_, err := r.redisClient.Del(context.Background(), StreamFind.ID.Hex()).Result()

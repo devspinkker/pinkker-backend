@@ -3,7 +3,9 @@ package streamapplication
 import (
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	streaminfrastructure "PINKKER-BACKEND/internal/stream/stream-infrastructure"
+	"PINKKER-BACKEND/pkg/utils"
 
+	"github.com/gofiber/websocket/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -17,8 +19,16 @@ func NewStreamService(StreamRepository *streaminfrastructure.StreamRepository) *
 	}
 }
 
-// get stream by id
+// get stream by StreamerID
 func (s *StreamService) GetStreamById(id primitive.ObjectID) (*streamdomain.Stream, error) {
+	stream, err := s.StreamRepository.GetStreamById(id)
+	return stream, err
+}
+func (s *StreamService) GetStreamSummaryById(id primitive.ObjectID) (*streamdomain.StreamSummary, error) {
+	StreamSummary, err := s.StreamRepository.GetStreamSummaryById(id)
+	return StreamSummary, err
+}
+func (s *StreamService) Get(id primitive.ObjectID) (*streamdomain.Stream, error) {
 	stream, err := s.StreamRepository.GetStreamById(id)
 	return stream, err
 }
@@ -65,7 +75,11 @@ func (s *StreamService) Update_thumbnail(cmt, image string) error {
 	err := s.StreamRepository.Update_thumbnail(cmt, image)
 	return err
 }
+func (s *StreamService) GetWebSocketClientsInRoom(roomID string) ([]*websocket.Conn, error) {
+	clients, err := utils.NewChatService().GetWebSocketClientsInRoom(roomID)
 
+	return clients, err
+}
 func (s *StreamService) Streamings_online() (int, error) {
 	online, err := s.StreamRepository.Streamings_online()
 	return online, err
@@ -88,6 +102,7 @@ func (s *StreamService) UpdateModChatSlowMode(data streamdomain.UpdateModChatSlo
 	err := s.StreamRepository.UpdateModChatSlowMode(data, id)
 	return err
 }
+
 func (s *StreamService) Update_Emotes(idUser primitive.ObjectID, date int) error {
 	err := s.StreamRepository.Update_Emotes(idUser, date)
 	return err
