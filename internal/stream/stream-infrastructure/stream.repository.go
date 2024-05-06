@@ -308,6 +308,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
 	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
+	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
 
 	filterUsers := bson.D{
 		{Key: "KeyTransmission", Value: Key},
@@ -378,18 +379,24 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 				return err
 			}
 		}
+		startFollowersCount := len(userFind.Followers)
+		startSubsCount := len(userFind.Subscriptions)
+
 		// aqui quiero crear el resumen del Stream con valores predeterminnados
 		summary := streamdomain.StreamSummary{
-			StreamDuration:   0,
-			AverageViewers:   0,
-			MaxViewers:       0,
-			NewFollowers:     0,
-			NewSubscriptions: 0,
-			Advertisements:   0,
-			Date:             time.Now(),
-			StreamerID:       userFind.ID,
+			EndOfStream:         time.Now(),
+			AverageViewers:      0,
+			MaxViewers:          0,
+			NewFollowers:        0,
+			NewSubscriptions:    0,
+			Advertisements:      0,
+			StartOfStream:       time.Now(),
+			StreamerID:          userFind.ID,
+			StartFollowersCount: startFollowersCount,
+			EndFollowersCount:   startFollowersCount,
+			StartSubsCount:      startSubsCount,
+			EndSubsCount:        startSubsCount,
 		}
-		GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
 
 		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
 		if err != nil {
@@ -400,6 +407,32 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		if err != nil {
 			fmt.Println(err)
 		}
+		// Calcular la duración del stream
+
+		// Obtener el último resumen del stream
+		latestSummary, err := r.FindLatestStreamSummaryByStreamerID(userFind.ID)
+		if err != nil {
+			session.AbortTransaction(ctx)
+			return err
+		}
+
+		// Calcular los nuevos seguidores y suscripciones
+		newFollowersCount := len(userFind.Followers) - latestSummary.StartFollowersCount
+		newSubsCount := len(userFind.Subscriptions) - latestSummary.StartSubsCount
+
+		// Actualizar el resumen del stream
+		updateSummary := bson.D{
+			{Key: "$set", Value: bson.D{
+				{Key: "EndOfStream", Value: time.Now()},
+				{Key: "NewFollowers", Value: newFollowersCount},
+				{Key: "NewSubscriptions", Value: newSubsCount},
+			}},
+		}
+
+		_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, bson.M{"_id": latestSummary.ID}, updateSummary)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = session.CommitTransaction(ctx)
@@ -409,6 +442,25 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 
 	return nil
 }
+
+func (r *StreamRepository) FindLatestStreamSummaryByStreamerID(streamerID primitive.ObjectID) (*streamdomain.StreamSummary, error) {
+	ctx := context.Background()
+
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
+
+	filter := bson.M{"StreamerID": streamerID}
+	opts := options.FindOne().SetSort(bson.D{{Key: "StartOfStream", Value: -1}})
+
+	var streamSummary streamdomain.StreamSummary
+	err := GoMongoDBCollStreamSummary.FindOne(ctx, filter, opts).Decode(&streamSummary)
+	if err != nil {
+		return nil, err
+	}
+
+	return &streamSummary, nil
+}
+
 func (r *StreamRepository) CloseStream(key string) error {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 
