@@ -55,7 +55,7 @@ func (s *StreamHandler) CommercialInStream(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
-	err = s.NotifyCommercialInStreamToRoomClients(Stream.ID.String(), "https://cdn-a.amazon-adsystem.com/video/aab52b48-039b-4d0c-aa96-5991067d4927/10000-1920x1080.mp4")
+	err = s.NotifyCommercialInStreamToRoomClients(Stream.ID.Hex(), "https://cdn-a.amazon-adsystem.com/video/aab52b48-039b-4d0c-aa96-5991067d4927/10000-1920x1080.mp4")
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -71,6 +71,7 @@ func (s *StreamHandler) NotifyCommercialInStreamToRoomClients(roomID, Commercial
 	if err != nil {
 		return err
 	}
+
 	notification := map[string]interface{}{
 		"Commercial": Commercial,
 	}

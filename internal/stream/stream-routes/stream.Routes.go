@@ -18,13 +18,7 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	streamRepository := streaminfrastructure.NewStreamRepository(redisClient, newMongoDB)
 	streamService := streamapplication.NewStreamService(streamRepository)
 	streamHandler := streaminterfaces.NewStreamService(streamService)
-	App.Use("/ws", func(c *fiber.Ctx) error {
-		if websocket.IsWebSocketUpgrade(c) {
-			c.Locals("allowed", true)
-			return c.Next()
-		}
-		return c.Status(fiber.StatusUpgradeRequired).SendString("Upgrade required")
-	})
+
 	App.Post("/stream/getStreamById", streamHandler.GetStreamById)
 	App.Get("/stream/getStreamByNameUser", streamHandler.GetStreamByNameUser)
 	App.Get("/stream/getStreamsByCategorie", streamHandler.GetStreamsByCategorie)
@@ -48,7 +42,12 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 
 	App.Get("/stream/get_streamings_online", streamHandler.Streamings_online)
 	App.Post("/stream/commercialInStream", middleware.UseExtractor(), streamHandler.CommercialInStream)
-
+	App.Use("/ws", func(c *fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+		return c.Status(fiber.StatusUpgradeRequired).SendString("Upgrade required")
+	})
 	App.Get("/ws/commercialInStream/:roomID", websocket.New(func(c *websocket.Conn) {
 		roomID := c.Params("roomID")
 		chatService := utils.NewChatService()
