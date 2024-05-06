@@ -20,3 +20,7 @@ func (s *StreamSummaryService) UpdateStreamSummary(StreamerID primitive.ObjectID
 	err := s.StreamSummaryRepository.UpdateStreamSummary(StreamerID, data)
 	return err
 }
+func (s *StreamSummaryService) AddAds(idValueObj, Streamer primitive.ObjectID) error {
+	err := s.StreamSummaryRepository.AddAds(idValueObj, Streamer)
+	return err
+}
