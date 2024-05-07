@@ -3,6 +3,7 @@ package StreamSummaryinterfaces
 import (
 	StreamSummaryapplication "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-application"
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-domain"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -68,5 +69,38 @@ func (s *StreamSummaryHandler) AddAds(c *fiber.Ctx) error {
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
+	})
+}
+
+func (s *StreamSummaryHandler) GetLastSixStreamSummaries(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, err := primitive.ObjectIDFromHex(idValue)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	type request struct {
+		Date time.Time `json:"date"`
+	}
+
+	var requestBody request
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid request body",
+		})
+	}
+
+	LastSixStreamSummaries, err := s.StreamSummaryServise.GetLastSixStreamSummaries(idValueObj, requestBody.Date)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    LastSixStreamSummaries,
 	})
 }
