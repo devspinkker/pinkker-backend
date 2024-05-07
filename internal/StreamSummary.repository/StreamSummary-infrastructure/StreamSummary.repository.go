@@ -3,6 +3,7 @@ package StreamSummaryinfrastructure
 import (
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-domain"
 	"context"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -78,8 +79,6 @@ func (r *StreamSummaryRepository) AddAds(idValueObj, StreamerID primitive.Object
 		return err
 	}
 
-	streamSummary.Advertisements++
-
 	update := bson.M{
 		"$inc": bson.M{
 			"Advertisements": 1,
@@ -92,4 +91,40 @@ func (r *StreamSummaryRepository) AddAds(idValueObj, StreamerID primitive.Object
 	}
 
 	return nil
+}
+func (r *StreamSummaryRepository) GetLastSixStreamSummariesBeforeDate(StreamerID primitive.ObjectID, date time.Time) ([]StreamSummarydomain.StreamSummary, error) {
+	ctx := context.Background()
+
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
+
+	filter := bson.M{
+		"StreamerID": StreamerID,
+		"StartOfStream": bson.M{
+			"$lt": date,
+		},
+	}
+
+	opts := options.Find().SetSort(bson.D{{Key: "StartOfStream", Value: -1}}).SetLimit(6)
+
+	cursor, err := GoMongoDBCollStreamSummary.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var summaries []StreamSummarydomain.StreamSummary
+	for cursor.Next(ctx) {
+		var summary StreamSummarydomain.StreamSummary
+		if err := cursor.Decode(&summary); err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, summary)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return summaries, nil
 }
