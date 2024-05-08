@@ -1,6 +1,7 @@
 package streamapplication
 
 import (
+	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-domain"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	streaminfrastructure "PINKKER-BACKEND/internal/stream/stream-infrastructure"
 	"PINKKER-BACKEND/pkg/utils"
@@ -24,7 +25,7 @@ func (s *StreamService) GetStreamById(id primitive.ObjectID) (*streamdomain.Stre
 	stream, err := s.StreamRepository.GetStreamById(id)
 	return stream, err
 }
-func (s *StreamService) GetStreamSummaryById(id primitive.ObjectID) (*streamdomain.StreamSummary, error) {
+func (s *StreamService) GetStreamSummaryById(id primitive.ObjectID) (*StreamSummarydomain.StreamSummary, error) {
 	StreamSummary, err := s.StreamRepository.GetStreamSummaryById(id)
 	return StreamSummary, err
 }
