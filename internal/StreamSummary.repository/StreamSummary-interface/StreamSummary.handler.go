@@ -71,6 +71,25 @@ func (s *StreamSummaryHandler) AddAds(c *fiber.Ctx) error {
 		"message": "ok",
 	})
 }
+func (s *StreamSummaryHandler) AverageViewers(c *fiber.Ctx) error {
+	var req StreamSummarydomain.AverageViewers
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	err := s.StreamSummaryServise.AverageViewers(req.StreamerID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
 
 func (s *StreamSummaryHandler) GetLastSixStreamSummaries(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
