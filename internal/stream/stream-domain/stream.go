@@ -9,25 +9,26 @@ import (
 )
 
 type Stream struct {
-	ID                 primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	StreamerID         primitive.ObjectID `json:"streamerId" bson:"StreamerID"`
-	Streamer           string             `json:"streamer" bson:"Streamer"`
-	StreamerAvatar     string             `json:"streamer_avatar" bson:"StreamerAvatar,omitempty"`
-	ViewerCount        int                `json:"ViewerCount"  bson:"ViewerCount,default:0"`
-	Online             bool               `json:"online" bson:"Online,default:false"`
-	StreamTitle        string             `json:"stream_title" bson:"StreamTitle"`
-	StreamCategory     string             `json:"stream_category" bson:"StreamCategory"`
-	ImageCategorie     string             `json:"ImageCategorie" bson:"ImageCategorie"`
-	StreamNotification string             `json:"stream_notification" bson:"StreamNotification"`
-	StreamTag          []string           `json:"stream_tag"  bson:"StreamTag,default:['Español']"`
-	StreamLikes        []string           `json:"stream_likes" bson:"StreamLikes"`
-	StreamIdiom        string             `json:"stream_idiom" default:"Español" bson:"StreamIdiom,default:'Español'"`
-	StreamThumbnail    string             `json:"stream_thumbnail" bson:"StreamThumbnail"`
-	StartDate          time.Time          `json:"start_date" bson:"StartDate"`
-	Timestamp          time.Time          `json:"Timestamp" bson:"Timestamp"`
-	EmotesChat         map[string]string  `json:"EmotesChat" bson:"EmotesChat"`
-	ModChat            string             `json:"ModChat" bson:"ModChat"`
-	ModSlowMode        int                `json:"ModSlowMode" bson:"ModSlowMode"`
+	ID             primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	StreamerID     primitive.ObjectID `json:"streamerId" bson:"StreamerID"`
+	Streamer       string             `json:"streamer" bson:"Streamer"`
+	StreamerAvatar string             `json:"streamer_avatar" bson:"StreamerAvatar,omitempty"`
+	ViewerCount    int                `json:"ViewerCount"  bson:"ViewerCount,default:0"`
+
+	Online             bool              `json:"online" bson:"Online,default:false"`
+	StreamTitle        string            `json:"stream_title" bson:"StreamTitle"`
+	StreamCategory     string            `json:"stream_category" bson:"StreamCategory"`
+	ImageCategorie     string            `json:"ImageCategorie" bson:"ImageCategorie"`
+	StreamNotification string            `json:"stream_notification" bson:"StreamNotification"`
+	StreamTag          []string          `json:"stream_tag"  bson:"StreamTag,default:['Español']"`
+	StreamLikes        []string          `json:"stream_likes" bson:"StreamLikes"`
+	StreamIdiom        string            `json:"stream_idiom" default:"Español" bson:"StreamIdiom,default:'Español'"`
+	StreamThumbnail    string            `json:"stream_thumbnail" bson:"StreamThumbnail"`
+	StartDate          time.Time         `json:"start_date" bson:"StartDate"`
+	Timestamp          time.Time         `json:"Timestamp" bson:"Timestamp"`
+	EmotesChat         map[string]string `json:"EmotesChat" bson:"EmotesChat"`
+	ModChat            string            `json:"ModChat" bson:"ModChat"`
+	ModSlowMode        int               `json:"ModSlowMode" bson:"ModSlowMode"`
 }
 type StreamSummary struct {
 	ID                  primitive.ObjectID `json:"id" bson:"_id,omitempty"`

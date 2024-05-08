@@ -2,6 +2,7 @@ package StreamSummaryinfrastructure
 
 import (
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-domain"
+	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	"context"
 	"time"
 
@@ -82,6 +83,44 @@ func (r *StreamSummaryRepository) AddAds(idValueObj, StreamerID primitive.Object
 	update := bson.M{
 		"$inc": bson.M{
 			"Advertisements": 1,
+		},
+	}
+
+	_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (r *StreamSummaryRepository) AverageViewers(StreamerID primitive.ObjectID) error {
+	ctx := context.Background()
+
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
+	GoMongoDBColl := GoMongoDB.Collection("Streams")
+
+	filter := bson.M{"StreamerID": StreamerID}
+	Stream := streamdomain.Stream{}
+	result := GoMongoDBColl.FindOne(ctx, filter).Decode(&Stream)
+	if result != nil {
+		return result
+	}
+
+	filter = bson.M{"StreamerID": StreamerID}
+
+	opts := options.FindOne().SetSort(bson.D{{Key: "StartOfStream", Value: -1}})
+
+	var streamSummary StreamSummarydomain.StreamSummary
+	err := GoMongoDBCollStreamSummary.FindOne(ctx, filter, opts).Decode(&streamSummary)
+	if err != nil {
+		return err
+	}
+	currentDateTime := time.Now().Format("2006-01-02 15:04:05")
+
+	update := bson.M{
+		"$inc": bson.M{
+			"AverageViewersByTime." + currentDateTime: Stream.ViewerCount,
 		},
 	}
 

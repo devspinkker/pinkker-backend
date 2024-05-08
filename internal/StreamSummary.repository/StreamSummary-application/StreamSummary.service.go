@@ -25,7 +25,10 @@ func (s *StreamSummaryService) AddAds(idValueObj, Streamer primitive.ObjectID) e
 	err := s.StreamSummaryRepository.AddAds(idValueObj, Streamer)
 	return err
 }
-
+func (s *StreamSummaryService) AverageViewers(Streamer primitive.ObjectID) error {
+	err := s.StreamSummaryRepository.AverageViewers(Streamer)
+	return err
+}
 func (s *StreamSummaryService) GetLastSixStreamSummaries(Streamer primitive.ObjectID, date time.Time) ([]StreamSummarydomain.StreamSummary, error) {
 	StreamSummarydomain, err := s.StreamSummaryRepository.GetLastSixStreamSummariesBeforeDate(Streamer, date)
 	return StreamSummarydomain, err
