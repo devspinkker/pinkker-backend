@@ -119,7 +119,7 @@ func (r *StreamSummaryRepository) AverageViewers(StreamerID primitive.ObjectID) 
 	currentDateTime := time.Now().Format("2006-01-02 15:04:05")
 
 	update := bson.M{
-		"$inc": bson.M{
+		"$set": bson.M{
 			"AverageViewersByTime." + currentDateTime: Stream.ViewerCount,
 		},
 	}
