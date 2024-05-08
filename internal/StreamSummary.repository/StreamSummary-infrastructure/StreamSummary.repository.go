@@ -151,7 +151,6 @@ func (r *StreamSummaryRepository) GetLastSixStreamSummariesBeforeDate(StreamerID
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-
 	var summaries []StreamSummarydomain.StreamSummary
 	for cursor.Next(ctx) {
 		var summary StreamSummarydomain.StreamSummary
