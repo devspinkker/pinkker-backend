@@ -385,18 +385,19 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 
 		// aqui quiero crear el resumen del Stream con valores predeterminnados
 		summary := StreamSummarydomain.StreamSummary{
-			EndOfStream:         time.Now(),
-			AverageViewers:      0,
-			MaxViewers:          0,
-			NewFollowers:        0,
-			NewSubscriptions:    0,
-			Advertisements:      0,
-			StartOfStream:       time.Now(),
-			StreamerID:          userFind.ID,
-			StartFollowersCount: startFollowersCount,
-			EndFollowersCount:   startFollowersCount,
-			StartSubsCount:      startSubsCount,
-			EndSubsCount:        startSubsCount,
+			EndOfStream:          time.Now(),
+			AverageViewers:       0,
+			AverageViewersByTime: make(map[string]int),
+			MaxViewers:           0,
+			NewFollowers:         0,
+			NewSubscriptions:     0,
+			Advertisements:       0,
+			StartOfStream:        time.Now(),
+			StreamerID:           userFind.ID,
+			StartFollowersCount:  startFollowersCount,
+			EndFollowersCount:    startFollowersCount,
+			StartSubsCount:       startSubsCount,
+			EndSubsCount:         0,
 		}
 
 		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
