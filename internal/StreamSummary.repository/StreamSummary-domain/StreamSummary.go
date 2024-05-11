@@ -18,9 +18,7 @@ type StreamSummary struct {
 	StartOfStream        time.Time          `json:"StartOfStream" bson:"StartOfStream"`
 	StreamerID           primitive.ObjectID `json:"StreamerID" bson:"StreamerID"`
 	StartFollowersCount  int                `json:"StartFollowersCount" bson:"StartFollowersCount"`
-	EndFollowersCount    int                `json:"EndFollowersCount" bson:"EndFollowersCount"`
 	StartSubsCount       int                `json:"StartSubsCount" bson:"StartSubsCount"`
-	EndSubsCount         int                `json:"EndSubsCount" bson:"EndSubsCount"`
 }
 type UpdateStreamSummary struct {
 	AverageViewers   int `json:"AverageViewers" bson:"AverageViewers"`

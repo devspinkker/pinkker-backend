@@ -4,6 +4,7 @@ import (
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	donationtinfrastructure "PINKKER-BACKEND/internal/donation/donation-infrastructure"
 
+	"github.com/gofiber/websocket/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -24,9 +25,13 @@ func (D *DonationService) UserHasNumberPikels(FromUser primitive.ObjectID, Pixel
 }
 
 // donar pixeles de fromUser a ToUser
-func (D *DonationService) DonatePixels(FromUser primitive.ObjectID, ToUser primitive.ObjectID, Pixeles float64, text string) error {
-	err := D.DonationRepository.DonatePixels(FromUser, ToUser, Pixeles, text)
-	return err
+func (D *DonationService) DonatePixels(FromUser primitive.ObjectID, ToUser primitive.ObjectID, Pixeles float64, text string) (string, error) {
+	user, err := D.DonationRepository.DonatePixels(FromUser, ToUser, Pixeles, text)
+	return user, err
+}
+func (D *DonationService) GetWebSocketActivityFeed(user string) ([]*websocket.Conn, error) {
+	client, err := D.DonationRepository.GetWebSocketClientsInRoom(user)
+	return client, err
 }
 
 // user de token, para ver laas donaciones que le han hecho, solo la que Notified sea false

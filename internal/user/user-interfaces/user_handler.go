@@ -319,7 +319,7 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 			"message": "StatusInternalServerError",
 		})
 	}
-	errUpdateUserFollow := h.userService.FollowUser(IdUserTokenP, IdUser)
+	user, errUpdateUserFollow := h.userService.FollowUser(IdUserTokenP, IdUser)
 	if errUpdateUserFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -333,11 +333,30 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 			"data":    errdeleteUser,
 		})
 	}
+	h.NotifyActivityFeed(IdUser.Hex()+"ActivityFeed", user)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Follow",
 	})
 }
+func (h *UserHandler) NotifyActivityFeed(room, user string) error {
+	clients, err := h.userService.GetWebSocketActivityFeed(room)
+	if err != nil {
+		return err
+	}
 
+	notification := map[string]interface{}{
+		"action": "follow",
+		"data":   user,
+	}
+	for _, client := range clients {
+		err = client.WriteJSON(notification)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 func (h *UserHandler) Unfollow(c *fiber.Ctx) error {
 
 	var idReq IdReq

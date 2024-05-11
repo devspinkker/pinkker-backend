@@ -46,15 +46,36 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 			"message": err.Error(),
 		})
 	}
-	errdonatePixels := d.VodServise.DonatePixels(FromUser, idReq.ToUser, idReq.Pixeles, idReq.Text)
+	user, errdonatePixels := d.VodServise.DonatePixels(FromUser, idReq.ToUser, idReq.Pixeles, idReq.Text)
 	if errdonatePixels != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": errdonatePixels.Error(),
 		})
 	}
+	d.NotifyActivityFeed(FromUser.Hex()+"ActivityFeed", user, idReq.Pixeles)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})
+}
+func (d *DonationHandler) NotifyActivityFeed(room, user string, Pixeles float64) error {
+	clients, err := d.VodServise.GetWebSocketActivityFeed(room)
+	if err != nil {
+		return err
+	}
+
+	notification := map[string]interface{}{
+		"action":  "DonatePixels",
+		"Pixeles": Pixeles,
+		"data":    user,
+	}
+	for _, client := range clients {
+		err = client.WriteJSON(notification)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 func (d *DonationHandler) Mydonors(c *fiber.Ctx) error {
 	IdUserToken := c.Context().UserValue("_id").(string)

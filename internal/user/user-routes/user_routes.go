@@ -5,8 +5,10 @@ import (
 	infrastructure "PINKKER-BACKEND/internal/user/user-infrastructure"
 	interfaces "PINKKER-BACKEND/internal/user/user-interfaces"
 	"PINKKER-BACKEND/pkg/middleware"
+	"PINKKER-BACKEND/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -43,4 +45,24 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/user/EditProfile", middleware.UseExtractor(), UserHandler.EditProfile)
 	App.Post("/user/EditAvatar", middleware.UseExtractor(), UserHandler.EditAvatar)
 	App.Post("/user/EditSocialNetworks", middleware.UseExtractor(), UserHandler.EditSocialNetworks)
+
+	App.Get("/ws/notification/ActivityFeed/:user", websocket.New(func(c *websocket.Conn) {
+		user := c.Params("user") + "ActivityFeed"
+		chatService := utils.NewChatService()
+		client := &utils.Client{Connection: c}
+		chatService.AddClientToRoom(user, client)
+
+		defer func() {
+			chatService.RemoveClientFromRoom(user, client)
+			_ = c.Close()
+		}()
+
+		for {
+			_, _, err := c.ReadMessage()
+			if err != nil {
+				break
+			}
+		}
+	}))
+
 }
