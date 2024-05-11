@@ -68,6 +68,7 @@ func (h *SubscriptionHandler) NotifyActivityFeed(room, user string, text string)
 	clients, err := h.subscriptionService.GetWebSocketActivityFeed(room)
 	if err != nil {
 		return err
+
 	}
 
 	notification := map[string]interface{}{
