@@ -85,8 +85,8 @@ func (r *StreamSummaryRepository) AddAds(idValueObj, StreamerID primitive.Object
 			"Advertisements": 1,
 		},
 	}
-
-	_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, filter, update)
+	filterUpdata := bson.M{"_id": streamSummary.ID}
+	_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, filterUpdata, update)
 	if err != nil {
 		return err
 	}
@@ -123,8 +123,8 @@ func (r *StreamSummaryRepository) AverageViewers(StreamerID primitive.ObjectID) 
 			"AverageViewersByTime." + currentDateTime: Stream.ViewerCount,
 		},
 	}
-
-	_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, filter, update)
+	filterUpdate := bson.M{"_id": streamSummary.ID}
+	_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, filterUpdate, update)
 	if err != nil {
 		return err
 	}

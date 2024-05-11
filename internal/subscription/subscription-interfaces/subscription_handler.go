@@ -40,7 +40,7 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 			"data":    "text < 100",
 		})
 	}
-	errdonatePixels := h.subscriptionService.Subscription(FromUser, idReq.ToUser, idReq.Text)
+	user, errdonatePixels := h.subscriptionService.Subscription(FromUser, idReq.ToUser, idReq.Text)
 	if errdonatePixels != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": errdonatePixels.Error(),
@@ -59,9 +59,30 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 			"message": errupdataSubsChat,
 		})
 	}
+	h.NotifyActivityFeed(FromUser.Hex()+"ActivityFeed", user, idReq.Text)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})
+}
+func (h *SubscriptionHandler) NotifyActivityFeed(room, user string, text string) error {
+	clients, err := h.subscriptionService.GetWebSocketActivityFeed(room)
+	if err != nil {
+		return err
+	}
+
+	notification := map[string]interface{}{
+		"action":  "Suscribirse",
+		"Pixeles": text,
+		"data":    user,
+	}
+	for _, client := range clients {
+		err = client.WriteJSON(notification)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type ReqChatSubs struct {

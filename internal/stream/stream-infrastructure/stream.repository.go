@@ -395,9 +395,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 			StartOfStream:        time.Now(),
 			StreamerID:           userFind.ID,
 			StartFollowersCount:  startFollowersCount,
-			EndFollowersCount:    startFollowersCount,
 			StartSubsCount:       startSubsCount,
-			EndSubsCount:         0,
 		}
 
 		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)

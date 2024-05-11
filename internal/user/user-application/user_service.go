@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofiber/websocket/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -116,10 +117,10 @@ func (u *UserService) GetUserByCmt(key string) (*domain.User, error) {
 }
 
 // follow
-func (u *UserService) FollowUser(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) error {
-	err := u.roomRepository.FollowUser(IdUserTokenP, IdUser)
+func (u *UserService) FollowUser(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) (string, error) {
+	user, err := u.roomRepository.FollowUser(IdUserTokenP, IdUser)
 
-	return err
+	return user, err
 }
 func (u *UserService) Unfollow(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) error {
 	err := u.roomRepository.UnfollowUser(IdUserTokenP, IdUser)
@@ -132,6 +133,10 @@ func (u *UserService) DeleteRedisUserChatInOneRoom(userToDelete primitive.Object
 	err := u.roomRepository.DeleteRedisUserChatInOneRoom(userToDelete, IdRoom)
 
 	return err
+}
+func (u *UserService) GetWebSocketActivityFeed(user string) ([]*websocket.Conn, error) {
+	client, err := u.roomRepository.GetWebSocketClientsInRoom(user)
+	return client, err
 }
 
 // oauth2

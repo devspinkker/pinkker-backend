@@ -4,6 +4,7 @@ import (
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	subscriptioninfrastructure "PINKKER-BACKEND/internal/subscription/subscription-infrastructure"
 
+	"github.com/gofiber/websocket/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -17,9 +18,13 @@ func NewChatService(roomRepository *subscriptioninfrastructure.SubscriptionRepos
 	}
 }
 
-func (s *SubscriptionService) Subscription(FromUser, ToUser primitive.ObjectID, text string) error {
-	err := s.roomRepository.Subscription(FromUser, ToUser, text)
-	return err
+func (s *SubscriptionService) GetWebSocketActivityFeed(user string) ([]*websocket.Conn, error) {
+	client, err := s.roomRepository.GetWebSocketClientsInRoom(user)
+	return client, err
+}
+func (s *SubscriptionService) Subscription(FromUser, ToUser primitive.ObjectID, text string) (string, error) {
+	user, err := s.roomRepository.Subscription(FromUser, ToUser, text)
+	return user, err
 }
 func (D *SubscriptionService) GetSubsChat(id primitive.ObjectID) ([]subscriptiondomain.ResSubscriber, error) {
 	Donations, err := D.roomRepository.GetSubsChat(id)

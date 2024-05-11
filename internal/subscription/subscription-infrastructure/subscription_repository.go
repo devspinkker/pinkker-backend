@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/gofiber/websocket/v2"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -13,6 +14,7 @@ import (
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
+	"PINKKER-BACKEND/pkg/utils"
 )
 
 type SubscriptionRepository struct {
@@ -26,8 +28,12 @@ func NewSubscriptionRepository(redisClient *redis.Client, mongoClient *mongo.Cli
 		mongoClient: mongoClient,
 	}
 }
+func (r *SubscriptionRepository) GetWebSocketClientsInRoom(roomID string) ([]*websocket.Conn, error) {
+	clients, err := utils.NewChatService().GetWebSocketClientsInRoom(roomID)
 
-func (r *SubscriptionRepository) Subscription(Source, Destination primitive.ObjectID, text string) error {
+	return clients, err
+}
+func (r *SubscriptionRepository) Subscription(Source, Destination primitive.ObjectID, text string) (string, error) {
 	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*24*time.Hour)
@@ -35,20 +41,20 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 
 	sourceUser, destUser, err := r.findUsersBy_ids(ctx, Source, Destination, usersCollection)
 	if err != nil {
-		return err
+		return destUser.NameUser, err
 	}
 	if sourceUser.ID == destUser.ID {
-		return errors.New("You can't subscribe to yourself")
+		return destUser.NameUser, errors.New("You can't subscribe to yourself")
 	}
 	if sourceUser.Pixeles < 1000 {
-		return errors.New("pixeles insufficient")
+		return destUser.NameUser, errors.New("pixeles insufficient")
 	}
 
 	// Verificar si el usuario fuente ya tiene una suscripción existente al usuario destino
 	existingSubscription, err := r.getSubscriptionByUserIDs(sourceUser.ID, destUser.ID)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
-			return err
+			return destUser.NameUser, err
 		}
 	}
 
@@ -59,37 +65,37 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 	if existingSubscription.ID == primitive.NilObjectID {
 		subscriptionID, err = r.addSubscription(sourceUser, destUser, subscriptionStart, subscriptionEnd, text)
 		if err != nil {
-			return err
+			return destUser.NameUser, err
 		}
 		err = r.addSubscriber(destUser, sourceUser, subscriptionEnd, text)
 		if err != nil {
-			return err
+			return destUser.NameUser, err
 		}
 
 	} else {
 		err = r.updateSubscription(existingSubscription.ID, subscriptionStart, subscriptionEnd, text)
 		if err != nil {
-			return err
+			return destUser.NameUser, err
 		}
 		Subscriber, err := r.getSubscribersByUserIDs(sourceUser.ID, destUser.ID)
 		if err != nil {
 			if err != mongo.ErrNoDocuments {
-				return err
+				return destUser.NameUser, err
 			}
 		}
 		err = r.updateSubscriber(Subscriber.ID.Hex(), subscriptionEnd, text)
 		if err != nil {
-			return err
+			return destUser.NameUser, err
 		}
 		subscriptionID = existingSubscription.ID
 	}
 
 	if err := r.updateUserSource(ctx, sourceUser, usersCollection, Destination, subscriptionID); err != nil {
-		return err
+		return destUser.NameUser, err
 	}
 
 	err = r.updateUserDest(ctx, destUser, usersCollection)
-	return err
+	return destUser.NameUser, err
 }
 
 func (r *SubscriptionRepository) findUsersBy_ids(ctx context.Context, source_id, dest_id primitive.ObjectID, usersCollection *mongo.Collection) (*userdomain.User, *userdomain.User, error) {

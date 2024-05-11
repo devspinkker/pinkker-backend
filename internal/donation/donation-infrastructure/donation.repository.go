@@ -2,15 +2,19 @@ package donationtinfrastructure
 
 import (
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
+	userdomain "PINKKER-BACKEND/internal/user/user-domain"
+	"PINKKER-BACKEND/pkg/utils"
 	"context"
 	"errors"
 	"time"
 
+	"github.com/gofiber/websocket/v2"
 	"github.com/redis/go-redis/v9"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type DonationRepository struct {
@@ -39,9 +43,14 @@ func (d *DonationRepository) UserHasNumberPikels(FromUser primitive.ObjectID, Pi
 	}
 	return nil
 }
+func (D *DonationRepository) GetWebSocketClientsInRoom(roomID string) ([]*websocket.Conn, error) {
+	clients, err := utils.NewChatService().GetWebSocketClientsInRoom(roomID)
+
+	return clients, err
+}
 
 // DonatePixels transfiere pixeles de un usuario a otro
-func (d *DonationRepository) DonatePixels(FromUser, ToUser primitive.ObjectID, Pixels float64, text string) error {
+func (d *DonationRepository) DonatePixels(FromUser, ToUser primitive.ObjectID, Pixels float64, text string) (string, error) {
 	// Obtener las colecciones "Users" y "Donations"
 	GoMongoDBCollUsers := d.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	GoMongoDBCollDonations := d.mongoClient.Database("PINKKER-BACKEND").Collection("Donations")
@@ -49,14 +58,14 @@ func (d *DonationRepository) DonatePixels(FromUser, ToUser primitive.ObjectID, P
 	// Iniciar una sesión para realizar las actualizaciones de manera transaccional
 	session, err := d.mongoClient.StartSession()
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer session.EndSession(context.Background())
 
 	// Iniciar una transacción
 	err = session.StartTransaction()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Actualizar el usuario donante (FromUser)
@@ -67,7 +76,7 @@ func (d *DonationRepository) DonatePixels(FromUser, ToUser primitive.ObjectID, P
 	)
 	if err != nil {
 		session.AbortTransaction(context.Background())
-		return err
+		return "", err
 	}
 
 	// Verificar si el usuario receptor (ToUser) existe
@@ -77,22 +86,26 @@ func (d *DonationRepository) DonatePixels(FromUser, ToUser primitive.ObjectID, P
 	)
 	if err != nil {
 		session.AbortTransaction(context.Background())
-		return err
+		return "", err
 	}
 	if toUserExists == 0 {
 		session.AbortTransaction(context.Background())
-		return errors.New("el usuario receptor no existe")
+		return "", errors.New("el usuario receptor no existe")
 	}
 
 	// Actualizar el usuario receptor (ToUser)
-	_, err = GoMongoDBCollUsers.UpdateOne(
+	update := bson.M{"$inc": bson.M{"Pixeles": Pixels}}
+	ToUserData := userdomain.User{}
+	err = GoMongoDBCollUsers.FindOneAndUpdate(
 		context.Background(),
-		primitive.D{{Key: "_id", Value: ToUser}},
-		primitive.D{{Key: "$inc", Value: primitive.D{{Key: "Pixeles", Value: Pixels}}}},
-	)
+		bson.M{"_id": ToUser},
+		update,
+		options.FindOneAndUpdate().SetReturnDocument(options.After),
+	).Decode(&ToUserData)
+
 	if err != nil {
 		session.AbortTransaction(context.Background())
-		return err
+		return "", err
 	}
 
 	// Crear el documento de donación
@@ -108,16 +121,16 @@ func (d *DonationRepository) DonatePixels(FromUser, ToUser primitive.ObjectID, P
 	_, err = GoMongoDBCollDonations.InsertOne(context.Background(), donation)
 	if err != nil {
 		session.AbortTransaction(context.Background())
-		return err
+		return "", err
 	}
 
 	// Finalizar la transacción
 	err = session.CommitTransaction(context.Background())
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return ToUserData.NameUser, err
 }
 
 // donadores de pixeles con Notified en false
