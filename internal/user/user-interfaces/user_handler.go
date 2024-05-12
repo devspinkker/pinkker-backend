@@ -304,7 +304,13 @@ type IdReq struct {
 func (h *UserHandler) Follow(c *fiber.Ctx) error {
 
 	var idReq IdReq
-	c.BodyParser(&idReq)
+	err := c.BodyParser(&idReq)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
 	IdUser, err := primitive.ObjectIDFromHex(idReq.IdUser)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -313,13 +319,15 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 	}
 
 	IdUserToken := c.Context().UserValue("_id").(string)
+	nameUser := c.Context().UserValue("nameUser").(string)
+
 	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
 	if errinObjectID != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
 		})
 	}
-	user, errUpdateUserFollow := h.userService.FollowUser(IdUserTokenP, IdUser)
+	errUpdateUserFollow := h.userService.FollowUser(IdUserTokenP, IdUser)
 	if errUpdateUserFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -333,7 +341,7 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 			"data":    errdeleteUser,
 		})
 	}
-	h.NotifyActivityFeed(IdUser.Hex()+"ActivityFeed", user)
+	h.NotifyActivityFeed(IdUser.Hex()+"ActivityFeed", nameUser)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Follow",
 	})
@@ -360,7 +368,13 @@ func (h *UserHandler) NotifyActivityFeed(room, user string) error {
 func (h *UserHandler) Unfollow(c *fiber.Ctx) error {
 
 	var idReq IdReq
-	c.BodyParser(&idReq)
+	err := c.BodyParser(&idReq)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
 	IdUser, err := primitive.ObjectIDFromHex(idReq.IdUser)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

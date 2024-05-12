@@ -269,7 +269,7 @@ func (u *UserRepository) EditSocialNetworks(SocialNetwork domain.SocialNetwork, 
 }
 
 // follow
-func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.ObjectID) (string, error) {
+func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.ObjectID) error {
 	db := u.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollUsers := db.Collection("Users")
 
@@ -278,13 +278,13 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 	var userFolloer domain.User
 	err := GoMongoDBCollUsers.FindOne(context.Background(), filterFollowe).Decode(&userFolloer)
 	if err != nil {
-		return "", err
+		return err
 	}
 	filterToken := bson.M{"_id": IdUserTokenP}
 	var usertoken domain.User
 	err = GoMongoDBCollUsers.FindOne(context.Background(), filterToken).Decode(&usertoken)
 	if err != nil {
-		return "", err
+		return err
 	}
 	Followingadd := domain.FollowInfo{
 		Since:         time.Now(),
@@ -298,7 +298,7 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 
 	_, err = GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// Agregar IdUserTokenP al mapa Followers de followedUserID
@@ -313,7 +313,7 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 
 	_, err = GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		return "", err
+		return err
 	}
 	GoMongoDBCollInformationInAllRooms := db.Collection("UserInformationInAllRooms")
 
@@ -322,7 +322,7 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 	GoMongoDBCollStreams := db.Collection("Streams")
 	err = GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&StreamInfo)
 	if err != nil {
-		return "", err
+		return err
 	}
 	filter = bson.M{"NameUser": usertoken.NameUser}
 	var userInfo domain.InfoUser
@@ -351,10 +351,10 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 		}
 		_, err := GoMongoDBCollInformationInAllRooms.InsertOne(context.Background(), userInfo)
 		if err != nil {
-			return "", err
+			return err
 		}
 	} else if err != nil {
-		return "", err
+		return err
 	}
 	roomExists := false
 	for _, room := range userInfo.Rooms {
@@ -389,10 +389,10 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 
 	_, err = GoMongoDBCollInformationInAllRooms.UpdateOne(context.Background(), filter, bson.M{"$set": userInfo})
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return userFolloer.NameUser, nil
+	return nil
 }
 func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectID) error {
 	db := u.mongoClient.Database("PINKKER-BACKEND")
