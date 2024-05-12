@@ -59,7 +59,7 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 			"message": errupdataSubsChat,
 		})
 	}
-	h.NotifyActivityFeed(FromUser.Hex()+"ActivityFeed", user, idReq.Text)
+	h.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", user, idReq.Text)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})
@@ -72,9 +72,9 @@ func (h *SubscriptionHandler) NotifyActivityFeed(room, user string, text string)
 	}
 
 	notification := map[string]interface{}{
-		"action":  "Suscribirse",
-		"Pixeles": text,
-		"data":    user,
+		"action": "Suscribirse",
+		"Text":   text,
+		"data":   user,
 	}
 	for _, client := range clients {
 		err = client.WriteJSON(notification)

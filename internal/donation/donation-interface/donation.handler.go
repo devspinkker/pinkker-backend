@@ -32,7 +32,9 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 		})
 	}
 
+	nameUser := c.Context().UserValue("nameUser").(string)
 	IdUserToken := c.Context().UserValue("_id").(string)
+
 	FromUser, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
 	if errinObjectID != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -46,13 +48,13 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 			"message": err.Error(),
 		})
 	}
-	user, errdonatePixels := d.VodServise.DonatePixels(FromUser, idReq.ToUser, idReq.Pixeles, idReq.Text)
+	errdonatePixels := d.VodServise.DonatePixels(FromUser, idReq.ToUser, idReq.Pixeles, idReq.Text)
 	if errdonatePixels != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": errdonatePixels.Error(),
 		})
 	}
-	d.NotifyActivityFeed(FromUser.Hex()+"ActivityFeed", user, idReq.Pixeles)
+	d.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", nameUser, idReq.Pixeles)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})
