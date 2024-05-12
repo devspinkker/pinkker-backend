@@ -117,10 +117,10 @@ func (u *UserService) GetUserByCmt(key string) (*domain.User, error) {
 }
 
 // follow
-func (u *UserService) FollowUser(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) (string, error) {
-	user, err := u.roomRepository.FollowUser(IdUserTokenP, IdUser)
+func (u *UserService) FollowUser(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) error {
+	err := u.roomRepository.FollowUser(IdUserTokenP, IdUser)
 
-	return user, err
+	return err
 }
 func (u *UserService) Unfollow(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) error {
 	err := u.roomRepository.UnfollowUser(IdUserTokenP, IdUser)
