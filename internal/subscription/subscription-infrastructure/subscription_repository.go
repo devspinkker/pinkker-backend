@@ -41,20 +41,20 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 
 	sourceUser, destUser, err := r.findUsersBy_ids(ctx, Source, Destination, usersCollection)
 	if err != nil {
-		return destUser.NameUser, err
+		return sourceUser.NameUser, err
 	}
 	if sourceUser.ID == destUser.ID {
-		return destUser.NameUser, errors.New("You can't subscribe to yourself")
+		return sourceUser.NameUser, errors.New("You can't subscribe to yourself")
 	}
 	if sourceUser.Pixeles < 1000 {
-		return destUser.NameUser, errors.New("pixeles insufficient")
+		return sourceUser.NameUser, errors.New("pixeles insufficient")
 	}
 
 	// Verificar si el usuario fuente ya tiene una suscripción existente al usuario destino
 	existingSubscription, err := r.getSubscriptionByUserIDs(sourceUser.ID, destUser.ID)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
-			return destUser.NameUser, err
+			return sourceUser.NameUser, err
 		}
 	}
 
@@ -65,37 +65,37 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 	if existingSubscription.ID == primitive.NilObjectID {
 		subscriptionID, err = r.addSubscription(sourceUser, destUser, subscriptionStart, subscriptionEnd, text)
 		if err != nil {
-			return destUser.NameUser, err
+			return sourceUser.NameUser, err
 		}
 		err = r.addSubscriber(destUser, sourceUser, subscriptionEnd, text)
 		if err != nil {
-			return destUser.NameUser, err
+			return sourceUser.NameUser, err
 		}
 
 	} else {
 		err = r.updateSubscription(existingSubscription.ID, subscriptionStart, subscriptionEnd, text)
 		if err != nil {
-			return destUser.NameUser, err
+			return sourceUser.NameUser, err
 		}
 		Subscriber, err := r.getSubscribersByUserIDs(sourceUser.ID, destUser.ID)
 		if err != nil {
 			if err != mongo.ErrNoDocuments {
-				return destUser.NameUser, err
+				return sourceUser.NameUser, err
 			}
 		}
 		err = r.updateSubscriber(Subscriber.ID.Hex(), subscriptionEnd, text)
 		if err != nil {
-			return destUser.NameUser, err
+			return sourceUser.NameUser, err
 		}
 		subscriptionID = existingSubscription.ID
 	}
 
 	if err := r.updateUserSource(ctx, sourceUser, usersCollection, Destination, subscriptionID); err != nil {
-		return destUser.NameUser, err
+		return sourceUser.NameUser, err
 	}
 
 	err = r.updateUserDest(ctx, destUser, usersCollection)
-	return destUser.NameUser, err
+	return sourceUser.NameUser, err
 }
 
 func (r *SubscriptionRepository) findUsersBy_ids(ctx context.Context, source_id, dest_id primitive.ObjectID, usersCollection *mongo.Collection) (*userdomain.User, *userdomain.User, error) {

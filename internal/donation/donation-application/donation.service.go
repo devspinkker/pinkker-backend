@@ -25,9 +25,9 @@ func (D *DonationService) UserHasNumberPikels(FromUser primitive.ObjectID, Pixel
 }
 
 // donar pixeles de fromUser a ToUser
-func (D *DonationService) DonatePixels(FromUser primitive.ObjectID, ToUser primitive.ObjectID, Pixeles float64, text string) (string, error) {
-	user, err := D.DonationRepository.DonatePixels(FromUser, ToUser, Pixeles, text)
-	return user, err
+func (D *DonationService) DonatePixels(FromUser primitive.ObjectID, ToUser primitive.ObjectID, Pixeles float64, text string) error {
+	err := D.DonationRepository.DonatePixels(FromUser, ToUser, Pixeles, text)
+	return err
 }
 func (D *DonationService) GetWebSocketActivityFeed(user string) ([]*websocket.Conn, error) {
 	client, err := D.DonationRepository.GetWebSocketClientsInRoom(user)
