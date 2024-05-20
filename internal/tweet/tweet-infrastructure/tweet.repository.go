@@ -29,14 +29,15 @@ func NewTweetRepository(redisClient *redis.Client, mongoClient *mongo.Client) *T
 }
 
 // Save
-func (t *TweetRepository) TweetSave(Tweet tweetdomain.Post) error {
+func (t *TweetRepository) TweetSave(Tweet tweetdomain.Post) (primitive.ObjectID, error) {
 	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
-	_, errInsertOne := GoMongoDBCollUsers.InsertOne(context.Background(), Tweet)
+	result, errInsertOne := GoMongoDBCollUsers.InsertOne(context.Background(), Tweet)
 	if errInsertOne != nil {
-		return errInsertOne
+		return primitive.ObjectID{}, errInsertOne
 	}
-	return nil
+	insertedID := result.InsertedID.(primitive.ObjectID)
+	return insertedID, nil
 }
 func (t *TweetRepository) UpdateTrends(hashtags []string) error {
 	GoMongoDB := t.mongoClient.Database("PINKKER-BACKEND").Collection("Trends")

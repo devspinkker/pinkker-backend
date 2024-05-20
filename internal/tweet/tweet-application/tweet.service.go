@@ -20,7 +20,7 @@ func NewTweetService(TweetRepository *tweetinfrastructure.TweetRepository) *Twee
 }
 
 // save
-func (ts *TweetService) SaveTweet(status string, img string, user primitive.ObjectID) error {
+func (ts *TweetService) SaveTweet(status string, img string, user primitive.ObjectID) (primitive.ObjectID, error) {
 	var modelNewTweet tweetdomain.Post
 	modelNewTweet.Status = status
 	modelNewTweet.PostImage = img
@@ -33,15 +33,15 @@ func (ts *TweetService) SaveTweet(status string, img string, user primitive.Obje
 	Hashtags := extractHashtags(status)
 	modelNewTweet.Hashtags = Hashtags
 
-	err := ts.TweetRepository.TweetSave(modelNewTweet)
+	idTweet, err := ts.TweetRepository.TweetSave(modelNewTweet)
 	if err != nil {
-		return err
+		return idTweet, err
 
 	}
 	if len(Hashtags) > 0 {
 		err = ts.TweetRepository.UpdateTrends(Hashtags)
 	}
-	return err
+	return idTweet, err
 }
 
 func extractHashtags(status string) []string {
