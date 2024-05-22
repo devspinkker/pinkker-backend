@@ -91,16 +91,30 @@ func (t *TweetRepository) SaveComment(tweetComment *tweetdomain.PostComment) err
 }
 
 func (t *TweetRepository) FindTweetbyId(idTweet primitive.ObjectID) (tweetdomain.Post, error) {
-
+	// Selecciona la colección
 	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+
 	findTweet := bson.D{
 		{Key: "_id", Value: idTweet},
 	}
-	var PostDocument tweetdomain.Post
-	PostCollectionErr := GoMongoDBCollUsers.FindOne(context.TODO(), findTweet).Decode(&PostDocument)
 
-	if PostCollectionErr != nil {
-		return tweetdomain.Post{}, PostCollectionErr
+	update := bson.D{
+		{Key: "$inc", Value: bson.D{
+			{Key: "Views", Value: 1},
+		}},
+	}
+
+	var PostDocument tweetdomain.Post
+
+	err := GoMongoDBCollUsers.FindOneAndUpdate(
+		context.TODO(),
+		findTweet,
+		update,
+		options.FindOneAndUpdate().SetReturnDocument(options.After),
+	).Decode(&PostDocument)
+
+	if err != nil {
+		return tweetdomain.Post{}, err
 	}
 
 	return PostDocument, nil
@@ -197,7 +211,6 @@ func (t *TweetRepository) GetFollowedUsers(idValueObj primitive.ObjectID) (userd
 	return user, err
 }
 func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, error) {
-
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
 	skip := (page - 1) * 10
@@ -224,6 +237,7 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 			{Key: "Likes", Value: "$Likes"},
 			{Key: "Comments", Value: "$Comments"},
 			{Key: "RePosts", Value: "$RePosts"},
+			{Key: "Views", Value: "$Views"},
 			{Key: "OriginalPost", Value: "$OriginalPost"},
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
@@ -231,6 +245,7 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 		}}},
 	}
 
+	// Ejecutamos el primer pipeline y recolectamos los IDs
 	cursor, err := GoMongoDBCollTweets.Aggregate(context.Background(), pipeline)
 	if err != nil {
 		return nil, err
@@ -238,6 +253,7 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 	defer cursor.Close(context.Background())
 
 	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
+	var tweetIDs []primitive.ObjectID
 	for cursor.Next(context.Background()) {
 		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
@@ -245,17 +261,35 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 		}
 
 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
+		tweetIDs = append(tweetIDs, tweetWithUserInfo.ID)
 	}
+
+	// Recolectamos los IDs de los OriginalPosts
 	var originalPostIDs []primitive.ObjectID
 	for _, tweet := range tweetsWithUserInfo {
 		if tweet.OriginalPost != primitive.NilObjectID {
 			originalPostIDs = append(originalPostIDs, tweet.OriginalPost)
 		}
 	}
+
+	// Actualizamos los documentos del primer pipeline
+	if len(tweetIDs) > 0 {
+		updateFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: tweetIDs}}}}
+		update := bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "Views", Value: 1},
+			}},
+		}
+		_, err := GoMongoDBCollTweets.UpdateMany(context.Background(), updateFilter, update)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Ejecutamos el segundo pipeline si hay originalPostIDs
 	if len(originalPostIDs) > 0 {
 		originalPostPipeline := []bson.D{
 			{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: originalPostIDs}}}}}},
-
 			{{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "Users"},
 				{Key: "localField", Value: "UserID"},
@@ -273,6 +307,7 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 				{Key: "Likes", Value: "$Likes"},
 				{Key: "Comments", Value: "$Comments"},
 				{Key: "RePosts", Value: "$RePosts"},
+				{Key: "Views", Value: "$Views"},
 				{Key: "OriginalPost", Value: "$OriginalPost"},
 				{Key: "UserInfo.FullName", Value: 1},
 				{Key: "UserInfo.Avatar", Value: 1},
@@ -295,6 +330,19 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 			originalPostMap[originalPost.ID] = originalPost
 		}
 
+		// Actualizamos los documentos del segundo pipeline
+		updateFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: originalPostIDs}}}}
+		update := bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "Views", Value: 1},
+			}},
+		}
+		_, err = GoMongoDBCollTweets.UpdateMany(context.Background(), updateFilter, update)
+		if err != nil {
+			return nil, err
+		}
+
+		// Vinculamos los datos del originalPost con los tweets
 		for i, tweet := range tweetsWithUserInfo {
 			if tweet.OriginalPost != primitive.NilObjectID {
 				originalPost, found := originalPostMap[tweet.OriginalPost]
@@ -310,6 +358,19 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGetFollowReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
+	// Actualizamos el campo Views incrementándolo en 1
+	updateFilter := bson.D{{Key: "_id", Value: id}}
+	update := bson.D{
+		{Key: "$inc", Value: bson.D{
+			{Key: "Views", Value: 1},
+		}},
+	}
+	_, err := GoMongoDBCollTweets.UpdateOne(context.Background(), updateFilter, update)
+	if err != nil {
+		return tweetdomain.TweetGetFollowReq{}, err
+	}
+
+	// Ejecutamos el pipeline de agregación para obtener los datos
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{{Key: "_id", Value: id}}}}, // Filtrar por el _id proporcionado
 		{{Key: "$lookup", Value: bson.D{
@@ -329,6 +390,7 @@ func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGet
 			{Key: "Likes", Value: "$Likes"},
 			{Key: "Comments", Value: "$Comments"},
 			{Key: "RePosts", Value: "$RePosts"},
+			{Key: "Views", Value: "$Views"},
 			{Key: "OriginalPost", Value: "$OriginalPost"},
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
@@ -351,14 +413,22 @@ func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGet
 
 	return tweetWithUserInfo, nil
 }
-
 func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
-
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
 	skip := (page - 1) * 10
+	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "UserID", Value: id}}}}
+
+	// Actualizamos todos los documentos coincidentes incrementando el campo Views en 1
+	_, err := GoMongoDBCollTweets.UpdateMany(context.Background(), matchStage, bson.D{
+		{Key: "$inc", Value: bson.D{{Key: "Views", Value: 1}}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	pipeline := []bson.D{
-		{{Key: "$match", Value: bson.D{{Key: "UserID", Value: id}}}},
+		matchStage,
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
@@ -370,7 +440,7 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 			{Key: "TimeStamp", Value: -1},
 		}}},
 		{{Key: "$skip", Value: skip}},
-		{{Key: "$limit", Value: 10}},
+		{{Key: "$limit", Value: limit}},
 		{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},
 			{Key: "Status", Value: "$Status"},
@@ -381,6 +451,7 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 			{Key: "Likes", Value: "$Likes"},
 			{Key: "Comments", Value: "$Comments"},
 			{Key: "RePosts", Value: "$RePosts"},
+			{Key: "Views", Value: "$Views"},
 			{Key: "OriginalPost", Value: "$OriginalPost"},
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
@@ -412,7 +483,6 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 	if len(originalPostIDs) > 0 {
 		originalPostPipeline := []bson.D{
 			{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: originalPostIDs}}}}}},
-
 			{{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "Users"},
 				{Key: "localField", Value: "UserID"},
@@ -430,6 +500,7 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 				{Key: "Likes", Value: "$Likes"},
 				{Key: "Comments", Value: "$Comments"},
 				{Key: "RePosts", Value: "$RePosts"},
+				{Key: "Views", Value: "$Views"},
 				{Key: "OriginalPost", Value: "$OriginalPost"},
 				{Key: "UserInfo.FullName", Value: 1},
 				{Key: "UserInfo.Avatar", Value: 1},
@@ -469,11 +540,21 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 	currentTime := time.Now()
 	last24Hours := currentTime.Add(-24 * time.Hour)
 	skip := (page - 1) * 13
+	matchStage := bson.D{{Key: "$match", Value: bson.D{
+		{Key: "UserID", Value: bson.D{{Key: "$in", Value: userIDs}}},
+		{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
+	}}}
+
+	// Actualizamos todos los documentos coincidentes incrementando el campo Views en 1
+	_, err := GoMongoDBCollTweets.UpdateMany(context.Background(), matchStage, bson.D{
+		{Key: "$inc", Value: bson.D{{Key: "Views", Value: 1}}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	pipeline := []bson.D{
-		{{Key: "$match", Value: bson.D{
-			{Key: "UserID", Value: bson.D{{Key: "$in", Value: userIDs}}},
-			{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
-		}}},
+		matchStage,
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
@@ -496,6 +577,7 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 			{Key: "Likes", Value: "$Likes"},
 			{Key: "Comments", Value: "$Comments"},
 			{Key: "RePosts", Value: "$RePosts"},
+			{Key: "Views", Value: "$Views"},
 			{Key: "OriginalPost", Value: "$OriginalPost"},
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
@@ -528,7 +610,6 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 	if len(originalPostIDs) > 0 {
 		originalPostPipeline := []bson.D{
 			{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: originalPostIDs}}}}}},
-
 			{{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "Users"},
 				{Key: "localField", Value: "UserID"},
@@ -546,6 +627,7 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 				{Key: "Likes", Value: "$Likes"},
 				{Key: "Comments", Value: "$Comments"},
 				{Key: "RePosts", Value: "$RePosts"},
+				{Key: "Views", Value: "$Views"},
 				{Key: "OriginalPost", Value: "$OriginalPost"},
 				{Key: "UserInfo.FullName", Value: 1},
 				{Key: "UserInfo.Avatar", Value: 1},
@@ -593,8 +675,18 @@ func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int) 
 
 	commentIDs := tweet.Comments
 
+	matchStage := bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: commentIDs}}}}}}
+
+	// Actualizamos todos los documentos coincidentes incrementando el campo Views en 1
+	_, err := GoMongoDBCollTweets.UpdateMany(context.Background(), matchStage, bson.D{
+		{Key: "$inc", Value: bson.D{{Key: "Views", Value: 1}}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	pipeline := []bson.D{
-		{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: commentIDs}}}}}},
+		matchStage,
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
@@ -616,6 +708,7 @@ func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int) 
 			{Key: "PostImage", Value: "$PostImage"},
 			{Key: "TimeStamp", Value: "$TimeStamp"},
 			{Key: "UserID", Value: "$UserID"},
+			{Key: "Views", Value: "$Views"},
 			{Key: "Likes", Value: "$Likes"},
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
@@ -710,9 +803,7 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 
 	pipeline := bson.A{
 		// Etapa de coincidencia para encontrar los tweets que han sido dados like por los usuarios seguidos en las últimas 24 horas
-
 		bson.D{{Key: "$match", Value: bson.M{"Type": bson.M{"$in": []string{"Post", "RePost"}}}}},
-
 		bson.D{{Key: "$match", Value: bson.D{
 			{Key: "Likes", Value: bson.D{{Key: "$in", Value: followingIDs}}},
 			{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
@@ -729,6 +820,7 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 		// Ordenar los tweets por timestamp
 		bson.D{{Key: "$sort", Value: bson.D{{Key: "TimeStamp", Value: -1}}}},
 		// Limitar la cantidad de tweets devueltos
+		bson.D{{Key: "$limit", Value: limit}},
 		// Proyectar los campos deseados
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},
@@ -741,18 +833,29 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 			{Key: "Comments", Value: 1},
 			{Key: "RePosts", Value: 1},
 			{Key: "OriginalPost", Value: 1},
+			{Key: "Views", Value: 1},
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
 		}}},
-		bson.D{{Key: "$limit", Value: limit}},
 	}
+
+	// Aplicar el filtro para excluir ciertos IDs
 	excludedIDs := make([]interface{}, len(excludeIDs))
 	for i, id := range excludeIDs {
 		excludedIDs[i] = id
 	}
 	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
 	pipeline = append(pipeline, bson.D{{Key: "$match", Value: excludeFilter}})
+
+	// Actualizar el campo Views sumando 1
+	updateViews := bson.D{
+		{Key: "$inc", Value: bson.D{{Key: "Views", Value: 1}}},
+	}
+	_, err = GoMongoDBCollTweets.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": excludedIDs}}, updateViews)
+	if err != nil {
+		return nil, err
+	}
 
 	cursor, err := GoMongoDBCollTweets.Aggregate(ctx, pipeline)
 	if err != nil {
@@ -767,56 +870,6 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
 			return nil, err
 		}
-
-		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
-	}
-
-	pipelineRandom := bson.A{
-		bson.D{{Key: "$match", Value: bson.M{"Type": bson.M{"$in": []string{"Post", "RePost"}}}}},
-		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "UserID"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "UserInfo"},
-		}}},
-		// Desenrollar la información del usuario
-		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
-		// Ordenar los tweets por timestamp
-		bson.D{{Key: "$sort", Value: bson.D{{Key: "TimeStamp", Value: -1}}}},
-		// Limitar la cantidad de tweets devueltos
-		bson.D{{Key: "$limit", Value: 13}},
-		// Proyectar los campos deseados
-		bson.D{{Key: "$project", Value: bson.D{
-			{Key: "id", Value: "$_id"},
-			{Key: "Status", Value: 1},
-			{Key: "PostImage", Value: 1},
-			{Key: "Type", Value: 1},
-			{Key: "TimeStamp", Value: 1},
-			{Key: "UserID", Value: 1},
-			{Key: "Likes", Value: 1},
-			{Key: "Comments", Value: 1},
-			{Key: "RePosts", Value: 1},
-			{Key: "OriginalPost", Value: 1},
-			{Key: "UserInfo.FullName", Value: 1},
-			{Key: "UserInfo.Avatar", Value: 1},
-			{Key: "UserInfo.NameUser", Value: 1},
-		}}},
-		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
-		bson.D{{Key: "$limit", Value: limit - len(tweetsWithUserInfo)}}, // Limitar la cantidad de clips devueltos por categorías distintas
-	}
-	pipelineRandom = append(pipelineRandom, bson.D{{Key: "$match", Value: excludeFilter}})
-
-	cursorRandom, err := GoMongoDBCollTweets.Aggregate(ctx, pipelineRandom)
-	if err != nil {
-		return nil, err
-	}
-	defer cursorRandom.Close(ctx)
-	for cursorRandom.Next(ctx) {
-		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
-		if err := cursorRandom.Decode(&tweetWithUserInfo); err != nil {
-			return nil, err
-		}
-
 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
 	}
 
@@ -852,6 +905,7 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 				{Key: "Likes", Value: "$Likes"},
 				{Key: "Comments", Value: "$Comments"},
 				{Key: "RePosts", Value: "$RePosts"},
+				{Key: "Views", Value: "$Views"},
 				{Key: "OriginalPost", Value: "$OriginalPost"},
 				{Key: "UserInfo.FullName", Value: 1},
 				{Key: "UserInfo.Avatar", Value: 1},
@@ -908,7 +962,13 @@ func (t *TweetRepository) GetTrends(page int, limit int) ([]tweetdomain.Trend, e
 }
 
 func (t *TweetRepository) GetTweetsByHashtag(hashtag string, page int, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+	ctx := context.Background()
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+
+	// Actualizar el campo Views sumando 1
+	updateViews := bson.D{
+		{Key: "$inc", Value: bson.D{{Key: "Views", Value: 1}}},
+	}
 
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{{Key: "Hashtags", Value: hashtag}}}},
@@ -932,6 +992,7 @@ func (t *TweetRepository) GetTweetsByHashtag(hashtag string, page int, limit int
 			{Key: "RePosts", Value: "$RePosts"},
 			{Key: "Hashtags", Value: "$Hashtags"},
 			{Key: "OriginalPost", Value: "$OriginalPost"},
+			{Key: "Views", Value: "$Views"},
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
@@ -940,14 +1001,19 @@ func (t *TweetRepository) GetTweetsByHashtag(hashtag string, page int, limit int
 		{{Key: "$limit", Value: int64(limit)}},             // Limitar resultados según la paginación
 	}
 
-	cursor, err := GoMongoDBCollTweets.Aggregate(context.Background(), pipeline)
+	// Actualizar el campo Views sumando 1 antes de ejecutar el pipeline de agregación
+	if _, err := GoMongoDBCollTweets.UpdateMany(ctx, bson.M{"Hashtags": hashtag}, updateViews); err != nil {
+		return nil, err
+	}
+
+	cursor, err := GoMongoDBCollTweets.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(context.Background())
+	defer cursor.Close(ctx)
 
 	var tweets []tweetdomain.TweetGetFollowReq
-	if err := cursor.All(context.Background(), &tweets); err != nil {
+	if err := cursor.All(ctx, &tweets); err != nil {
 		return nil, err
 	}
 

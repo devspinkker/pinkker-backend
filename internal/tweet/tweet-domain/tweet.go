@@ -25,6 +25,7 @@ type Post struct {
 	Comments  []primitive.ObjectID `json:"Comments" bson:"Comments"`
 	RePosts   []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 	Hashtags  []string             `json:"hashtags" bson:"Hashtags"`
+	Views     int                  `json:"Views" bson:"Views"`
 }
 type PostComment struct {
 	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
@@ -38,6 +39,7 @@ type PostComment struct {
 	Likes        []primitive.ObjectID `json:"Likes" bson:"Likes"`
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 	Hashtags     []string             `json:"hashtags" bson:"Hashtags"`
+	Views        int                  `json:"Views" bson:"Views"`
 }
 type RePost struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
@@ -58,6 +60,7 @@ type CitaPost struct {
 	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
 	PostImage    string               `json:"PostImage" bson:"PostImage"`
 	Hashtags     []string             `json:"hashtags" bson:"Hashtags"`
+	Views        int                  `json:"Views" bson:"Views"`
 }
 type TweetModelValidator struct {
 	Status string `json:"status" validate:"required,min=3,max=100"`
@@ -107,6 +110,7 @@ type TweetGetFollowReq struct {
 		NameUser string `json:"NameUser"`
 	} `json:"UserInfo"`
 	OriginalPostData *TweetGetFollowReq `json:"OriginalPostData"`
+	Views            int                `json:"Views" bson:"Views"`
 }
 type TweetCommentsGetReq struct {
 	ID           primitive.ObjectID   `json:"_id" bson:"_id"`
@@ -120,6 +124,7 @@ type TweetCommentsGetReq struct {
 	OriginalPost primitive.ObjectID   `json:"OriginalPost"`
 	Type         string               `json:"Type" bson:"Type"`
 	Hashtags     []string             `json:"hashtags" bson:"hashtags"`
+	Views        int                  `json:"Views" bson:"Views"`
 	UserInfo     struct {
 		FullName string `json:"FullName"`
 		Avatar   string `json:"Avatar"`

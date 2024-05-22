@@ -32,6 +32,7 @@ func (ts *TweetService) SaveTweet(status string, img string, user primitive.Obje
 	modelNewTweet.Type = "Post"
 	Hashtags := extractHashtags(status)
 	modelNewTweet.Hashtags = Hashtags
+	modelNewTweet.Views = 0
 
 	idTweet, err := ts.TweetRepository.TweetSave(modelNewTweet)
 	if err != nil {
