@@ -33,7 +33,6 @@ func (ts *TweetService) SaveTweet(status string, img string, user primitive.Obje
 	Hashtags := extractHashtags(status)
 	modelNewTweet.Hashtags = Hashtags
 	modelNewTweet.Views = 0
-
 	idTweet, err := ts.TweetRepository.TweetSave(modelNewTweet)
 	if err != nil {
 		return idTweet, err
@@ -56,7 +55,7 @@ func extractHashtags(status string) []string {
 	}
 	return hashtags
 }
-func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID, img string, user primitive.ObjectID) error {
+func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID, img string, user primitive.ObjectID) (primitive.ObjectID, error) {
 	var modelNewTweet tweetdomain.PostComment
 	modelNewTweet.Status = status
 	modelNewTweet.PostImage = img
@@ -69,8 +68,8 @@ func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID,
 	modelNewTweet.RePosts = []primitive.ObjectID{}
 	modelNewTweet.Type = "PostComment"
 
-	err := ts.TweetRepository.SaveComment(&modelNewTweet)
-	return err
+	insertedID, err := ts.TweetRepository.SaveComment(&modelNewTweet)
+	return insertedID, err
 }
 
 // like
@@ -117,9 +116,8 @@ func (ts *TweetService) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGetFo
 	return Tweet, errGetFollowedUsers
 }
 
-func (ts *TweetService) GetPostuser(page int, id primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
-
-	Tweets, errGetFollowedUsers := ts.TweetRepository.GetPostuser(page, id, limit)
+func (ts *TweetService) GetPostuser(page int, id primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
+	Tweets, errGetFollowedUsers := ts.TweetRepository.GetPostuser(page, id, 10)
 	return Tweets, errGetFollowedUsers
 }
 

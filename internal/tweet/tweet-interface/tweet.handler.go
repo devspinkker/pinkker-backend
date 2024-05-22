@@ -259,12 +259,8 @@ func (th *TweetHandler) GetPostuser(c *fiber.Ctx) error {
 			"data":    "name error",
 		})
 	}
-	limit, errlimit := strconv.Atoi(c.Query("limit", "1"))
-	if errlimit != nil || limit < 1 {
-		limit = 1
-	}
 
-	Tweets, errTweetGetFollow := th.TweetServise.GetPostuser(page, id, limit)
+	Tweets, errTweetGetFollow := th.TweetServise.GetPostuser(page, id)
 	if errTweetGetFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -306,14 +302,22 @@ func (th *TweetHandler) CommentPost(c *fiber.Ctx) error {
 	for {
 		select {
 		case PostImage := <-PostImageChanel:
-			err := th.TweetServise.SaveComment(TweetComment.Status, TweetComment.OriginalPost, PostImage, idValueObj)
+			insertedID, err := th.TweetServise.SaveComment(TweetComment.Status, TweetComment.OriginalPost, PostImage, idValueObj)
 			if err != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"message": err.Error(),
 				})
 			}
+			Tweet, errTweetGetFollow := th.TweetServise.GetPostId(insertedID)
+			if errTweetGetFollow != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"message": "StatusInternalServerError",
+					"data":    errTweetGetFollow.Error(),
+				})
+			}
 			return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 				"message": "StatusCreated",
+				"post":    Tweet,
 			})
 		case <-errChanel:
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
