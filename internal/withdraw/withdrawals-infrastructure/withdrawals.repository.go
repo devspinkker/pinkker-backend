@@ -5,6 +5,7 @@ import (
 	withdrawalsdomain "PINKKER-BACKEND/internal/withdraw/withdraw"
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -62,5 +63,50 @@ func (r *WithdrawalsRepository) WithdrawalRequest(id primitive.ObjectID, data wi
 		return err
 	}
 
+	return nil
+}
+func (r *WithdrawalsRepository) GetPendingUnnotifiedWithdrawals(data withdrawalsdomain.WithdrawalRequestGet) ([]withdrawalsdomain.WithdrawalRequests, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
+
+	filter := bson.M{
+		"Status":   "Pending",
+		"Notified": false,
+	}
+
+	cursor, err := GoMongoDBCollWithdrawals.Find(context.Background(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var withdrawalRequests []withdrawalsdomain.WithdrawalRequests
+	for cursor.Next(context.Background()) {
+		var request withdrawalsdomain.WithdrawalRequests
+		if err := cursor.Decode(&request); err != nil {
+			return nil, err
+		}
+		withdrawalRequests = append(withdrawalRequests, request)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return withdrawalRequests, nil
+}
+func (r *WithdrawalsRepository) AutCode(id primitive.ObjectID, code string) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collectionUsers := db.Collection("Users")
+	var User userdomain.User
+
+	err := collectionUsers.FindOne(context.Background(), bson.M{"_id": id}).Decode(&User)
+	if err != nil {
+		return err
+	}
+
+	if User.PanelAdminPinkker.Level != 1 || !User.PanelAdminPinkker.Asset || User.PanelAdminPinkker.Code != code {
+		return fmt.Errorf("usuario no autorizado")
+	}
 	return nil
 }
