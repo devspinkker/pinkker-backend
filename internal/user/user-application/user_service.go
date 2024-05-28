@@ -52,6 +52,11 @@ func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avat
 	modelNewUser.BirthDate = newUser.BirthDateTime
 	modelNewUser.Clips = []primitive.ObjectID{}
 	modelNewUser.Online = false
+	modelNewUser.PanelAdminPinkker.Level = 0
+	modelNewUser.PanelAdminPinkker.Asset = false
+	modelNewUser.PanelAdminPinkker.Date = time.Now()
+	modelNewUser.PanelAdminPinkker.Code = ""
+
 	return &modelNewUser
 }
 

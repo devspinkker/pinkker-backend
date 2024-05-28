@@ -872,7 +872,7 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 	last24Hours := time.Now().Add(-24 * time.Hour)
 
 	pipeline := bson.A{
-		bson.D{{Key: "$match", Value: bson.M{"Type": bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}}}},
+		bson.D{{Key: "$match", Value: bson.M{"Type": bson.M{"$in": []string{"Post", "RePost", "CitaPost", "PostComment"}}}}},
 		bson.D{{Key: "$match", Value: bson.D{
 			{Key: "Likes", Value: bson.D{{Key: "$in", Value: followingIDs}}},
 			{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
