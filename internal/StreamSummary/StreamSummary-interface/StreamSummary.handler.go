@@ -1,8 +1,8 @@
 package StreamSummaryinterfaces
 
 import (
-	StreamSummaryapplication "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-application"
-	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-domain"
+	StreamSummaryapplication "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-application"
+	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
 	"time"
 
 	"github.com/gofiber/fiber/v2"

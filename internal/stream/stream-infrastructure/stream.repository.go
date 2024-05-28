@@ -1,7 +1,7 @@
 package streaminfrastructure
 
 import (
-	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-domain"
+	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"PINKKER-BACKEND/pkg/helpers"
@@ -32,7 +32,7 @@ func NewStreamRepository(redisClient *redis.Client, mongoClient *mongo.Client) *
 
 func (r *StreamRepository) CategoriesUpdate(req streamdomain.CategoriesUpdate, idUser primitive.ObjectID) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
-	fmt.Println(req)
+	fmt.Println(req.Name) // Imprimir el nombre para verificación
 	collection := db.Collection("Categorias")
 	collectionUsers := db.Collection("Users")
 	var User userdomain.User
@@ -42,45 +42,61 @@ func (r *StreamRepository) CategoriesUpdate(req streamdomain.CategoriesUpdate, i
 		return err
 	}
 
-	if User.PanelAdminPinkker.Level <= 3 || !User.PanelAdminPinkker.Asset || User.PanelAdminPinkker.Code != req.CodeAdmin {
+	if User.PanelAdminPinkker.Level != 1 || !User.PanelAdminPinkker.Asset || User.PanelAdminPinkker.Code != req.CodeAdmin {
 		return fmt.Errorf("usuario no autorizado")
 	}
 
-	filter := bson.M{"nombre": req.Name}
+	filter := bson.M{"Name": req.Name}
 
 	if req.Delete {
 		_, err := collection.DeleteOne(context.Background(), filter)
 		return err
 	}
 
+	// Preparar las operaciones de actualización e inserción
+	setUpdate := bson.M{
+		"Img":      req.Img,
+		"TopColor": req.TopColor,
+	}
+
+	setOnInsert := bson.M{
+		"Name":       req.Name,
+		"Spectators": 0,
+		"createdAt":  time.Now(),
+	}
+
 	// Verificar si la categoría ya existe
-	var existingCategory streamdomain.CategoriesUpdate
+	var existingCategory bson.M
 	err = collection.FindOne(context.Background(), filter).Decode(&existingCategory)
-	if err != nil && err != mongo.ErrNoDocuments {
+
+	if err == mongo.ErrNoDocuments {
+		// Si la categoría no existe, la insertamos
+		update := bson.M{
+			"$set":         setUpdate,
+			"$setOnInsert": setOnInsert,
+		}
+
+		opts := options.Update().SetUpsert(true)
+		_, err = collection.UpdateOne(context.Background(), filter, update, opts)
+		if err != nil {
+			return err
+		}
+	} else if err == nil {
+		// Si la categoría existe, actualizamos los campos necesarios
+		update := bson.M{
+			"$set": setUpdate,
+		}
+
+		_, err = collection.UpdateOne(context.Background(), filter, update)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Si hay otro error, lo devolvemos
 		return err
 	}
 
-	// Construir el update
-	update := bson.M{
-		"$set": bson.M{
-			"img":      req.Img,
-			"TopColor": req.TopColor,
-		},
-	}
-
-	// Si la categoría no existe, agregar $setOnInsert para crearla
-	if err == mongo.ErrNoDocuments {
-		update["$setOnInsert"] = bson.M{
-			"nombre":     req.Name,
-			"spectators": 0,
-			"createdAt":  time.Now(),
-		}
-	}
-
-	opts := options.Update().SetUpsert(true)
-
-	_, err = collection.UpdateOne(context.Background(), filter, update, opts)
-	return err
+	return nil
 }
 
 // get stream by id

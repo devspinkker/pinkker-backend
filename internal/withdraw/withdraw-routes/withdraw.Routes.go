@@ -1,0 +1,21 @@
+package withdrawroutes
+
+import (
+	withdrawapplication "PINKKER-BACKEND/internal/withdraw/withdraw-application"
+	withdrawtinterfaces "PINKKER-BACKEND/internal/withdraw/withdraw-interface"
+	withdrawalstinfrastructure "PINKKER-BACKEND/internal/withdraw/withdrawals-infrastructure"
+	"PINKKER-BACKEND/pkg/middleware"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+func Withdrawroutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Client) {
+
+	withdrawRepository := withdrawalstinfrastructure.NewwithdrawalsRepository(redisClient, newMongoDB)
+	withdrawService := withdrawapplication.NewwithdrawalsService(withdrawRepository)
+	withdrawHandler := withdrawtinterfaces.NewwithdrawService(withdrawService)
+
+	App.Post("/pixel/DonatePixel", middleware.UseExtractor(), withdrawHandler.WithdrawalRequest)
+}
