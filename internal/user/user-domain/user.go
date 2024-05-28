@@ -59,6 +59,12 @@ type User struct {
 	Online                   bool                              `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
 	ClipsComment             []primitive.ObjectID              `json:"ClipsComment" bson:"ClipsComment,omitempty"`
 	CategoryPreferences      map[string]float64                `json:"categoryPreferences" bson:"categoryPreferences"`
+	PanelAdminPinkker        struct {
+		Level int       `json:"Level,omitempty" bson:"Level" default:"0"`
+		Asset bool      `json:"Asset,omitempty" bson:"Asset,omitempty" default:"false"`
+		Code  string    `json:"Code,omitempty" bson:"Code"`
+		Date  time.Time `json:"date,omitempty" bson:"Date,omitempty"`
+	} `json:"PanelAdminPinkker,omitempty" bson:"PanelAdminPinkker"`
 }
 type FollowInfo struct {
 	Since         time.Time `json:"since" bson:"since"`

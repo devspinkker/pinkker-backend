@@ -25,6 +25,31 @@ type IDStream struct {
 	IdStream primitive.ObjectID `json:"IdStream" `
 }
 
+func (s *StreamHandler) CategoriesUpdate(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	idUser, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var requestBody streamdomain.CategoriesUpdate
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	if err := s.StreamServise.CategoriesUpdate(requestBody, idUser); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
 func (s *StreamHandler) CommercialInStream(c *fiber.Ctx) error {
 	IdUserToken := c.Context().UserValue("_id").(string)
 	idUser, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)

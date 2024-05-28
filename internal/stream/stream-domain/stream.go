@@ -90,6 +90,15 @@ type Update_start_date struct {
 	Date int    `json:"date"`
 	Key  string `json:"keyTransmission"`
 }
+type CategoriesUpdate struct {
+	Name       string   `json:"nombre"`
+	Img        string   `json:"img,omitempty"`
+	Spectators int      `json:"spectators,omitempty"`
+	Tags       []string `json:"tags,omitempty"`
+	TopColor   string   `json:"TopColor,omitempty"`
+	CodeAdmin  string   `json:"CodeAdmin"`
+	Delete     bool     `json:"Delete"`
+}
 type Categoria struct {
 	Name       string   `json:"nombre"`
 	Img        string   `json:"img,omitempty"`

@@ -19,6 +19,10 @@ func NewStreamService(StreamRepository *streaminfrastructure.StreamRepository) *
 		StreamRepository: StreamRepository,
 	}
 }
+func (s *StreamService) CategoriesUpdate(req streamdomain.CategoriesUpdate, idUser primitive.ObjectID) error {
+	err := s.StreamRepository.CategoriesUpdate(req, idUser)
+	return err
+}
 
 // get stream by StreamerID
 func (s *StreamService) GetStreamById(id primitive.ObjectID) (*streamdomain.Stream, error) {
