@@ -1,7 +1,6 @@
 package streamdomain
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/go-playground/validator"
@@ -79,10 +78,10 @@ func (u *UpdateModChatSlowMode) Validate() error {
 }
 
 func (u *UpdateModChatSlowMode) customModSlowModeValidator() error {
-	allowedValues := map[int]bool{2: true, 5: true, 15: true, 30: true, 45: true, 60: true, 120: true}
-	if !allowedValues[u.ModSlowMode] {
-		return fmt.Errorf("ModSlowMode debe ser uno de los valores permitidos: 2, 5, 15, 30, 45, 60, 120")
-	}
+	// allowedValues := map[int]bool{2: true, 5: true, 15: true, 30: true, 45: true, 60: true, 120: true}
+	// if !allowedValues[u.ModSlowMode] {
+	// 	return fmt.Errorf("ModSlowMode debe ser uno de los valores permitidos: 2, 5, 15, 30, 45, 60, 120")
+	// }
 	return nil
 }
 
@@ -91,14 +90,23 @@ type Update_start_date struct {
 	Key  string `json:"keyTransmission"`
 }
 type CategoriesUpdate struct {
-	Name       string   `json:"nombre"`
-	Img        string   `json:"img,omitempty"`
-	Spectators int      `json:"spectators,omitempty"`
-	Tags       []string `json:"tags,omitempty"`
-	TopColor   string   `json:"TopColor,omitempty"`
-	CodeAdmin  string   `json:"CodeAdmin"`
-	Delete     bool     `json:"Delete"`
+	Name       string `json:"Name" validate:"required"`
+	Img        string `json:"img,omitempty"`
+	Spectators int    `json:"spectators,omitempty"`
+	TopColor   string `json:"TopColor,omitempty"`
+	CodeAdmin  string `json:"CodeAdmin" validate:"required"`
+	Delete     bool   `json:"Delete"`
 }
+
+func (u *CategoriesUpdate) Validate() error {
+	validate := validator.New()
+	if err := validate.Struct(u); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type Categoria struct {
 	Name       string   `json:"nombre"`
 	Img        string   `json:"img,omitempty"`

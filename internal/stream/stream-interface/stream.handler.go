@@ -3,6 +3,7 @@ package streaminterfaces
 import (
 	streamapplication "PINKKER-BACKEND/internal/stream/stream-application"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
+	"PINKKER-BACKEND/pkg/helpers"
 	"fmt"
 	"strconv"
 
@@ -34,22 +35,43 @@ func (s *StreamHandler) CategoriesUpdate(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
+
 	var requestBody streamdomain.CategoriesUpdate
 	if err := c.BodyParser(&requestBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 		})
 	}
+	fmt.Println(requestBody)
+	fileHeader, err := c.FormFile("avatar")
+	if err == nil {
+		PostImageChanel := make(chan string)
+		errChanel := make(chan error)
+		go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
 
+		select {
+		case avatarUrl := <-PostImageChanel:
+			requestBody.Img = avatarUrl
+		case <-errChanel:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Error processing image",
+			})
+		}
+	}
+
+	// Actualizar la categoría
 	if err := s.StreamServise.CategoriesUpdate(requestBody, idUser); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
+			"data":    err.Error(),
 		})
 	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})
 }
+
 func (s *StreamHandler) CommercialInStream(c *fiber.Ctx) error {
 	IdUserToken := c.Context().UserValue("_id").(string)
 	idUser, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)

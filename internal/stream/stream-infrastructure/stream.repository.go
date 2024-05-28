@@ -30,6 +30,59 @@ func NewStreamRepository(redisClient *redis.Client, mongoClient *mongo.Client) *
 	}
 }
 
+func (r *StreamRepository) CategoriesUpdate(req streamdomain.CategoriesUpdate, idUser primitive.ObjectID) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	fmt.Println(req)
+	collection := db.Collection("Categorias")
+	collectionUsers := db.Collection("Users")
+	var User userdomain.User
+
+	err := collectionUsers.FindOne(context.Background(), bson.M{"_id": idUser}).Decode(&User)
+	if err != nil {
+		return err
+	}
+
+	if User.PanelAdminPinkker.Level <= 3 || !User.PanelAdminPinkker.Asset || User.PanelAdminPinkker.Code != req.CodeAdmin {
+		return fmt.Errorf("usuario no autorizado")
+	}
+
+	filter := bson.M{"nombre": req.Name}
+
+	if req.Delete {
+		_, err := collection.DeleteOne(context.Background(), filter)
+		return err
+	}
+
+	// Verificar si la categoría ya existe
+	var existingCategory streamdomain.CategoriesUpdate
+	err = collection.FindOne(context.Background(), filter).Decode(&existingCategory)
+	if err != nil && err != mongo.ErrNoDocuments {
+		return err
+	}
+
+	// Construir el update
+	update := bson.M{
+		"$set": bson.M{
+			"img":      req.Img,
+			"TopColor": req.TopColor,
+		},
+	}
+
+	// Si la categoría no existe, agregar $setOnInsert para crearla
+	if err == mongo.ErrNoDocuments {
+		update["$setOnInsert"] = bson.M{
+			"nombre":     req.Name,
+			"spectators": 0,
+			"createdAt":  time.Now(),
+		}
+	}
+
+	opts := options.Update().SetUpsert(true)
+
+	_, err = collection.UpdateOne(context.Background(), filter, update, opts)
+	return err
+}
+
 // get stream by id
 func (r *StreamRepository) GetStreamById(id primitive.ObjectID) (*streamdomain.Stream, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
@@ -520,47 +573,7 @@ func (r *StreamRepository) Update_thumbnail(cmt, image string) error {
 
 	return err
 }
-func (r *StreamRepository) CategoriesUpdate(req streamdomain.CategoriesUpdate, idUser primitive.ObjectID) error {
-	db := r.mongoClient.Database("PINKKER-BACKEND")
 
-	collection := db.Collection("Streams")
-	collectionUsers := db.Collection("Users")
-	var User userdomain.User
-	err := collectionUsers.FindOne(context.Background(), bson.M{"_id": idUser}).Decode(&User)
-	if err != nil {
-		return err
-	}
-
-	if User.PanelAdminPinkker.Level <= 3 || !User.PanelAdminPinkker.Asset || User.PanelAdminPinkker.Code != req.CodeAdmin {
-		return fmt.Errorf("usuario no autorizado")
-	}
-
-	filter := bson.M{"nombre": req.Name}
-
-	if req.Delete {
-		_, err := collection.DeleteOne(context.Background(), filter)
-		return err
-	}
-
-	update := bson.M{
-		"$set": bson.M{
-			"img":             req.Img,
-			"spectators":      req.Spectators,
-			"tags":            req.Tags,
-			"TopColor":        req.TopColor,
-			"KeyTransmission": req.CodeAdmin,
-		},
-		"$setOnInsert": bson.M{
-			"nombre":    req.Name,
-			"createdAt": time.Now(),
-		},
-	}
-
-	opts := options.Update().SetUpsert(true)
-
-	_, err = collection.UpdateOne(context.Background(), filter, update, opts)
-	return err
-}
 func (r *StreamRepository) Update_start_date(req streamdomain.Update_start_date) error {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 
