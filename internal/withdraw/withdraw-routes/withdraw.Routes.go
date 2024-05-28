@@ -17,5 +17,5 @@ func Withdrawroutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo
 	withdrawService := withdrawapplication.NewwithdrawalsService(withdrawRepository)
 	withdrawHandler := withdrawtinterfaces.NewwithdrawService(withdrawService)
 
-	App.Post("/pixel/DonatePixel", middleware.UseExtractor(), withdrawHandler.WithdrawalRequest)
+	App.Post("/Withdraw/WithdrawalRequest", middleware.UseExtractor(), withdrawHandler.WithdrawalRequest)
 }
