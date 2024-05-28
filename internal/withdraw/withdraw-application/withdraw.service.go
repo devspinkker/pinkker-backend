@@ -20,3 +20,13 @@ func (s *WithdrawalsService) WithdrawalRequest(StreamerID primitive.ObjectID, da
 	err := s.withdrawalsRepository.WithdrawalRequest(StreamerID, data)
 	return err
 }
+func (s *WithdrawalsService) GetPendingUnnotifiedWithdrawals(id primitive.ObjectID, data withdrawalsdomain.WithdrawalRequestGet) ([]withdrawalsdomain.WithdrawalRequests, error) {
+
+	err := s.withdrawalsRepository.AutCode(id, data.Code)
+	if err != nil {
+		return nil, err
+	}
+	Withdrawal, err := s.withdrawalsRepository.GetPendingUnnotifiedWithdrawals(data)
+	return Withdrawal, err
+
+}

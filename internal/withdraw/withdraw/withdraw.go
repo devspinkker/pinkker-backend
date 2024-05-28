@@ -23,7 +23,18 @@ type WithdrawalRequestReq struct {
 	Cbu    string `json:"cbu"`
 }
 
-func (u *WithdrawalRequestReq) ValidateReqCreateDonation() error {
+func (u *WithdrawalRequestReq) ValidateReq() error {
+
+	validate := validator.New()
+	return validate.Struct(u)
+}
+
+type WithdrawalRequestGet struct {
+	Code string `json:"Code"`
+	Page int    `json:"PagePage"`
+}
+
+func (u *WithdrawalRequestGet) ValidateReqCreateDonation() error {
 
 	validate := validator.New()
 	return validate.Struct(u)
