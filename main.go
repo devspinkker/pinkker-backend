@@ -9,6 +9,7 @@ import (
 	subscriptionroutes "PINKKER-BACKEND/internal/subscription/subscription-routes"
 	tweetroutes "PINKKER-BACKEND/internal/tweet/tweet-routes"
 	userroutes "PINKKER-BACKEND/internal/user/user-routes"
+	withdrawroutes "PINKKER-BACKEND/internal/withdraw/withdraw-routes"
 
 	"context"
 	"fmt"
@@ -59,6 +60,8 @@ func main() {
 	subscriptionroutes.SubsRoutes(app, redisClient, newMongoDB)
 	//StreamSummary
 	StreamSummaryroutes.StreamSummaryRoutes(app, redisClient, newMongoDB)
+
+	withdrawroutes.Withdrawroutes(app, redisClient, newMongoDB)
 
 	PORT := config.PORT()
 	if PORT == "" {
