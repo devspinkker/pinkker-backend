@@ -70,7 +70,7 @@ func (r *WithdrawalsRepository) GetPendingUnnotifiedWithdrawals(data withdrawals
 	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
 
 	filter := bson.M{
-		"Status":   "Pending",
+		"State":    "Pending",
 		"Notified": false,
 	}
 
