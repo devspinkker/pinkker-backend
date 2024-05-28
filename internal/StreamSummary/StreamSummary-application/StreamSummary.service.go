@@ -1,8 +1,8 @@
 package StreamSummaryapplication
 
 import (
-	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-domain"
-	StreamSummaryinfrastructure "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-infrastructure"
+	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
+	StreamSummaryinfrastructure "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-infrastructure"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"

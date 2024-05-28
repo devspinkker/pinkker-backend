@@ -1,7 +1,7 @@
 package streamapplication
 
 import (
-	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-domain"
+	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	streaminfrastructure "PINKKER-BACKEND/internal/stream/stream-infrastructure"
 	"PINKKER-BACKEND/pkg/utils"

@@ -1,9 +1,9 @@
 package StreamSummaryroutes
 
 import (
-	StreamSummaryapplication "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-application"
-	StreamSummaryinfrastructure "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-infrastructure"
-	StreamSummaryinterfaces "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-interface"
+	StreamSummaryapplication "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-application"
+	StreamSummaryinfrastructure "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-infrastructure"
+	StreamSummaryinterfaces "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-interface"
 	"PINKKER-BACKEND/pkg/middleware"
 
 	"github.com/gofiber/fiber/v2"

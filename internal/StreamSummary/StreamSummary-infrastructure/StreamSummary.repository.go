@@ -1,7 +1,7 @@
 package StreamSummaryinfrastructure
 
 import (
-	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary.repository/StreamSummary-domain"
+	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	"context"
 	"time"
