@@ -65,6 +65,7 @@ type User struct {
 		Code  string    `json:"Code,omitempty" bson:"Code"`
 		Date  time.Time `json:"date,omitempty" bson:"Date,omitempty"`
 	} `json:"PanelAdminPinkker,omitempty" bson:"PanelAdminPinkker"`
+	Banned bool `json:"Banned" bson:"Banned"`
 }
 type FollowInfo struct {
 	Since         time.Time `json:"since" bson:"since"`
@@ -195,6 +196,7 @@ type GetUser struct {
 	Wallet                   string                            `json:"Wallet" bson:"Wallet"`
 	Online                   bool                              `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
 	ClipsComment             []primitive.ObjectID              `json:"ClipsComment" bson:"ClipsComment"`
+	Banned                   bool                              `json:"Banned" bson:"Banned"`
 }
 type UserInfoOAuth2 struct {
 	ID      string `json:"id"`

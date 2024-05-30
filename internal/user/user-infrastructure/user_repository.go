@@ -100,6 +100,10 @@ func (u *UserRepository) PanelAdminPinkkerbanStreamer(PanelAdminPinkkerInfoUserR
 	if err != nil {
 		return err
 	}
+	_, err = GoMongoDBCollUsers.UpdateOne(ctx, userFilter, update)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
