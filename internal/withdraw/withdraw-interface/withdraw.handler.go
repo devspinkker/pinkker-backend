@@ -19,6 +19,7 @@ func NewwithdrawService(Servise *withdrawapplication.WithdrawalsService) *Withdr
 }
 
 func (s *WithdrawalsRepository) WithdrawalRequest(c *fiber.Ctx) error {
+	nameUser := c.Context().UserValue("nameUser").(string)
 	idValue := c.Context().UserValue("_id").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
 	if errorID != nil {
@@ -34,7 +35,7 @@ func (s *WithdrawalsRepository) WithdrawalRequest(c *fiber.Ctx) error {
 			"err":     err.Error(),
 		})
 	}
-	err := s.Servise.WithdrawalRequest(idValueObj, req)
+	err := s.Servise.WithdrawalRequest(idValueObj, nameUser, req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -47,6 +48,7 @@ func (s *WithdrawalsRepository) WithdrawalRequest(c *fiber.Ctx) error {
 }
 func (s *WithdrawalsRepository) GetWithdrawalRequest(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
+
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
 	if errorID != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
