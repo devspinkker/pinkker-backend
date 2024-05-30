@@ -16,8 +16,8 @@ func NewwithdrawalsService(withdrawalsRepository *withdrawalstinfrastructure.Wit
 		withdrawalsRepository: withdrawalsRepository,
 	}
 }
-func (s *WithdrawalsService) WithdrawalRequest(StreamerID primitive.ObjectID, data withdrawalsdomain.WithdrawalRequestReq) error {
-	err := s.withdrawalsRepository.WithdrawalRequest(StreamerID, data)
+func (s *WithdrawalsService) WithdrawalRequest(StreamerID primitive.ObjectID, nameUser string, data withdrawalsdomain.WithdrawalRequestReq) error {
+	err := s.withdrawalsRepository.WithdrawalRequest(StreamerID, nameUser, data)
 	return err
 }
 func (s *WithdrawalsService) GetPendingUnnotifiedWithdrawals(id primitive.ObjectID, data withdrawalsdomain.WithdrawalRequestGet) ([]withdrawalsdomain.WithdrawalRequests, error) {

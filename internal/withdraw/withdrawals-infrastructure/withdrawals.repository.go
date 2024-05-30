@@ -26,7 +26,7 @@ func NewwithdrawalsRepository(redisClient *redis.Client, mongoClient *mongo.Clie
 		mongoClient: mongoClient,
 	}
 }
-func (r *WithdrawalsRepository) WithdrawalRequest(id primitive.ObjectID, data withdrawalsdomain.WithdrawalRequestReq) error {
+func (r *WithdrawalsRepository) WithdrawalRequest(id primitive.ObjectID, nameUser string, data withdrawalsdomain.WithdrawalRequestReq) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollUsers := db.Collection("Users")
 	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
@@ -45,17 +45,28 @@ func (r *WithdrawalsRepository) WithdrawalRequest(id primitive.ObjectID, data wi
 	if user.Pixeles < amount || user.Pixeles > 1000 {
 		return errors.New("insufficient pixels")
 	}
+	var existingRequest withdrawalsdomain.WithdrawalRequests
+	err = GoMongoDBCollWithdrawals.FindOne(context.Background(), bson.M{
+		"RequestedBy": id,
+		"State":       "Pending",
+	}).Decode(&existingRequest)
+	if err == nil {
+		return errors.New("there is already a pending withdrawal request")
+	} else if err != mongo.ErrNoDocuments {
+		return err
+	}
 
 	CreateWithdrawalRequest := withdrawalsdomain.WithdrawalRequests{
-		ID:          primitive.NewObjectID(),
-		Destination: data.Cbu,
-		AcceptedBy:  primitive.NilObjectID,
-		RequestedBy: id,
-		Amount:      amount,
-		TimeStamp:   time.Now(),
-		Notified:    false,
-		State:       "Pending",
-		TextReturn:  "",
+		ID:               primitive.NewObjectID(),
+		Destination:      data.Cbu,
+		AcceptedBy:       primitive.NilObjectID,
+		RequestedBy:      id,
+		RequesteNameUser: nameUser,
+		Amount:           amount,
+		TimeStamp:        time.Now(),
+		Notified:         false,
+		State:            "Pending",
+		TextReturn:       "",
 	}
 
 	_, err = GoMongoDBCollWithdrawals.InsertOne(context.Background(), CreateWithdrawalRequest)
