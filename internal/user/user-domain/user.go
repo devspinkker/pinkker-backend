@@ -108,6 +108,17 @@ func (u *UserModelValidator) ValidateUser() error {
 	return validate.Struct(u)
 }
 
+type PanelAdminPinkkerInfoUserReq struct {
+	Code     string `json:"Code,omitempty" bson:"Code"`
+	IdUser   string `json:"IdUser,omitempty" bson:"IdUser"`
+	NameUser string `json:"NameUser,omitempty" bson:"NameUser"`
+}
+
+func (u *PanelAdminPinkkerInfoUserReq) ValidateUser() error {
+	validate := validator.New()
+	return validate.Struct(u)
+}
+
 type ReqGoogle_callback_NameUserConfirm struct {
 	NameUser string `json:"NameUser" validate:"required,min=5,max=20"`
 	Pais     string `json:"Pais" validate:"required"`

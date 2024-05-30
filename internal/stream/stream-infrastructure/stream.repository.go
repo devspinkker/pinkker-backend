@@ -482,7 +482,6 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 			session.AbortTransaction(ctx)
 			return err
 		}
-
 		newFollowersCount := len(userFind.Followers) - latestSummary.StartFollowersCount
 		newSubsCount := len(userFind.Subscriptions) - latestSummary.StartSubsCount
 		AverageViewers := 0
@@ -513,6 +512,21 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		}
 
 		_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, bson.M{"_id": latestSummary.ID}, updateSummary)
+		if err != nil {
+			return err
+		}
+		streamDuration := time.Since(latestSummary.StartOfStream)
+		totalTimeOnline := StreamFind.TotalTimeOnlineSeconds
+		totalTimeOnline += int64(streamDuration.Seconds())
+
+		updateStream := bson.D{
+			{Key: "$set", Value: bson.D{
+				{Key: "TotalTimeOnline", Value: totalTimeOnline},
+			}},
+		}
+
+		// Actualizar el documento de Stream
+		_, err = GoMongoDBCollStreams.UpdateOne(ctx, bson.M{"_id": StreamFind.ID}, updateStream)
 		if err != nil {
 			return err
 		}

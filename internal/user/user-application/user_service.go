@@ -1,6 +1,7 @@
 package userapplication
 
 import (
+	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	domain "PINKKER-BACKEND/internal/user/user-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	infrastructure "PINKKER-BACKEND/internal/user/user-infrastructure"
@@ -171,5 +172,13 @@ func (u *UserService) RedisSaveAccountRecoveryCode(code string, user domain.User
 }
 func (u *UserService) EditSocialNetworks(SocialNetwork userdomain.SocialNetwork, id primitive.ObjectID) error {
 	err := u.roomRepository.EditSocialNetworks(SocialNetwork, id)
+	return err
+}
+func (u *UserService) PanelAdminPinkkerInfoUser(dt userdomain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) (domain.User, streamdomain.Stream, error) {
+	user, stream, err := u.roomRepository.PanelAdminPinkkerInfoUser(dt, id)
+	return user, stream, err
+}
+func (u *UserService) PanelAdminPinkkerbanStreamer(dt userdomain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) error {
+	err := u.roomRepository.PanelAdminPinkkerbanStreamer(dt, id)
 	return err
 }
