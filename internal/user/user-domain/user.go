@@ -110,9 +110,9 @@ func (u *UserModelValidator) ValidateUser() error {
 }
 
 type PanelAdminPinkkerInfoUserReq struct {
-	Code     string `json:"Code,omitempty" bson:"Code"`
-	IdUser   string `json:"IdUser,omitempty" bson:"IdUser"`
-	NameUser string `json:"NameUser,omitempty" bson:"NameUser"`
+	Code     string             `json:"Code,omitempty" bson:"Code"`
+	IdUser   primitive.ObjectID `json:"IdUser,omitempty" bson:"IdUser"`
+	NameUser string             `json:"NameUser,omitempty" bson:"NameUser"`
 }
 
 func (u *PanelAdminPinkkerInfoUserReq) ValidateUser() error {
