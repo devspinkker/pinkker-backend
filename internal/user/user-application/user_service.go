@@ -183,3 +183,8 @@ func (u *UserService) PanelAdminPinkkerbanStreamer(dt userdomain.PanelAdminPinkk
 	err := u.roomRepository.PanelAdminPinkkerbanStreamer(dt, id)
 	return err
 }
+
+func (u *UserService) PanelAdminRemoveBanStreamer(dt userdomain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) error {
+	err := u.roomRepository.PanelAdminRemoveBanStreamer(dt, id)
+	return err
+}

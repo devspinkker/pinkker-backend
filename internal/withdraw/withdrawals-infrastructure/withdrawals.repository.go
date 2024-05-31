@@ -42,7 +42,7 @@ func (r *WithdrawalsRepository) WithdrawalRequest(id primitive.ObjectID, nameUse
 		return err
 	}
 
-	if user.Pixeles < amount || user.Pixeles > 1000 {
+	if user.Pixeles < amount || user.Pixeles < 1000 {
 		return errors.New("insufficient pixels")
 	}
 	var existingRequest withdrawalsdomain.WithdrawalRequests

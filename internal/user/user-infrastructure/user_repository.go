@@ -43,7 +43,7 @@ func (u *UserRepository) PanelAdminPinkkerInfoUser(PanelAdminPinkkerInfoUserReq 
 	ctx := context.TODO()
 
 	var userFilter bson.M
-	if PanelAdminPinkkerInfoUserReq.IdUser != "" {
+	if PanelAdminPinkkerInfoUserReq.IdUser != primitive.NilObjectID {
 		userFilter = bson.M{"_id": PanelAdminPinkkerInfoUserReq.IdUser}
 	} else if PanelAdminPinkkerInfoUserReq.NameUser != "" {
 		userFilter = bson.M{"NameUser": PanelAdminPinkkerInfoUserReq.NameUser}
@@ -76,7 +76,7 @@ func (u *UserRepository) PanelAdminPinkkerbanStreamer(PanelAdminPinkkerInfoUserR
 	ctx := context.TODO()
 
 	var userFilter bson.M
-	if PanelAdminPinkkerInfoUserReq.IdUser != "" {
+	if PanelAdminPinkkerInfoUserReq.IdUser != primitive.NilObjectID {
 		userFilter = bson.M{"_id": PanelAdminPinkkerInfoUserReq.IdUser}
 	} else if PanelAdminPinkkerInfoUserReq.NameUser != "" {
 		userFilter = bson.M{"NameUser": PanelAdminPinkkerInfoUserReq.NameUser}
@@ -107,7 +107,49 @@ func (u *UserRepository) PanelAdminPinkkerbanStreamer(PanelAdminPinkkerInfoUserR
 
 	return nil
 }
+func (u *UserRepository) PanelAdminRemoveBanStreamer(PanelAdminPinkkerInfoUserReq domain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) error {
+	err := u.AutCode(id, PanelAdminPinkkerInfoUserReq.Code)
+	if err != nil {
+		return err
+	}
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := db.Collection("Users")
+	GoMongoDBCollStream := db.Collection("Streams")
 
+	ctx := context.TODO()
+
+	var userFilter bson.M
+	if PanelAdminPinkkerInfoUserReq.IdUser != primitive.NilObjectID {
+		userFilter = bson.M{"_id": PanelAdminPinkkerInfoUserReq.IdUser}
+	} else if PanelAdminPinkkerInfoUserReq.NameUser != "" {
+		userFilter = bson.M{"NameUser": PanelAdminPinkkerInfoUserReq.NameUser}
+	} else {
+		return errors.New("IdUser and NameUser are empty")
+	}
+	var userResult domain.User
+	err = GoMongoDBCollUsers.FindOne(ctx, userFilter).Decode(&userResult)
+	if err != nil {
+		return err
+	}
+	streamFilter := bson.M{"StreamerID": userResult.ID}
+	var streamResult streamdomain.Stream
+	err = GoMongoDBCollStream.FindOne(ctx, streamFilter).Decode(&streamResult)
+	if err != nil {
+		return err
+	}
+
+	update := bson.M{"$set": bson.M{"Banned": false}}
+	_, err = GoMongoDBCollStream.UpdateOne(ctx, streamFilter, update)
+	if err != nil {
+		return err
+	}
+	_, err = GoMongoDBCollUsers.UpdateOne(ctx, userFilter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 func (u *UserRepository) AutCode(id primitive.ObjectID, code string) error {
 	db := u.mongoClient.Database("PINKKER-BACKEND")
 	collectionUsers := db.Collection("Users")

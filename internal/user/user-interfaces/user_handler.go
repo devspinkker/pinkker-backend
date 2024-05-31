@@ -38,12 +38,14 @@ func (h *UserHandler) PanelAdminPinkkerInfoUser(c *fiber.Ctx) error {
 	if errinObjectID != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
+			"data":    errinObjectID.Error(),
 		})
 	}
 	user, stream, errUpdateUserFollow := h.userService.PanelAdminPinkkerInfoUser(PanelAdminPinkkerInfoUserReq, IdUserTokenP)
 	if errUpdateUserFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
+			"data":    errUpdateUserFollow.Error(),
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -76,7 +78,30 @@ func (h *UserHandler) PanelAdminPinkkerbanStreamer(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "StatusOK",
 	})
-
+}
+func (h *UserHandler) PanelAdminRemoveBanStreamer(c *fiber.Ctx) error {
+	var PanelAdminPinkkerInfoUserReq domain.PanelAdminPinkkerInfoUserReq
+	if err := c.BodyParser(&PanelAdminPinkkerInfoUserReq); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	errUpdateUserFollow := h.userService.PanelAdminRemoveBanStreamer(PanelAdminPinkkerInfoUserReq, IdUserTokenP)
+	if errUpdateUserFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+	})
 }
 func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 	var newUser domain.UserModelValidator
