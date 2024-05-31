@@ -30,3 +30,14 @@ func (s *WithdrawalsService) GetPendingUnnotifiedWithdrawals(id primitive.Object
 	return Withdrawal, err
 
 }
+func (s *WithdrawalsService) AcceptWithdrawal(id primitive.ObjectID, data withdrawalsdomain.AcceptWithdrawal) error {
+
+	err := s.withdrawalsRepository.AutCode(id, data.Code)
+	if err != nil {
+		return err
+	}
+	err = s.withdrawalsRepository.AcceptWithdrawal(id, data)
+
+	return err
+
+}

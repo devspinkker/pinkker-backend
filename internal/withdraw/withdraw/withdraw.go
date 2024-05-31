@@ -40,3 +40,14 @@ func (u *WithdrawalRequestGet) ValidateReqCreateDonation() error {
 	validate := validator.New()
 	return validate.Struct(u)
 }
+
+type AcceptWithdrawal struct {
+	Code                 string             `json:"Code"`
+	WithdrawalRequestsId primitive.ObjectID `json:"WithdrawalRequestsId"`
+}
+
+func (u *AcceptWithdrawal) Validate() error {
+
+	validate := validator.New()
+	return validate.Struct(u)
+}

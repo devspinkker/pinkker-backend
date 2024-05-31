@@ -73,3 +73,30 @@ func (s *WithdrawalsRepository) GetWithdrawalRequest(c *fiber.Ctx) error {
 		"data":    data,
 	})
 }
+func (s *WithdrawalsRepository) AcceptWithdrawal(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var req withdrawalsdomain.AcceptWithdrawal
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	err := s.Servise.AcceptWithdrawal(idValueObj, req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
