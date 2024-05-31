@@ -121,3 +121,71 @@ func (r *WithdrawalsRepository) AutCode(id primitive.ObjectID, code string) erro
 	}
 	return nil
 }
+func (r *WithdrawalsRepository) AcceptWithdrawal(id primitive.ObjectID, data withdrawalsdomain.AcceptWithdrawal) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
+	ctx := context.TODO()
+
+	filter := bson.M{
+		"_id":   data.WithdrawalRequestsId,
+		"State": "Pending",
+	}
+	var withdrawals withdrawalsdomain.WithdrawalRequests
+	err := GoMongoDBCollWithdrawals.FindOne(context.Background(), filter).Decode(&withdrawals)
+	if err != nil {
+		return err
+	}
+
+	collectionUsers := db.Collection("Users")
+	var UserRequest userdomain.User
+
+	err = collectionUsers.FindOne(context.Background(), bson.M{"_id": withdrawals.RequestedBy}).Decode(&UserRequest)
+	if err != nil {
+		return err
+	}
+
+	if UserRequest.Pixeles < withdrawals.Amount {
+		updateState := bson.M{
+			"$set": bson.M{
+				"State":      "rejected",
+				"AcceptedBy": id,
+				"TimeStamp":  time.Now(),
+				"TextReturn": "falta de fondos, retiro rechazado",
+			},
+		}
+
+		_, err = GoMongoDBCollWithdrawals.UpdateOne(ctx, filter, updateState)
+		if err != nil {
+			return err
+
+		}
+		return errors.New("falta de fondos, retiro rechazado")
+	}
+
+	updateWithdrawals := bson.D{
+		{Key: "$inc", Value: bson.D{
+			{Key: "Pixeles", Value: -(withdrawals.Amount)},
+		}},
+	}
+
+	_, err = collectionUsers.UpdateOne(ctx, bson.M{"_id": withdrawals.RequestedBy}, updateWithdrawals)
+	if err != nil {
+		return err
+	}
+
+	updateState := bson.M{
+		"$set": bson.M{
+			"State":      "Accepted",
+			"AcceptedBy": id,
+			"TimeStamp":  time.Now(),
+			"TextReturn": "Retiro aceptado",
+		},
+	}
+
+	_, err = GoMongoDBCollWithdrawals.UpdateOne(ctx, filter, updateState)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
