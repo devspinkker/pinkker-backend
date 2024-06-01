@@ -41,3 +41,21 @@ func (s *WithdrawalsService) AcceptWithdrawal(id primitive.ObjectID, data withdr
 	return err
 
 }
+func (s *WithdrawalsService) RejectWithdrawal(id primitive.ObjectID, data withdrawalsdomain.RejectWithdrawal) error {
+
+	err := s.withdrawalsRepository.AutCode(id, data.Code)
+	if err != nil {
+		return err
+	}
+	err = s.withdrawalsRepository.RejectWithdrawal(id, data)
+
+	return err
+
+}
+func (s *WithdrawalsService) GetWithdrawalToken(id primitive.ObjectID) ([]withdrawalsdomain.WithdrawalRequests, error) {
+
+	data, err := s.withdrawalsRepository.GetWithdrawalToken(id)
+
+	return data, err
+
+}

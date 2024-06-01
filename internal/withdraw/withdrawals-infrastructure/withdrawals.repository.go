@@ -189,3 +189,65 @@ func (r *WithdrawalsRepository) AcceptWithdrawal(id primitive.ObjectID, data wit
 
 	return nil
 }
+func (r *WithdrawalsRepository) RejectWithdrawal(id primitive.ObjectID, data withdrawalsdomain.RejectWithdrawal) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
+	ctx := context.TODO()
+
+	filter := bson.M{
+		"_id":   data.WithdrawalRequestsId,
+		"State": "Pending",
+	}
+	var withdrawals withdrawalsdomain.WithdrawalRequests
+	err := GoMongoDBCollWithdrawals.FindOne(ctx, filter).Decode(&withdrawals)
+	if err != nil {
+		return err
+	}
+
+	updateState := bson.M{
+		"$set": bson.M{
+			"State":      "rejected",
+			"AcceptedBy": id,
+			"TimeStamp":  time.Now(),
+			"TextReturn": data.TextReturn,
+		},
+	}
+
+	_, err = GoMongoDBCollWithdrawals.UpdateOne(ctx, filter, updateState)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *WithdrawalsRepository) GetWithdrawalToken(id primitive.ObjectID) ([]withdrawalsdomain.WithdrawalRequests, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
+	ctx := context.TODO()
+
+	filter := bson.M{
+		"RequestedBy": id,
+	}
+
+	cursor, err := GoMongoDBCollWithdrawals.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var withdrawals []withdrawalsdomain.WithdrawalRequests
+	for cursor.Next(ctx) {
+		var withdrawal withdrawalsdomain.WithdrawalRequests
+		if err := cursor.Decode(&withdrawal); err != nil {
+			return nil, err
+		}
+		withdrawals = append(withdrawals, withdrawal)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return withdrawals, nil
+}
