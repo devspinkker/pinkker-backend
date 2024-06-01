@@ -51,3 +51,9 @@ func (u *AcceptWithdrawal) Validate() error {
 	validate := validator.New()
 	return validate.Struct(u)
 }
+
+type RejectWithdrawal struct {
+	WithdrawalRequestsId primitive.ObjectID `bson:"_id"`
+	TextReturn           string             `bson:"TextReturn"`
+	Code                 string             `bson:"Code"`
+}

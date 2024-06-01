@@ -100,3 +100,51 @@ func (s *WithdrawalsRepository) AcceptWithdrawal(c *fiber.Ctx) error {
 		"message": "ok",
 	})
 }
+func (s *WithdrawalsRepository) RejectWithdrawal(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var req withdrawalsdomain.RejectWithdrawal
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	err := s.Servise.RejectWithdrawal(idValueObj, req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
+func (s *WithdrawalsRepository) GetWithdrawalToken(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	data, err := s.Servise.GetWithdrawalToken(idValueObj)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    data,
+	})
+}
