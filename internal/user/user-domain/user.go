@@ -32,10 +32,10 @@ type User struct {
 	Pixeles           float64                `json:"Pixeles,default:0.0" bson:"Pixeles,default:0.0"`
 	CustomAvatar      bool                   `json:"customAvatar,omitempty" bson:"CustomAvatar"`
 	CountryInfo       map[string]interface{} `json:"countryInfo,omitempty" bson:"CountryInfo"`
-	PinkkerPrime      struct {
+	Partner           struct {
 		Active bool      `json:"active,omitempty" bson:"Active,omitempty"`
 		Date   time.Time `json:"date,omitempty" bson:"Date,omitempty"`
-	} `json:"pinkkerPrime,omitempty" bson:"PinkkerPrime"`
+	} `json:"Partner,omitempty" bson:"Partner"`
 	Suscribers    []string `json:"suscribers,omitempty" bson:"Suscribers"`
 	SocialNetwork struct {
 		Facebook  string `json:"facebook,omitempty" bson:"facebook"`
@@ -171,10 +171,10 @@ type GetUser struct {
 	BirthDate       time.Time              `json:"birthDate" bson:"BirthDate"`
 	CustomAvatar    bool                   `json:"customAvatar,omitempty" bson:"CustomAvatar"`
 	CountryInfo     map[string]interface{} `json:"countryInfo,omitempty" bson:"CountryInfo"`
-	PinkkerPrime    struct {
+	Partner         struct {
 		Active bool      `json:"active,omitempty" bson:"Active,omitempty"`
 		Date   time.Time `json:"date,omitempty" bson:"Date,omitempty"`
-	} `json:"pinkkerPrime,omitempty" bson:"PinkkerPrime"`
+	} `json:"Partner,omitempty" bson:"Partner"`
 	Suscribers    []string `json:"suscribers,omitempty" bson:"Suscribers"`
 	SocialNetwork struct {
 		Facebook  string `json:"facebook,omitempty" bson:"facebook"`

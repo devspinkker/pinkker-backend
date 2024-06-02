@@ -13,7 +13,7 @@ func CreateToken(user *userdomain.User) (string, error) {
 	claims := jwt.MapClaims{
 		"_id":          user.ID,
 		"nameuser":     user.NameUser,
-		"pinkkerPrime": user.Verified,
+		"pinkkerPrime": user.Partner.Active,
 		"exp":          time.Now().Add(time.Hour * 2400).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

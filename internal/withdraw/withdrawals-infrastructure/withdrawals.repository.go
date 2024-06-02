@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type WithdrawalsRepository struct {
@@ -230,7 +231,11 @@ func (r *WithdrawalsRepository) GetWithdrawalToken(id primitive.ObjectID) ([]wit
 		"RequestedBy": id,
 	}
 
-	cursor, err := GoMongoDBCollWithdrawals.Find(ctx, filter)
+	findOptions := options.Find()
+	sort := bson.D{{Key: "TimeStamp", Value: -1}}
+	findOptions.SetSort(sort)
+
+	cursor, err := GoMongoDBCollWithdrawals.Find(ctx, filter, findOptions)
 	if err != nil {
 		return nil, err
 	}

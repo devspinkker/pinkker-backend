@@ -150,6 +150,51 @@ func (u *UserRepository) PanelAdminRemoveBanStreamer(PanelAdminPinkkerInfoUserRe
 
 	return nil
 }
+func (u *UserRepository) PanelAdminPinkkerPartnerUser(PanelAdminPinkkerInfoUserReq domain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) error {
+	// Autenticar el código
+	err := u.AutCode(id, PanelAdminPinkkerInfoUserReq.Code)
+	if err != nil {
+		return err
+	}
+	ctx := context.TODO()
+
+	// Conectar a la base de datos y obtener la colección de usuarios
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := db.Collection("Users")
+
+	// Crear el filtro para encontrar al usuario
+	var userFilter bson.M
+	if PanelAdminPinkkerInfoUserReq.IdUser != primitive.NilObjectID {
+		userFilter = bson.M{"_id": PanelAdminPinkkerInfoUserReq.IdUser}
+	} else if PanelAdminPinkkerInfoUserReq.NameUser != "" {
+		userFilter = bson.M{"NameUser": PanelAdminPinkkerInfoUserReq.NameUser}
+	} else {
+		return errors.New("IdUser and NameUser are empty")
+	}
+
+	var userResult domain.User
+	err = GoMongoDBCollUsers.FindOne(ctx, userFilter).Decode(&userResult)
+	if err != nil {
+		return err
+	}
+
+	newActiveState := !userResult.Partner.Active
+
+	update := bson.M{
+		"$set": bson.M{
+			"Partner.Active": newActiveState,
+			"Partner.Date":   time.Now(),
+		},
+	}
+
+	_, err = GoMongoDBCollUsers.UpdateOne(ctx, userFilter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (u *UserRepository) AutCode(id primitive.ObjectID, code string) error {
 	db := u.mongoClient.Database("PINKKER-BACKEND")
 	collectionUsers := db.Collection("Users")
