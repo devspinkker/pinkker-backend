@@ -22,5 +22,5 @@ func Withdrawroutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo
 	App.Post("/Withdraw/AcceptWithdrawal", middleware.UseExtractor(), withdrawHandler.AcceptWithdrawal)
 
 	App.Post("/Withdraw/RejectWithdrawal", middleware.UseExtractor(), withdrawHandler.RejectWithdrawal)
-	App.Get("/Withdraw/GetWithdrawalToken", middleware.UseExtractor(), withdrawHandler.AcceptWithdrawal)
+	App.Get("/Withdraw/GetWithdrawalToken", middleware.UseExtractor(), withdrawHandler.GetWithdrawalToken)
 }

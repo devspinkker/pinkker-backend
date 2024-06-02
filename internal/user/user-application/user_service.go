@@ -179,6 +179,11 @@ func (u *UserService) PanelAdminPinkkerInfoUser(dt userdomain.PanelAdminPinkkerI
 	user, stream, err := u.roomRepository.PanelAdminPinkkerInfoUser(dt, id)
 	return user, stream, err
 }
+
+func (u *UserService) PanelAdminPinkkerPartnerUser(dt userdomain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) error {
+	err := u.roomRepository.PanelAdminPinkkerPartnerUser(dt, id)
+	return err
+}
 func (u *UserService) PanelAdminPinkkerbanStreamer(dt userdomain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) error {
 	err := u.roomRepository.PanelAdminPinkkerbanStreamer(dt, id)
 	return err

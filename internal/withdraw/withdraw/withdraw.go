@@ -53,7 +53,7 @@ func (u *AcceptWithdrawal) Validate() error {
 }
 
 type RejectWithdrawal struct {
-	WithdrawalRequestsId primitive.ObjectID `bson:"_id"`
-	TextReturn           string             `bson:"TextReturn"`
-	Code                 string             `bson:"Code"`
+	WithdrawalRequestsId primitive.ObjectID `json:"WithdrawalRequestsId"`
+	TextReturn           string             `json:"TextReturn"`
+	Code                 string             `json:"Code"`
 }

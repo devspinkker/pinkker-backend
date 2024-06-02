@@ -48,6 +48,7 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/user/PanelAdminPinkker/InfoUser", middleware.UseExtractor(), UserHandler.PanelAdminPinkkerInfoUser)
 	App.Post("/user/PanelAdminPinkker/banStreamer", middleware.UseExtractor(), UserHandler.PanelAdminPinkkerbanStreamer)
 	App.Post("/user/PanelAdminPinkker/RemoveBanStreamer", middleware.UseExtractor(), UserHandler.PanelAdminRemoveBanStreamer)
+	App.Post("/user/PanelAdminPinkker/PanelAdminPinkkerPartnerUser", middleware.UseExtractor(), UserHandler.PanelAdminPinkkerPartnerUser)
 
 	App.Get("/ws/notification/ActivityFeed/:user", websocket.New(func(c *websocket.Conn) {
 		user := c.Params("user") + "ActivityFeed"
