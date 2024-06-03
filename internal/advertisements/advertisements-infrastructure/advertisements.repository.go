@@ -1,13 +1,10 @@
 package advertisementsinfrastructure
 
 import (
+	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
-	withdrawalsdomain "PINKKER-BACKEND/internal/withdraw/withdraw"
 	"context"
-	"errors"
 	"fmt"
-	"strconv"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
@@ -16,98 +13,48 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type WithdrawalsRepository struct {
+type AdvertisementsRepository struct {
 	redisClient *redis.Client
 	mongoClient *mongo.Client
 }
 
-func NewwithdrawalsRepository(redisClient *redis.Client, mongoClient *mongo.Client) *WithdrawalsRepository {
-	return &WithdrawalsRepository{
+func NewadvertisementsRepository(redisClient *redis.Client, mongoClient *mongo.Client) *AdvertisementsRepository {
+	return &AdvertisementsRepository{
 		redisClient: redisClient,
 		mongoClient: mongoClient,
 	}
 }
-func (r *WithdrawalsRepository) WithdrawalRequest(id primitive.ObjectID, nameUser string, data withdrawalsdomain.WithdrawalRequestReq) error {
+func (r *AdvertisementsRepository) AdvertisementsGet() ([]advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBCollUsers := db.Collection("Users")
-	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
+	Advertisements := db.Collection("Advertisements")
 
-	amount, err := strconv.ParseFloat(data.Amount, 64)
-	if err != nil {
-		return err
-	}
+	ctx := context.TODO()
 
-	var user userdomain.User
-	err = GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": id}).Decode(&user)
-	if err != nil {
-		return err
-	}
+	findOptions := options.Find()
 
-	if user.Pixeles < amount || user.Pixeles < 1000 {
-		return errors.New("insufficient pixels")
-	}
-	var existingRequest withdrawalsdomain.WithdrawalRequests
-	err = GoMongoDBCollWithdrawals.FindOne(context.Background(), bson.M{
-		"RequestedBy": id,
-		"State":       "Pending",
-	}).Decode(&existingRequest)
-	if err == nil {
-		return errors.New("there is already a pending withdrawal request")
-	} else if err != mongo.ErrNoDocuments {
-		return err
-	}
-
-	CreateWithdrawalRequest := withdrawalsdomain.WithdrawalRequests{
-		ID:               primitive.NewObjectID(),
-		Destination:      data.Cbu,
-		AcceptedBy:       primitive.NilObjectID,
-		RequestedBy:      id,
-		RequesteNameUser: nameUser,
-		Amount:           amount,
-		TimeStamp:        time.Now(),
-		Notified:         false,
-		State:            "Pending",
-		TextReturn:       "",
-	}
-
-	_, err = GoMongoDBCollWithdrawals.InsertOne(context.Background(), CreateWithdrawalRequest)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-func (r *WithdrawalsRepository) GetPendingUnnotifiedWithdrawals(data withdrawalsdomain.WithdrawalRequestGet) ([]withdrawalsdomain.WithdrawalRequests, error) {
-	db := r.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
-
-	filter := bson.M{
-		"State":    "Pending",
-		"Notified": false,
-	}
-
-	cursor, err := GoMongoDBCollWithdrawals.Find(context.Background(), filter)
+	cursor, err := Advertisements.Find(ctx, findOptions)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(context.Background())
+	defer cursor.Close(ctx)
 
-	var withdrawalRequests []withdrawalsdomain.WithdrawalRequests
-	for cursor.Next(context.Background()) {
-		var request withdrawalsdomain.WithdrawalRequests
-		if err := cursor.Decode(&request); err != nil {
+	var advertisementsArray []advertisements.Advertisements
+	for cursor.Next(ctx) {
+		var advertisement advertisements.Advertisements
+		if err := cursor.Decode(&advertisement); err != nil {
 			return nil, err
 		}
-		withdrawalRequests = append(withdrawalRequests, request)
+		advertisementsArray = append(advertisementsArray, advertisement)
 	}
 
 	if err := cursor.Err(); err != nil {
 		return nil, err
 	}
 
-	return withdrawalRequests, nil
+	return advertisementsArray, nil
+
 }
-func (r *WithdrawalsRepository) AutCode(id primitive.ObjectID, code string) error {
+func (r *AdvertisementsRepository) AutCode(id primitive.ObjectID, code string) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collectionUsers := db.Collection("Users")
 	var User userdomain.User
@@ -122,137 +69,57 @@ func (r *WithdrawalsRepository) AutCode(id primitive.ObjectID, code string) erro
 	}
 	return nil
 }
-func (r *WithdrawalsRepository) AcceptWithdrawal(id primitive.ObjectID, data withdrawalsdomain.AcceptWithdrawal) error {
+func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateAdvertisement) (advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
-	ctx := context.TODO()
+	collection := db.Collection("Advertisements")
 
-	filter := bson.M{
-		"_id":   data.WithdrawalRequestsId,
-		"State": "Pending",
-	}
-	var withdrawals withdrawalsdomain.WithdrawalRequests
-	err := GoMongoDBCollWithdrawals.FindOne(context.Background(), filter).Decode(&withdrawals)
+	var documento advertisements.Advertisements
+	documento.Name = ad.Name
+	documento.Destination = ad.Destination
+	documento.Categorie = ad.Categorie
+	documento.Impressions = ad.Impressions
+	documento.UrlVideo = ad.UrlVideo
+	documento.ReferenceLink = ad.ReferenceLink
+	documento.PayPerPrint = ad.PayPerPrint
+	_, err := collection.InsertOne(context.Background(), ad)
 	if err != nil {
-		return err
+		return advertisements.Advertisements{}, err
 	}
 
-	collectionUsers := db.Collection("Users")
-	var UserRequest userdomain.User
+	return documento, nil
+}
+func (r *AdvertisementsRepository) UpdateAdvertisement(ad advertisements.UpdateAdvertisement) (advertisements.Advertisements, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Advertisements")
 
-	err = collectionUsers.FindOne(context.Background(), bson.M{"_id": withdrawals.RequestedBy}).Decode(&UserRequest)
-	if err != nil {
-		return err
-	}
-
-	if UserRequest.Pixeles < withdrawals.Amount {
-		updateState := bson.M{
-			"$set": bson.M{
-				"State":      "rejected",
-				"AcceptedBy": id,
-				"TimeStamp":  time.Now(),
-				"TextReturn": "falta de fondos, retiro rechazado",
-			},
-		}
-
-		_, err = GoMongoDBCollWithdrawals.UpdateOne(ctx, filter, updateState)
-		if err != nil {
-			return err
-
-		}
-		return errors.New("falta de fondos, retiro rechazado")
-	}
-
-	updateWithdrawals := bson.D{
-		{Key: "$inc", Value: bson.D{
-			{Key: "Pixeles", Value: -(withdrawals.Amount)},
-		}},
-	}
-
-	_, err = collectionUsers.UpdateOne(ctx, bson.M{"_id": withdrawals.RequestedBy}, updateWithdrawals)
-	if err != nil {
-		return err
-	}
-
-	updateState := bson.M{
+	filter := bson.M{"_id": ad.ID}
+	update := bson.M{
 		"$set": bson.M{
-			"State":      "Accepted",
-			"AcceptedBy": id,
-			"TimeStamp":  time.Now(),
-			"TextReturn": "Retiro aceptado",
+			"Name":          ad.Name,
+			"Destination":   ad.Destination,
+			"Categorie":     ad.Categorie,
+			"Impressions":   ad.Impressions,
+			"UrlVideo":      ad.UrlVideo,
+			"ReferenceLink": ad.ReferenceLink,
+			"PayPerPrint":   ad.PayPerPrint,
 		},
 	}
 
-	_, err = GoMongoDBCollWithdrawals.UpdateOne(ctx, filter, updateState)
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
+
+	var updatedAd advertisements.Advertisements
+	err := collection.FindOneAndUpdate(context.Background(), filter, update, opts).Decode(&updatedAd)
 	if err != nil {
-		return err
+		return advertisements.Advertisements{}, err
 	}
 
-	return nil
+	return updatedAd, nil
 }
-func (r *WithdrawalsRepository) RejectWithdrawal(id primitive.ObjectID, data withdrawalsdomain.RejectWithdrawal) error {
+func (r *AdvertisementsRepository) DeleteAdvertisement(id primitive.ObjectID) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
-	ctx := context.TODO()
+	collection := db.Collection("Advertisements")
 
-	filter := bson.M{
-		"_id":   data.WithdrawalRequestsId,
-		"State": "Pending",
-	}
-	var withdrawals withdrawalsdomain.WithdrawalRequests
-	err := GoMongoDBCollWithdrawals.FindOne(ctx, filter).Decode(&withdrawals)
-	if err != nil {
-		return err
-	}
-
-	updateState := bson.M{
-		"$set": bson.M{
-			"State":      "rejected",
-			"AcceptedBy": id,
-			"TimeStamp":  time.Now(),
-			"TextReturn": data.TextReturn,
-		},
-	}
-
-	_, err = GoMongoDBCollWithdrawals.UpdateOne(ctx, filter, updateState)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *WithdrawalsRepository) GetWithdrawalToken(id primitive.ObjectID) ([]withdrawalsdomain.WithdrawalRequests, error) {
-	db := r.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
-	ctx := context.TODO()
-
-	filter := bson.M{
-		"RequestedBy": id,
-	}
-
-	findOptions := options.Find()
-	sort := bson.D{{Key: "TimeStamp", Value: -1}}
-	findOptions.SetSort(sort)
-
-	cursor, err := GoMongoDBCollWithdrawals.Find(ctx, filter, findOptions)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var withdrawals []withdrawalsdomain.WithdrawalRequests
-	for cursor.Next(ctx) {
-		var withdrawal withdrawalsdomain.WithdrawalRequests
-		if err := cursor.Decode(&withdrawal); err != nil {
-			return nil, err
-		}
-		withdrawals = append(withdrawals, withdrawal)
-	}
-
-	if err := cursor.Err(); err != nil {
-		return nil, err
-	}
-
-	return withdrawals, nil
+	filter := bson.M{"_id": id}
+	_, err := collection.DeleteOne(context.Background(), filter)
+	return err
 }
