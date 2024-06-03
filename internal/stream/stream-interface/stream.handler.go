@@ -130,7 +130,7 @@ func (s *StreamHandler) NotifyCommercialInStreamToRoomClients(roomID string, Com
 	notification := map[string]interface{}{
 		"_id":           Commercial.ID,
 		"UrlVideo":      Commercial.UrlVideo,
-		"LinkReference": Commercial.Reference,
+		"LinkReference": Commercial.ReferenceLink,
 	}
 	for _, client := range clients {
 		err = client.WriteJSON(notification)
