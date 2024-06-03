@@ -41,6 +41,7 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	App.Post("/stream/update_Emotes", streamHandler.Update_Emotes)
 
 	App.Get("/stream/get_streamings_online", streamHandler.Streamings_online)
+
 	App.Post("/stream/commercialInStream", middleware.UseExtractor(), streamHandler.CommercialInStream)
 	App.Get("/ws/commercialInStream/:roomID", websocket.New(func(c *websocket.Conn) {
 		roomID := c.Params("roomID")

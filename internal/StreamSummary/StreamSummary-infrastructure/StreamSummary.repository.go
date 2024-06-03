@@ -54,12 +54,13 @@ func (r *StreamSummaryRepository) UpdateStreamSummary(StreamerID primitive.Objec
 
 	return nil
 }
-func (r *StreamSummaryRepository) AddAds(idValueObj, StreamerID primitive.ObjectID) error {
+func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds StreamSummarydomain.AddAds) error {
 	ctx := context.Background()
 
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
 	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
+	GoMongoDBCollAdvertisements := GoMongoDB.Collection("Advertisements")
 
 	// Filtrar por el ID del usuario
 	filter := bson.M{"_id": idValueObj}
@@ -70,7 +71,7 @@ func (r *StreamSummaryRepository) AddAds(idValueObj, StreamerID primitive.Object
 		return result.Err()
 	}
 
-	filter = bson.M{"StreamerID": StreamerID}
+	filter = bson.M{"StreamerID": AddAds.StreamerID}
 
 	opts := options.FindOne().SetSort(bson.D{{Key: "StartOfStream", Value: -1}})
 
@@ -91,8 +92,19 @@ func (r *StreamSummaryRepository) AddAds(idValueObj, StreamerID primitive.Object
 		return err
 	}
 
+	advertisementFilter := bson.M{"_id": AddAds.AdvertisementsId}
+	advertisementUpdate := bson.M{
+		"$inc": bson.M{
+			"Impressions": 1,
+		},
+	}
+	_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, advertisementUpdate)
+	if err != nil {
+		return err
+	}
 	return nil
 }
+
 func (r *StreamSummaryRepository) AverageViewers(StreamerID primitive.ObjectID) error {
 	ctx := context.Background()
 

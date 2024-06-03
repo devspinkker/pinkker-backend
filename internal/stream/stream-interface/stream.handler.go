@@ -1,6 +1,7 @@
 package streaminterfaces
 
 import (
+	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	streamapplication "PINKKER-BACKEND/internal/stream/stream-application"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	"PINKKER-BACKEND/pkg/helpers"
@@ -102,7 +103,14 @@ func (s *StreamHandler) CommercialInStream(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
-	err = s.NotifyCommercialInStreamToRoomClients(Stream.ID.Hex(), "https://cdn-a.amazon-adsystem.com/video/aab52b48-039b-4d0c-aa96-5991067d4927/10000-1920x1080.mp4")
+	Commercial, err := s.StreamServise.CommercialInStreamSelectAdvertisements(Stream.StreamCategory)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "StatusNotFound",
+			"data":    err.Error(),
+		})
+	}
+	err = s.NotifyCommercialInStreamToRoomClients(Stream.ID.Hex(), Commercial)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -113,14 +121,16 @@ func (s *StreamHandler) CommercialInStream(c *fiber.Ctx) error {
 		"message": "ok",
 	})
 }
-func (s *StreamHandler) NotifyCommercialInStreamToRoomClients(roomID, Commercial string) error {
+func (s *StreamHandler) NotifyCommercialInStreamToRoomClients(roomID string, Commercial advertisements.Advertisements) error {
 	clients, err := s.StreamServise.GetWebSocketClientsInRoom(roomID)
 	if err != nil {
 		return err
 	}
 
 	notification := map[string]interface{}{
-		"Commercial": Commercial,
+		"_id":           Commercial.ID,
+		"UrlVideo":      Commercial.UrlVideo,
+		"LinkReference": Commercial.Reference,
 	}
 	for _, client := range clients {
 		err = client.WriteJSON(notification)
