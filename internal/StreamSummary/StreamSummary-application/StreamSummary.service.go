@@ -21,8 +21,8 @@ func (s *StreamSummaryService) UpdateStreamSummary(StreamerID primitive.ObjectID
 	err := s.StreamSummaryRepository.UpdateStreamSummary(StreamerID, data)
 	return err
 }
-func (s *StreamSummaryService) AddAds(idValueObj, Streamer primitive.ObjectID) error {
-	err := s.StreamSummaryRepository.AddAds(idValueObj, Streamer)
+func (s *StreamSummaryService) AddAds(idValueObj primitive.ObjectID, AddAds StreamSummarydomain.AddAds) error {
+	err := s.StreamSummaryRepository.AddAds(idValueObj, AddAds)
 	return err
 }
 func (s *StreamSummaryService) AverageViewers(Streamer primitive.ObjectID) error {

@@ -61,7 +61,7 @@ func (s *StreamSummaryHandler) AddAds(c *fiber.Ctx) error {
 		})
 	}
 
-	err := s.StreamSummaryServise.AddAds(idValueObj, req.StreamerID)
+	err := s.StreamSummaryServise.AddAds(idValueObj, req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),

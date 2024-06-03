@@ -2,6 +2,7 @@ package streaminfrastructure
 
 import (
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
+	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"PINKKER-BACKEND/pkg/helpers"
@@ -28,6 +29,57 @@ func NewStreamRepository(redisClient *redis.Client, mongoClient *mongo.Client) *
 		redisClient: redisClient,
 		mongoClient: mongoClient,
 	}
+}
+
+func (r *StreamRepository) CommercialInStreamSelectAdvertisements(data string) (advertisements.Advertisements, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
+	ctx := context.TODO()
+
+	// Pipeline para encontrar una coincidencia aleatoria
+	pipelineMatch := bson.A{
+		bson.M{"$match": bson.M{"Categorie": data}},
+		bson.M{"$sample": bson.M{"size": 1}},
+	}
+
+	// Pipeline para obtener cualquier documento aleatorio
+	pipelineRandom := bson.A{
+		bson.M{"$sample": bson.M{"size": 1}},
+	}
+
+	var advertisement advertisements.Advertisements
+
+	// Buscar coincidencia
+	cursor, err := GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineMatch)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+	defer cursor.Close(ctx)
+
+	// Decodificar el resultado
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&advertisement); err != nil {
+			return advertisements.Advertisements{}, err
+		}
+		return advertisement, nil
+	}
+
+	// Si no hay coincidencia, obtener cualquier documento aleatorio
+	cursor, err = GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineRandom)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+	defer cursor.Close(ctx)
+
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&advertisement); err != nil {
+			return advertisements.Advertisements{}, err
+		}
+		return advertisement, nil
+	}
+
+	// Si no se encuentra ningún documento, retornar un error
+	return advertisements.Advertisements{}, errors.New("no advertisements found")
 }
 
 func (r *StreamRepository) CategoriesUpdate(req streamdomain.CategoriesUpdate, idUser primitive.ObjectID) error {
@@ -109,6 +161,7 @@ func (r *StreamRepository) GetStreamById(id primitive.ObjectID) (*streamdomain.S
 	errCollStreams := GoMongoDBCollStreams.FindOne(context.Background(), FindStreamInDb).Decode(&FindStreamsById)
 	return FindStreamsById, errCollStreams
 }
+
 func (r *StreamRepository) GetStreamSummaryById(id primitive.ObjectID) (*StreamSummarydomain.StreamSummary, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("StreamSummary")
 	FindStreamInDb := bson.D{

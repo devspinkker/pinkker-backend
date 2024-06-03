@@ -28,7 +28,8 @@ type UpdateStreamSummary struct {
 	Advertisements   int `json:"Advertisements" bson:"Advertisements"`
 }
 type AddAds struct {
-	StreamerID primitive.ObjectID `json:"StreamerID" bson:"StreamerID"`
+	StreamerID       primitive.ObjectID `json:"StreamerID" bson:"StreamerID"`
+	AdvertisementsId primitive.ObjectID `json:"AdvertisementsId" bson:"AdvertisementsId"`
 }
 type AverageViewers struct {
 	StreamerID primitive.ObjectID `json:"StreamerID" bson:"StreamerID"`

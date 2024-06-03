@@ -2,6 +2,7 @@ package streamapplication
 
 import (
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
+	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	streaminfrastructure "PINKKER-BACKEND/internal/stream/stream-infrastructure"
 	"PINKKER-BACKEND/pkg/utils"
@@ -28,6 +29,10 @@ func (s *StreamService) CategoriesUpdate(req streamdomain.CategoriesUpdate, idUs
 func (s *StreamService) GetStreamById(id primitive.ObjectID) (*streamdomain.Stream, error) {
 	stream, err := s.StreamRepository.GetStreamById(id)
 	return stream, err
+}
+func (s *StreamService) CommercialInStreamSelectAdvertisements(data string) (advertisements.Advertisements, error) {
+	Advertisements, err := s.StreamRepository.CommercialInStreamSelectAdvertisements(data)
+	return Advertisements, err
 }
 func (s *StreamService) GetStreamSummaryById(id primitive.ObjectID) (*StreamSummarydomain.StreamSummary, error) {
 	StreamSummary, err := s.StreamRepository.GetStreamSummaryById(id)
