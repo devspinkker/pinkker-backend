@@ -1,61 +1,51 @@
 package advertisementsapplication
 
 import (
-	withdrawalsdomain "PINKKER-BACKEND/internal/withdraw/withdraw"
-	withdrawalstinfrastructure "PINKKER-BACKEND/internal/withdraw/withdrawals-infrastructure"
+	"PINKKER-BACKEND/internal/advertisements/advertisements"
+	advertisementsinfrastructure "PINKKER-BACKEND/internal/advertisements/advertisements-infrastructure"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type WithdrawalsService struct {
-	withdrawalsRepository *withdrawalstinfrastructure.WithdrawalsRepository
+type AdvertisementsService struct {
+	AdvertisementsRepository *advertisementsinfrastructure.AdvertisementsRepository
 }
 
-func NewwithdrawalsService(withdrawalsRepository *withdrawalstinfrastructure.WithdrawalsRepository) *WithdrawalsService {
-	return &WithdrawalsService{
-		withdrawalsRepository: withdrawalsRepository,
+func NewAdvertisementsService(AdvertisementsRepository *advertisementsinfrastructure.AdvertisementsRepository) *AdvertisementsService {
+	return &AdvertisementsService{
+		AdvertisementsRepository: AdvertisementsRepository,
 	}
 }
-func (s *WithdrawalsService) WithdrawalRequest(StreamerID primitive.ObjectID, nameUser string, data withdrawalsdomain.WithdrawalRequestReq) error {
-	err := s.withdrawalsRepository.WithdrawalRequest(StreamerID, nameUser, data)
-	return err
-}
-func (s *WithdrawalsService) GetPendingUnnotifiedWithdrawals(id primitive.ObjectID, data withdrawalsdomain.WithdrawalRequestGet) ([]withdrawalsdomain.WithdrawalRequests, error) {
-
-	err := s.withdrawalsRepository.AutCode(id, data.Code)
+func (s *AdvertisementsService) GetAdvertisements(StreamerID primitive.ObjectID, data advertisements.AdvertisementGet) ([]advertisements.Advertisements, error) {
+	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
 	if err != nil {
-		return nil, err
+		return []advertisements.Advertisements{}, err
 	}
-	Withdrawal, err := s.withdrawalsRepository.GetPendingUnnotifiedWithdrawals(data)
-	return Withdrawal, err
-
+	advertisementsGet, err := s.AdvertisementsRepository.AdvertisementsGet()
+	return advertisementsGet, err
 }
-func (s *WithdrawalsService) AcceptWithdrawal(id primitive.ObjectID, data withdrawalsdomain.AcceptWithdrawal) error {
+func (s *AdvertisementsService) CreateAdvertisement(StreamerID primitive.ObjectID, data advertisements.UpdateAdvertisement) (advertisements.Advertisements, error) {
+	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+	advertisementsGet, err := s.AdvertisementsRepository.CreateAdvertisement(data)
+	return advertisementsGet, err
+}
+func (s *AdvertisementsService) UpdateAdvertisement(StreamerID primitive.ObjectID, data advertisements.UpdateAdvertisement) (advertisements.Advertisements, error) {
+	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+	advertisementsGet, err := s.AdvertisementsRepository.UpdateAdvertisement(data)
+	return advertisementsGet, err
+}
 
-	err := s.withdrawalsRepository.AutCode(id, data.Code)
+func (s *AdvertisementsService) DeleteAdvertisement(StreamerID primitive.ObjectID, data advertisements.DeleteAdvertisement) error {
+	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
 	if err != nil {
 		return err
 	}
-	err = s.withdrawalsRepository.AcceptWithdrawal(id, data)
-
+	err = s.AdvertisementsRepository.DeleteAdvertisement(data.ID)
 	return err
-
-}
-func (s *WithdrawalsService) RejectWithdrawal(id primitive.ObjectID, data withdrawalsdomain.RejectWithdrawal) error {
-
-	err := s.withdrawalsRepository.AutCode(id, data.Code)
-	if err != nil {
-		return err
-	}
-	err = s.withdrawalsRepository.RejectWithdrawal(id, data)
-
-	return err
-
-}
-func (s *WithdrawalsService) GetWithdrawalToken(id primitive.ObjectID) ([]withdrawalsdomain.WithdrawalRequests, error) {
-
-	data, err := s.withdrawalsRepository.GetWithdrawalToken(id)
-
-	return data, err
-
 }
