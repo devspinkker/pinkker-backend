@@ -3,6 +3,7 @@ package main
 import (
 	"PINKKER-BACKEND/config"
 	StreamSummaryroutes "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-routes"
+	advertisementsroutes "PINKKER-BACKEND/internal/advertisements/advertisements-routes"
 	cliproutes "PINKKER-BACKEND/internal/clip/clip-routes"
 	donationroutes "PINKKER-BACKEND/internal/donation/donation-routes"
 	streamroutes "PINKKER-BACKEND/internal/stream/stream-routes"
@@ -62,6 +63,8 @@ func main() {
 	StreamSummaryroutes.StreamSummaryRoutes(app, redisClient, newMongoDB)
 
 	withdrawroutes.Withdrawroutes(app, redisClient, newMongoDB)
+
+	advertisementsroutes.AdvertisementsRoutes(app, redisClient, newMongoDB)
 
 	PORT := config.PORT()
 	if PORT == "" {

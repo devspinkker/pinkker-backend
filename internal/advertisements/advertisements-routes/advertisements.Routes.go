@@ -17,7 +17,7 @@ func AdvertisementsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB 
 	Service := advertisementsapplication.NewAdvertisementsService(Repository)
 	Handler := advertisementsinterface.NewwithdrawService(Service)
 
-	App.Get("/advertisements/GetAdvertisements", middleware.UseExtractor(), Handler.GetAdvertisements)
+	App.Post("/advertisements/GetAdvertisements", middleware.UseExtractor(), Handler.GetAdvertisements)
 	App.Post("/advertisements/CreateAdvertisement", middleware.UseExtractor(), Handler.CreateAdvertisement)
 	App.Post("/advertisements/UpdateAdvertisement", middleware.UseExtractor(), Handler.UpdateAdvertisement)
 	App.Post("/advertisements/DeleteAdvertisement", middleware.UseExtractor(), Handler.DeleteAdvertisement)
