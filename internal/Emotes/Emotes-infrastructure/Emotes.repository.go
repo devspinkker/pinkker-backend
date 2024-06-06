@@ -1,0 +1,181 @@
+package Emotesinfrastructure
+
+import (
+	EmotesDomain "PINKKER-BACKEND/internal/Emotes/Emotes"
+	userdomain "PINKKER-BACKEND/internal/user/user-domain"
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+type EmotesRepository struct {
+	redisClient *redis.Client
+	mongoClient *mongo.Client
+}
+
+func NewEmotesRepository(redisClient *redis.Client, mongoClient *mongo.Client) *EmotesRepository {
+	return &EmotesRepository{
+		redisClient: redisClient,
+		mongoClient: mongoClient,
+	}
+}
+
+func (r *EmotesRepository) CreateEmote(emote EmotesDomain.Emote) (*EmotesDomain.Emote, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	emote.ID = primitive.NewObjectID()
+	emote.CreatedAt = time.Now()
+
+	_, err := collection.InsertOne(context.Background(), emote)
+	if err != nil {
+		return nil, err
+	}
+	return &emote, nil
+}
+
+// UpdateEmote actualiza un emote existente en la base de datos
+func (r *EmotesRepository) UpdateEmote(emote EmotesDomain.Emote) (*EmotesDomain.Emote, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	filter := bson.M{"_id": emote.ID}
+	update := bson.M{
+		"$set": emote,
+	}
+
+	_, err := collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return nil, err
+	}
+	return &emote, nil
+}
+
+// DeleteEmote elimina un emote de la base de datos
+func (r *EmotesRepository) DeleteEmote(emoteID primitive.ObjectID) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	filter := bson.M{"_id": emoteID}
+
+	_, err := collection.DeleteOne(context.Background(), filter)
+	return err
+}
+
+// GetEmote obtiene un emote por su ID
+func (r *EmotesRepository) GetEmote(emoteID primitive.ObjectID) (*EmotesDomain.Emote, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	var emote EmotesDomain.Emote
+	err := collection.FindOne(context.Background(), bson.M{"_id": emoteID}).Decode(&emote)
+	if err != nil {
+		return nil, err
+	}
+	return &emote, nil
+}
+
+// GetAllEmotes obtiene todos los emotes de la colección
+func (r *EmotesRepository) GetAllEmotes() ([]EmotesDomain.Emote, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	cursor, err := collection.Find(context.Background(), bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var emotes []EmotesDomain.Emote
+	for cursor.Next(context.Background()) {
+		var emote EmotesDomain.Emote
+		if err := cursor.Decode(&emote); err != nil {
+			return nil, err
+		}
+		emotes = append(emotes, emote)
+	}
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+	return emotes, nil
+}
+
+// ChangeEmoteTypeToGlobal cambia el tipo de un emote a "global"
+func (r *EmotesRepository) ChangeEmoteTypeToGlobal(emoteID primitive.ObjectID) (*EmotesDomain.Emote, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	filter := bson.M{"_id": emoteID}
+	update := bson.M{
+		"$set": bson.M{"type": "global"},
+	}
+
+	var emote EmotesDomain.Emote
+	err := collection.FindOneAndUpdate(context.Background(), filter, update).Decode(&emote)
+	if err != nil {
+		return nil, err
+	}
+	return &emote, nil
+}
+
+// ChangeEmoteTypeToPinkker cambia el tipo de un emote a "pinkker"
+func (r *EmotesRepository) ChangeEmoteTypeToPinkker(emoteID primitive.ObjectID) (*EmotesDomain.Emote, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	filter := bson.M{"_id": emoteID}
+	update := bson.M{
+		"$set": bson.M{"type": "pinkker"},
+	}
+
+	var emote EmotesDomain.Emote
+	err := collection.FindOneAndUpdate(context.Background(), filter, update).Decode(&emote)
+	if err != nil {
+		return nil, err
+	}
+	return &emote, nil
+}
+func (r *EmotesRepository) GetEmotesByType(emoteType string) ([]EmotesDomain.Emote, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	filter := bson.M{"type": emoteType}
+	options := options.Find()
+	cursor, err := collection.Find(context.Background(), filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var emotes []EmotesDomain.Emote
+	for cursor.Next(context.Background()) {
+		var emote EmotesDomain.Emote
+		if err := cursor.Decode(&emote); err != nil {
+			return nil, err
+		}
+		emotes = append(emotes, emote)
+	}
+
+	return emotes, nil
+}
+func (r *EmotesRepository) AutCode(id primitive.ObjectID, code string) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collectionUsers := db.Collection("Users")
+	var User userdomain.User
+
+	err := collectionUsers.FindOne(context.Background(), bson.M{"_id": id}).Decode(&User)
+	if err != nil {
+		return err
+	}
+
+	if User.PanelAdminPinkker.Level != 1 || !User.PanelAdminPinkker.Asset || User.PanelAdminPinkker.Code != code {
+		return fmt.Errorf("usuario no autorizado")
+	}
+	return nil
+}
