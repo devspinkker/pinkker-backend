@@ -4,6 +4,7 @@ import (
 	Emotesapplication "PINKKER-BACKEND/internal/Emotes/Emotes-application"
 	Emotesinfrastructure "PINKKER-BACKEND/internal/Emotes/Emotes-infrastructure"
 	Emotesinterface "PINKKER-BACKEND/internal/Emotes/Emotes-interface"
+	"PINKKER-BACKEND/pkg/middleware"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
@@ -18,4 +19,7 @@ func EmotesRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.C
 
 	App.Get("Emotes/GetGlobalEmotes", Handler.GetGlobalEmotes)
 	App.Get("Emotes/GetPinkkerEmotes", Handler.GetPinkkerEmotes)
+
+	App.Post("Emotes/UpdateEmoteAut", middleware.UseExtractor(), Handler.UpdateEmoteAut)
+
 }

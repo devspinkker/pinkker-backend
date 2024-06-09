@@ -21,7 +21,12 @@ func (s *EmotesService) CreateEmote(emote Emotesdomain.Emote) (*Emotesdomain.Emo
 	return s.EmotesRepository.CreateEmote(emote)
 }
 
-func (s *EmotesService) UpdateEmote(emote Emotesdomain.Emote) (*Emotesdomain.Emote, error) {
+func (s *EmotesService) UpdateEmoteAut(emote Emotesdomain.EmoteUpdate, id primitive.ObjectID) (*Emotesdomain.Emote, error) {
+
+	err := s.EmotesRepository.AutCode(id, emote.Code)
+	if err != nil {
+		return nil, err
+	}
 	return s.EmotesRepository.UpdateEmote(emote)
 }
 
