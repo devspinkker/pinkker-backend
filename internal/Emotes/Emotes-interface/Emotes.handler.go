@@ -3,6 +3,7 @@ package Emotesinterface
 import (
 	EmotesDomain "PINKKER-BACKEND/internal/Emotes/Emotes"
 	Emotesapplication "PINKKER-BACKEND/internal/Emotes/Emotes-application"
+	"PINKKER-BACKEND/pkg/helpers"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -17,6 +18,54 @@ func NewwithdrawService(Servise *Emotesapplication.EmotesService) *EmotesReposit
 		Servise: Servise,
 	}
 }
+func (s *EmotesRepository) CreateOrUpdateEmoteWithImage(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	fileHeader, _ := c.FormFile("emoteImage")
+	PostImageChanel := make(chan string)
+	errChanel := make(chan error)
+	go helpers.ProcessImageEmotes(fileHeader, PostImageChanel, errChanel)
+
+	var req EmotesDomain.EmoteUpdateOrCreate
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request",
+		})
+	}
+
+	select {
+	case imageUrl := <-PostImageChanel:
+		emote := EmotesDomain.EmotePair{
+			Name: req.Name,
+			URL:  imageUrl,
+		}
+
+		createdEmote, err := s.Servise.CreateOrUpdateEmote(IdUserTokenP, req.TypeEmote, emote)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Internal Server Error",
+				"error":   err.Error(),
+			})
+		}
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "Emote creado o actualizado exitosamente",
+			"data":    createdEmote,
+		})
+
+	case err := <-errChanel:
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error al procesar la imagen",
+			"error":   err.Error(),
+		})
+	}
+}
+
 func (s *EmotesRepository) GetGlobalEmotes(c *fiber.Ctx) error {
 	GlobalEmotes, err := s.Servise.GetGlobalEmotes()
 	if err != nil {

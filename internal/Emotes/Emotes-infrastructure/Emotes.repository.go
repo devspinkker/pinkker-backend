@@ -88,6 +88,68 @@ func (r *EmotesRepository) GetEmote(emoteID primitive.ObjectID) (*EmotesDomain.E
 	return &emote, nil
 }
 
+func (r *EmotesRepository) UpdateOrCreateEmoteByUserAndType(userId primitive.ObjectID, emoteType string, emote EmotesDomain.EmotePair) (EmotesDomain.Emote, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	partnerFilter := bson.M{"_id": userId, "Partner.Active": true}
+	collectionUsers := db.Collection("Users")
+	var user userdomain.User
+	err := collectionUsers.FindOne(context.Background(), partnerFilter).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return EmotesDomain.Emote{}, fmt.Errorf("el usuario no es un Partner activo")
+		}
+		return EmotesDomain.Emote{}, err
+	}
+
+	// Construir el filtro y la actualización
+	filter := bson.M{"userId": userId, "type": emoteType}
+	update := bson.M{
+		"$push": bson.M{"emotes": emote},
+	}
+
+	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+	var updatedEmote EmotesDomain.Emote
+
+	// Realizar la operación de findOneAndUpdate
+	err = collection.FindOneAndUpdate(context.Background(), filter, update, opts).Decode(&updatedEmote)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			// Si no existe, crear un nuevo documento
+			newEmote := EmotesDomain.Emote{
+				UserID:    userId,
+				Type:      emoteType,
+				Emotes:    []EmotesDomain.EmotePair{emote},
+				CreatedAt: time.Now(),
+			}
+			newEmote.ID = primitive.NewObjectID()
+
+			_, err := collection.InsertOne(context.Background(), newEmote)
+			if err != nil {
+				return EmotesDomain.Emote{}, err
+			}
+			return newEmote, nil
+		}
+		return EmotesDomain.Emote{}, err
+	}
+
+	return updatedEmote, nil
+}
+
+func (r *EmotesRepository) GetEmoteTypesByUser(userId primitive.ObjectID, emoteType string) (*EmotesDomain.Emote, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	var emote EmotesDomain.Emote
+	filter := bson.M{"userId": userId, "type": emoteType}
+	err := collection.FindOne(context.Background(), filter).Decode(&emote)
+	if err != nil {
+		return nil, err
+	}
+	return &emote, nil
+}
+
 // GetAllEmotes obtiene todos los emotes de la colección
 func (r *EmotesRepository) GetAllEmotes() ([]EmotesDomain.Emote, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")

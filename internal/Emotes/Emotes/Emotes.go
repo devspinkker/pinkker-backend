@@ -13,12 +13,12 @@ type EmotePair struct {
 
 // Emote representa un emote individual
 type Emote struct {
-	ID        primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
-	Name      string              `json:"name" bson:"name"`
-	Emotes    []EmotePair         `json:"emotes" bson:"emotes"`
-	CreatedAt time.Time           `json:"createdAt" bson:"createdAt"`
-	Type      string              `json:"type" bson:"type"`
-	UserID    *primitive.ObjectID `json:"userId,omitempty" bson:"userId,omitempty"` // Solo para emotes de usuario
+	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Name      string             `json:"name" bson:"name"`
+	Emotes    []EmotePair        `json:"emotes" bson:"emotes"`
+	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
+	Type      string             `json:"type" bson:"type"`
+	UserID    primitive.ObjectID `json:"userId,omitempty" bson:"userId,omitempty"` // Solo para emotes de usuario
 }
 
 type EmoteUpdate struct {
@@ -29,6 +29,11 @@ type EmoteUpdate struct {
 	Type      string              `json:"type" bson:"type"`
 	UserID    *primitive.ObjectID `json:"userId,omitempty" bson:"userId,omitempty"` // Solo para emotes de usuario
 	Code      string              `json:"Code" bson:"Code"`
+}
+
+type EmoteUpdateOrCreate struct {
+	Name      string `json:"name" bson:"name"`
+	TypeEmote string `json:"typeEmote" bson:"typeEmote"`
 }
 
 // func (u *Emotes) Validate() error {

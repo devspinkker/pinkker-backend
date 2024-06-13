@@ -1,6 +1,7 @@
 package Emotesapplication
 
 import (
+	EmotesDomain "PINKKER-BACKEND/internal/Emotes/Emotes"
 	Emotesdomain "PINKKER-BACKEND/internal/Emotes/Emotes"
 	Emotesinfrastructure "PINKKER-BACKEND/internal/Emotes/Emotes-infrastructure"
 
@@ -22,6 +23,10 @@ func (s *EmotesService) CreateEmote(emote Emotesdomain.Emote) (*Emotesdomain.Emo
 	return s.EmotesRepository.CreateEmote(emote)
 }
 
+func (s *EmotesService) CreateOrUpdateEmote(userId primitive.ObjectID, emoteType string, emote EmotesDomain.EmotePair) (Emotesdomain.Emote, error) {
+
+	return s.EmotesRepository.UpdateOrCreateEmoteByUserAndType(userId, emoteType, emote)
+}
 func (s *EmotesService) UpdateEmoteAut(emote Emotesdomain.EmoteUpdate, id primitive.ObjectID) (*Emotesdomain.Emote, error) {
 
 	err := s.EmotesRepository.AutCode(id, emote.Code)
