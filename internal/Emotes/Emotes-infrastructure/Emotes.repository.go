@@ -137,7 +137,7 @@ func (r *EmotesRepository) UpdateOrCreateEmoteByUserAndType(userId primitive.Obj
 	return updatedEmote, nil
 }
 
-func (r *EmotesRepository) GetEmoteTypesByUser(userId primitive.ObjectID, emoteType string) (*EmotesDomain.Emote, error) {
+func (r *EmotesRepository) GetEmoteIdUserandType(userId primitive.ObjectID, emoteType string) (EmotesDomain.Emote, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("Emotes")
 
@@ -145,9 +145,9 @@ func (r *EmotesRepository) GetEmoteTypesByUser(userId primitive.ObjectID, emoteT
 	filter := bson.M{"userId": userId, "type": emoteType}
 	err := collection.FindOne(context.Background(), filter).Decode(&emote)
 	if err != nil {
-		return nil, err
+		return EmotesDomain.Emote{}, err
 	}
-	return &emote, nil
+	return emote, nil
 }
 
 // GetAllEmotes obtiene todos los emotes de la colección

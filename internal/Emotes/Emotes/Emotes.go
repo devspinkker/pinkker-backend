@@ -35,6 +35,10 @@ type EmoteUpdateOrCreate struct {
 	Name      string `json:"name" bson:"name"`
 	TypeEmote string `json:"typeEmote" bson:"typeEmote"`
 }
+type GetEmoteIdUserandType struct {
+	IdUser    primitive.ObjectID `json:"IdUser" bson:"IdUserIdUser"`
+	TypeEmote string             `json:"typeEmote" bson:"typeEmote"`
+}
 
 // func (u *Emotes) Validate() error {
 // 	validate := validator.New()

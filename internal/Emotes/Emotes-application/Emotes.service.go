@@ -34,6 +34,11 @@ func (s *EmotesService) UpdateEmoteAut(emote Emotesdomain.EmoteUpdate, id primit
 		return nil, err
 	}
 	return s.EmotesRepository.UpdateEmote(emote)
+
+}
+func (s *EmotesService) GetEmoteIdUserandType(userId primitive.ObjectID, emoteType string) (Emotesdomain.Emote, error) {
+
+	return s.EmotesRepository.GetEmoteIdUserandType(userId, emoteType)
 }
 
 func (s *EmotesService) DeleteEmote(emoteID primitive.ObjectID) error {
