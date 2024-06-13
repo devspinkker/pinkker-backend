@@ -20,16 +20,14 @@ func NewwithdrawService(Servise *Emotesapplication.EmotesService) *EmotesReposit
 }
 func (s *EmotesRepository) CreateOrUpdateEmoteWithImage(c *fiber.Ctx) error {
 	IdUserToken := c.Context().UserValue("_id").(string)
+	nameUser := c.Context().UserValue("nameUser").(string)
+
 	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
 	if errinObjectID != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
 		})
 	}
-	fileHeader, _ := c.FormFile("emoteImage")
-	PostImageChanel := make(chan string)
-	errChanel := make(chan error)
-	go helpers.ProcessImageEmotes(fileHeader, PostImageChanel, errChanel)
 
 	var req EmotesDomain.EmoteUpdateOrCreate
 	if err := c.BodyParser(&req); err != nil {
@@ -37,6 +35,10 @@ func (s *EmotesRepository) CreateOrUpdateEmoteWithImage(c *fiber.Ctx) error {
 			"message": "Bad Request",
 		})
 	}
+	fileHeader, _ := c.FormFile("emoteImage")
+	PostImageChanel := make(chan string)
+	errChanel := make(chan error)
+	go helpers.ProcessImageEmotes(fileHeader, PostImageChanel, errChanel, nameUser, req.TypeEmote)
 
 	select {
 	case imageUrl := <-PostImageChanel:
