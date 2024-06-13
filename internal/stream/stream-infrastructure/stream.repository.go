@@ -5,7 +5,6 @@ import (
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
-	"PINKKER-BACKEND/pkg/helpers"
 	"context"
 	"errors"
 	"fmt"
@@ -484,7 +483,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 				notifyOnlineStreamer = append(notifyOnlineStreamer, followInfo.Email)
 			}
 		}
-		_ = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
+		// _ = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
 
 		// modo de chat cuandos se prende
 		exist, err := r.redisClient.Exists(context.Background(), StreamFind.ID.Hex()).Result()
