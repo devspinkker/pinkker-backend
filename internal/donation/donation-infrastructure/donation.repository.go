@@ -209,6 +209,7 @@ func (d *DonationRepository) AllMyPixelesDonors(id primitive.ObjectID) ([]donati
 			{Key: "ToUser", Value: 1},
 			{Key: "id", Value: "$_id"},
 		}}},
+		{{Key: "$limit", Value: 20}},
 	}
 	cursor, err := GoMongoDBCollDonations.Aggregate(context.Background(), pipeline)
 	if err != nil {

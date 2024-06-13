@@ -18,6 +18,7 @@ func NewEmotesService(EmotesRepository *Emotesinfrastructure.EmotesRepository) *
 }
 
 func (s *EmotesService) CreateEmote(emote Emotesdomain.Emote) (*Emotesdomain.Emote, error) {
+
 	return s.EmotesRepository.CreateEmote(emote)
 }
 

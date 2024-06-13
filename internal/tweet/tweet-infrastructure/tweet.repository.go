@@ -587,13 +587,7 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 }
 
 // Función de utilidad para extraer los IDs de los tweets
-func getIDsFromTweets(tweets []tweetdomain.TweetGetFollowReq) []primitive.ObjectID {
-	var ids []primitive.ObjectID
-	for _, tweet := range tweets {
-		ids = append(ids, tweet.ID)
-	}
-	return ids
-}
+
 func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectID, page int) ([]tweetdomain.TweetGetFollowReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 	currentTime := time.Now()
@@ -870,13 +864,18 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 	}
 
 	last24Hours := time.Now().Add(-24 * time.Hour)
-
+	excludedIDs := make([]interface{}, len(excludeIDs))
+	for i, id := range excludeIDs {
+		excludedIDs[i] = id
+	}
+	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
 	pipeline := bson.A{
 		bson.D{{Key: "$match", Value: bson.M{"Type": bson.M{"$in": []string{"Post", "RePost", "CitaPost", "PostComment"}}}}},
 		bson.D{{Key: "$match", Value: bson.D{
 			{Key: "Likes", Value: bson.D{{Key: "$in", Value: followingIDs}}},
 			{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
 		}}},
+		bson.D{{Key: "$match", Value: excludeFilter}},
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
@@ -904,13 +903,6 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 		}}},
 	}
 
-	excludedIDs := make([]interface{}, len(excludeIDs))
-	for i, id := range excludeIDs {
-		excludedIDs[i] = id
-	}
-	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
-	pipeline = append(pipeline, bson.D{{Key: "$match", Value: excludeFilter}})
-
 	cursor, err := GoMongoDBCollTweets.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
@@ -931,6 +923,7 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 
 	pipelineRandom := bson.A{
 		bson.D{{Key: "$match", Value: bson.M{"Type": bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}}}},
+		bson.D{{Key: "$match", Value: excludeFilter}},
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
@@ -959,7 +952,6 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
 		bson.D{{Key: "$limit", Value: limit - len(tweetsWithUserInfo)}},
 	}
-	pipelineRandom = append(pipelineRandom, bson.D{{Key: "$match", Value: excludeFilter}})
 
 	cursorRandom, err := GoMongoDBCollTweets.Aggregate(ctx, pipelineRandom)
 	if err != nil {
@@ -978,9 +970,11 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 	}
 
 	// Actualizar el campo Views sumando 1 para los posts obtenidos en ambos pipelines
-	_, err = GoMongoDBCollTweets.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": tweetIDs}}, bson.M{"$inc": bson.M{"Views": 1}})
-	if err != nil {
-		return nil, err
+	if len(tweetIDs) > 0 {
+		_, err = GoMongoDBCollTweets.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": tweetIDs}}, bson.M{"$inc": bson.M{"Views": 1}})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var originalPostIDs []primitive.ObjectID
@@ -1044,6 +1038,7 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 
 	return tweetsWithUserInfo, nil
 }
+
 func (t *TweetRepository) GetTrends(page int, limit int) ([]tweetdomain.Trend, error) {
 	GoMongoDB := t.mongoClient.Database("PINKKER-BACKEND").Collection("Trends")
 
