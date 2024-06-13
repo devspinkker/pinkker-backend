@@ -70,13 +70,20 @@ func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, exc
 			followingIDs = append(followingIDs, userID)
 		}
 	}
+	excludedIDs := make([]interface{}, len(excludeIDs))
+	for i, id := range excludeIDs {
+		excludedIDs[i] = id
+	}
+	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
 
+	// Agregar el filtro de exclusión al pipeline
 	pipelineFirstFour := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: bson.D{
 			{Key: "likes", Value: bson.D{{Key: "$in", Value: followingIDs}}},
 			{Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: time.Now().Add(-23 * time.Hour)}}},
 			{Key: "category", Value: bson.D{{Key: "$in", Value: firstFourCategories}}}, // Filtrar por las primeras 4 categorías
 		}}},
+		bson.D{{Key: "$match", Value: excludeFilter}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceFactor", Value: bson.D{
 				{Key: "$multiply", Value: []interface{}{
@@ -88,14 +95,6 @@ func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, exc
 		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
 		bson.D{{Key: "$limit", Value: limit}},
 	}
-	excludedIDs := make([]interface{}, len(excludeIDs))
-	for i, id := range excludeIDs {
-		excludedIDs[i] = id
-	}
-	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
-
-	// Agregar el filtro de exclusión al pipeline
-	pipelineFirstFour = append(pipelineFirstFour, bson.D{{Key: "$match", Value: excludeFilter}})
 
 	cursorFirstFour, err := GoMongoDBCollClip.Aggregate(ctx, pipelineFirstFour)
 	if err != nil {
@@ -120,6 +119,7 @@ func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, exc
 		//	{Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: time.Now().Add(-23 * time.Hour)}}},
 		//	{Key: "category", Value: bson.D{{Key: "$nin", Value: firstFourCategories}}}, // Filtrar por categorías distintas a las primeras 4
 		// }}},
+		bson.D{{Key: "$match", Value: excludeFilter}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceFactor", Value: bson.D{
 				{Key: "$multiply", Value: []interface{}{
@@ -131,7 +131,6 @@ func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, exc
 		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
 		bson.D{{Key: "$limit", Value: limit - len(recommendedClips)}}, // Limitar la cantidad de clips devueltos por categorías distintas
 	}
-	pipelineRandom = append(pipelineRandom, bson.D{{Key: "$match", Value: excludeFilter}})
 	// Ejecutar el pipeline de agregación para obtener clips de categorías distintas
 	cursorRandom, err := GoMongoDBCollClip.Aggregate(ctx, pipelineRandom)
 	if err != nil {
