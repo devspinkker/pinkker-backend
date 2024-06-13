@@ -65,7 +65,29 @@ func (s *EmotesRepository) CreateOrUpdateEmoteWithImage(c *fiber.Ctx) error {
 		})
 	}
 }
+func (s *EmotesRepository) GetEmoteIdUserandType(c *fiber.Ctx) error {
 
+	var req EmotesDomain.GetEmoteIdUserandType
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request",
+		})
+	}
+
+	Emote, err := s.Servise.GetEmoteIdUserandType(req.IdUser, req.TypeEmote)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"error":   err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Emote,
+	})
+
+}
 func (s *EmotesRepository) GetGlobalEmotes(c *fiber.Ctx) error {
 	GlobalEmotes, err := s.Servise.GetGlobalEmotes()
 	if err != nil {
