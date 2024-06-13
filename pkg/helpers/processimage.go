@@ -12,7 +12,7 @@ import (
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 )
 
-func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
+func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error, nameUser, typeEmote string) {
 	if fileHeader != nil {
 		file, err := fileHeader.Open()
 		if err != nil {
@@ -36,7 +36,7 @@ func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan s
 		}
 
 		params := uploader.UploadParams{
-			Folder: "emotes/",
+			Folder: "emotes/" + nameUser + "/" + typeEmote,
 		}
 		resp, err := cldService.Upload.Upload(ctx, file, params)
 		if err != nil {
@@ -48,7 +48,6 @@ func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan s
 			errChanel <- errors.New("la URL de la imagen no tiene un protocolo seguro")
 			return
 		}
-
 		PostImageChanel <- resp.SecureURL
 	} else {
 		PostImageChanel <- ""
