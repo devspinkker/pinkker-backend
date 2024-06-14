@@ -31,13 +31,23 @@ func (s *EmotesService) DeleteEmoteForType(userId primitive.ObjectID, Name strin
 
 	return s.EmotesRepository.DeleteEmoteForType(userId, emoteType, Name)
 }
-func (s *EmotesService) UpdateEmoteAut(emote Emotesdomain.EmoteUpdate, id primitive.ObjectID) (*Emotesdomain.Emote, error) {
+func (s *EmotesService) AddEmoteAut(emote Emotesdomain.EmoteUpdate, id primitive.ObjectID) (*Emotesdomain.Emote, error) {
 
 	err := s.EmotesRepository.AutCode(id, emote.Code)
 	if err != nil {
 		return nil, err
 	}
-	return s.EmotesRepository.UpdateEmote(emote)
+	return s.EmotesRepository.AddEmoteAut(emote)
+
+}
+
+func (s *EmotesService) DeleteEmoteAut(emote Emotesdomain.EmoteUpdate, id primitive.ObjectID) (*Emotesdomain.Emote, error) {
+
+	err := s.EmotesRepository.AutCode(id, emote.Code)
+	if err != nil {
+		return nil, err
+	}
+	return s.EmotesRepository.DeleteEmoteAut(emote)
 
 }
 func (s *EmotesService) GetEmoteIdUserandType(userId primitive.ObjectID, emoteType string) (Emotesdomain.Emote, error) {

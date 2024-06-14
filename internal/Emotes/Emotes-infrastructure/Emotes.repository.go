@@ -40,14 +40,35 @@ func (r *EmotesRepository) CreateEmote(emote EmotesDomain.Emote) (*EmotesDomain.
 	return &emote, nil
 }
 
-// UpdateEmote actualiza un emote existente en la base de datos
-func (r *EmotesRepository) UpdateEmote(emote EmotesDomain.EmoteUpdate) (*EmotesDomain.Emote, error) {
+func (r *EmotesRepository) AddEmoteAut(emote EmotesDomain.EmoteUpdate) (*EmotesDomain.Emote, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("Emotes")
 
 	filter := bson.M{"_id": emote.ID}
 	update := bson.M{
-		"$set": bson.M{"emotes": emote.Emotes},
+		"$push": bson.M{"emotes": emote.Emotes},
+	}
+
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
+	var updatedEmote EmotesDomain.Emote
+
+	err := collection.FindOneAndUpdate(context.Background(), filter, update, opts).Decode(&updatedEmote)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &updatedEmote, nil
+}
+func (r *EmotesRepository) DeleteEmoteAut(emote EmotesDomain.EmoteUpdate) (*EmotesDomain.Emote, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	filter := bson.M{"_id": emote.ID}
+	update := bson.M{
+		"$pull": bson.M{"emotes": emote.Emotes},
 	}
 
 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)

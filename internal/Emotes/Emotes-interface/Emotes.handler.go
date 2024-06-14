@@ -144,30 +144,88 @@ func (s *EmotesRepository) GetPinkkerEmotes(c *fiber.Ctx) error {
 		"data":    GlobalEmotes,
 	})
 }
-func (s *EmotesRepository) UpdateEmoteAut(c *fiber.Ctx) error {
+func (s *EmotesRepository) AddEmoteAut(c *fiber.Ctx) error {
+	// Extract user ID from context
+	idValue := c.Context().UserValue("_id").(string)
+	nameUser := c.Context().UserValue("nameUser").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request",
+		})
+	}
+
+	// Parse request body into EmoteUpdate struct
+	var req EmotesDomain.EmoteUpdate
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request",
+		})
+	}
+
+	fileHeader, _ := c.FormFile("emoteImage")
+	PostImageChanel := make(chan string)
+	errChanel := make(chan error)
+
+	go helpers.ProcessImageEmotes(fileHeader, PostImageChanel, errChanel, nameUser+"aut", req.Type)
+
+	select {
+	case imageUrl := <-PostImageChanel:
+		req.Emotes = EmotesDomain.EmotePair{
+			URL:  imageUrl,
+			Name: req.Name,
+		}
+		updatedEmote, err := s.Servise.AddEmoteAut(req, idValueObj)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Internal Server Error",
+				"error":   err.Error(),
+			})
+		}
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "OK",
+			"data":    updatedEmote,
+		})
+
+	case err := <-errChanel:
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error processing image",
+			"error":   err.Error(),
+		})
+	}
+}
+func (s *EmotesRepository) DeleteEmoteAut(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
 	if errorID != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "StatusBadRequest",
+			"message": "Bad Request",
 		})
 	}
-	var req EmotesDomain.EmoteUpdate
 
+	var req EmotesDomain.EmoteUpdate
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "StatusBadRequest",
+			"message": "Bad Request",
 		})
 	}
-	Emotes, err := s.Servise.UpdateEmoteAut(req, idValueObj)
+
+	req.Emotes = EmotesDomain.EmotePair{
+		URL:  "",
+		Name: req.Name,
+	}
+	updatedEmote, err := s.Servise.DeleteEmoteAut(req, idValueObj)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "StatusInternalServerError",
-			"data":    err.Error(),
+			"message": "Internal Server Error",
+			"error":   err.Error(),
 		})
 	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "ok",
-		"data":    Emotes,
+		"message": "OK",
+		"data":    updatedEmote,
 	})
+
 }
