@@ -22,13 +22,12 @@ type Emote struct {
 }
 
 type EmoteUpdate struct {
-	ID        primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
-	Name      string              `json:"name" bson:"name"`
-	Emotes    []EmotePair         `json:"emotes" bson:"emotes"`
-	CreatedAt time.Time           `json:"createdAt" bson:"createdAt"`
-	Type      string              `json:"type" bson:"type"`
-	UserID    *primitive.ObjectID `json:"userId,omitempty" bson:"userId,omitempty"` // Solo para emotes de usuario
-	Code      string              `json:"Code" bson:"Code"`
+	ID     primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
+	Emotes EmotePair           `json:"emotes" bson:"emotes"`
+	Type   string              `json:"type" bson:"type"`
+	UserID *primitive.ObjectID `json:"userId,omitempty" bson:"userId,omitempty"` // Solo para emotes de usuario
+	Code   string              `json:"Code" bson:"Code"`
+	Name   string              `json:"name" bson:"name"`
 }
 
 type EmoteUpdateOrCreate struct {

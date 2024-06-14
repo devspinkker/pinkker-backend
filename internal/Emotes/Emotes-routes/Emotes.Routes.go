@@ -20,7 +20,8 @@ func EmotesRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.C
 	App.Get("Emotes/GetGlobalEmotes", Handler.GetGlobalEmotes)
 	App.Get("Emotes/GetPinkkerEmotes", Handler.GetPinkkerEmotes)
 
-	App.Post("Emotes/UpdateEmoteAut", middleware.UseExtractor(), Handler.UpdateEmoteAut)
+	App.Post("Emotes/AddEmoteAut", middleware.UseExtractor(), Handler.AddEmoteAut)
+	App.Post("Emotes/DeleteEmoteAut", middleware.UseExtractor(), Handler.DeleteEmoteAut)
 	App.Post("Emotes/CreateOrUpdateEmote", middleware.UseExtractor(), Handler.CreateOrUpdateEmoteWithImage)
 	App.Post("Emotes/GetEmoteUserandType", middleware.UseExtractor(), Handler.GetEmoteIdUserandType)
 	App.Post("Emotes/DeleteEmoteForType", middleware.UseExtractor(), Handler.DeleteEmoteForType)
