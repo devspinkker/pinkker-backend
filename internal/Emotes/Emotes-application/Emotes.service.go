@@ -27,6 +27,10 @@ func (s *EmotesService) CreateOrUpdateEmote(userId primitive.ObjectID, emoteType
 
 	return s.EmotesRepository.UpdateOrCreateEmoteByUserAndType(userId, emoteType, emote)
 }
+func (s *EmotesService) DeleteEmoteForType(userId primitive.ObjectID, Name string, emoteType string) error {
+
+	return s.EmotesRepository.DeleteEmoteForType(userId, emoteType, Name)
+}
 func (s *EmotesService) UpdateEmoteAut(emote Emotesdomain.EmoteUpdate, id primitive.ObjectID) (*Emotesdomain.Emote, error) {
 
 	err := s.EmotesRepository.AutCode(id, emote.Code)

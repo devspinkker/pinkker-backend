@@ -87,6 +87,36 @@ func (r *EmotesRepository) GetEmote(emoteID primitive.ObjectID) (*EmotesDomain.E
 	}
 	return &emote, nil
 }
+func (r *EmotesRepository) DeleteEmoteForType(userId primitive.ObjectID, emoteType string, emoteName string) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Emotes")
+
+	partnerFilter := bson.M{"_id": userId, "Partner.Active": true}
+	collectionUsers := db.Collection("Users")
+	var user userdomain.User
+	err := collectionUsers.FindOne(context.Background(), partnerFilter).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return fmt.Errorf("el usuario no es un Partner activo")
+		}
+		return err
+	}
+
+	filter := bson.M{"userId": userId, "type": emoteType}
+	update := bson.M{
+		"$pull": bson.M{"emotes": bson.M{"name": emoteName}},
+	}
+
+	_, err = collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return fmt.Errorf("no se encontró ningún documento con el userId y emoteType especificados")
+		}
+		return err
+	}
+
+	return nil
+}
 
 func (r *EmotesRepository) UpdateOrCreateEmoteByUserAndType(userId primitive.ObjectID, emoteType string, emote EmotesDomain.EmotePair) (EmotesDomain.Emote, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
