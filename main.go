@@ -2,6 +2,7 @@ package main
 
 import (
 	"PINKKER-BACKEND/config"
+	Chatsroutes "PINKKER-BACKEND/internal/Chat/Chats-routes"
 	Emotesroutes "PINKKER-BACKEND/internal/Emotes/Emotes-routes"
 	StreamSummaryroutes "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-routes"
 	advertisementsroutes "PINKKER-BACKEND/internal/advertisements/advertisements-routes"
@@ -69,6 +70,7 @@ func main() {
 
 	Emotesroutes.EmotesRoutes(app, redisClient, newMongoDB)
 
+	Chatsroutes.ChatsRoutes(app, redisClient, newMongoDB)
 	PORT := config.PORT()
 	if PORT == "" {
 		PORT = "8081"

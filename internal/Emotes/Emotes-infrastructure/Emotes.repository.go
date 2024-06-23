@@ -67,8 +67,9 @@ func (r *EmotesRepository) DeleteEmoteAut(emote EmotesDomain.EmoteUpdate) (*Emot
 	collection := db.Collection("Emotes")
 
 	filter := bson.M{"_id": emote.ID}
+
 	update := bson.M{
-		"$pull": bson.M{"emotes": emote.Emotes},
+		"$pull": bson.M{"emotes": bson.M{"name": emote.Emotes.Name}},
 	}
 
 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
