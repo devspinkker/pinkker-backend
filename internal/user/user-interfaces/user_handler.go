@@ -334,7 +334,6 @@ func (h *UserHandler) Get_Recover_lost_password(c *fiber.Ctx) error {
 
 func (h *UserHandler) RestorePassword(c *fiber.Ctx) error {
 	var Get_new_password domain.ReqRestorePassword
-	fmt.Println("dsdsdss")
 
 	if err := c.BodyParser(&Get_new_password); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
