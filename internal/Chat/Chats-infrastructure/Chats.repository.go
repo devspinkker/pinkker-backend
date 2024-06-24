@@ -30,12 +30,14 @@ func (r *ChatsRepository) SaveMessage(message *Chatsdomain.Message) (*Chatsdomai
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := collection.InsertOne(ctx, message)
+	result, err := collection.InsertOne(ctx, message)
 	if err != nil {
 		return nil, err
 	}
 
-	filter := bson.M{"_id": message.ID}
+	insertedID := result.InsertedID.(primitive.ObjectID)
+
+	filter := bson.M{"_id": insertedID}
 
 	var savedMessage Chatsdomain.Message
 	err = collection.FindOne(ctx, filter).Decode(&savedMessage)
@@ -87,6 +89,62 @@ func (r *ChatsRepository) AddMessageToChat(user1ID, user2ID, messageID string) (
 	}
 
 	return objectID.Hex(), nil
+}
+
+func (r *ChatsRepository) GetChatsByUserID(userID string) ([]*Chatsdomain.ChatWithUsers, error) {
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.M{
+			"$or": bson.A{
+				bson.M{"user1_id": userID},
+				bson.M{"user2_id": userID},
+			},
+		}}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "let", Value: bson.D{
+				{Key: "user1_id", Value: "$user1_id"},
+				{Key: "user2_id", Value: "$user2_id"},
+			}},
+			{Key: "pipeline", Value: bson.A{
+				bson.D{{Key: "$match", Value: bson.M{
+					"$expr": bson.M{
+						"$or": bson.A{
+							bson.M{"$eq": bson.A{"$_id", "$$user1_id"}},
+							bson.M{"$eq": bson.A{"$_id", "$$user2_id"}},
+						},
+					},
+				}}},
+				bson.D{{Key: "$project", Value: bson.M{
+					"_id":      1,
+					"NameUser": 1,
+					"Avatar":   1,
+					"Partner":  1,
+				}}},
+			}},
+			{Key: "as", Value: "users"},
+		}}},
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var chats []*Chatsdomain.ChatWithUsers
+	for cursor.Next(ctx) {
+		var chat Chatsdomain.ChatWithUsers
+		if err := cursor.Decode(&chat); err != nil {
+			return nil, err
+		}
+		chats = append(chats, &chat)
+	}
+
+	return chats, nil
 }
 
 func (r *ChatsRepository) GetMessages(senderID, receiverID string) ([]*Chatsdomain.Message, error) {

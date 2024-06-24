@@ -38,7 +38,7 @@ func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 
 	message, Room, err := h.Service.SendMessage(request.SenderID, request.ReceiverID, request.Content)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot send message"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 	notification := map[string]interface{}{
 		"action":  "new_message",
@@ -78,7 +78,16 @@ func (h *ChatsHandler) GetMessages(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(messages)
 }
+func (h *ChatsHandler) GetChatsByUserID(c *fiber.Ctx) error {
+	userID := c.Context().UserValue("_id").(string)
 
+	messages, err := h.Service.GetChatsByUserID(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot get messages"})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(messages)
+}
 func (h *ChatsHandler) MarkMessageAsSeen(c *fiber.Ctx) error {
 	userID := c.Context().UserValue("_id").(string)
 	messageID := c.Params("id")
