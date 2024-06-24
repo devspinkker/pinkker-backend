@@ -172,7 +172,43 @@ func (r *ChatsRepository) GetMessages(senderID, receiverID string) ([]*Chatsdoma
 
 	return messages, nil
 }
+func (r *ChatsRepository) GetRecentMessages(user1ID, user2ID primitive.ObjectID) ([]*Chatsdomain.Message, error) {
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("messages")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.M{
+			"$or": []bson.M{
+				{"sender_id": user1ID, "receiver_id": user2ID},
+				{"sender_id": user2ID, "receiver_id": user1ID},
+			},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.M{"created_at": -1}}},
+		bson.D{{Key: "$limit", Value: 20}},
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var messages []*Chatsdomain.Message
+	for cursor.Next(ctx) {
+		var message Chatsdomain.Message
+		if err := cursor.Decode(&message); err != nil {
+			return nil, err
+		}
+		messages = append(messages, &message)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return messages, nil
+}
 func (r *ChatsRepository) MarkMessageAsSeen(messageID string) error {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("messages")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

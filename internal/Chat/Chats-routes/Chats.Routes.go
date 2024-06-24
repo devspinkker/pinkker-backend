@@ -19,6 +19,8 @@ func ChatsRoutes(app *fiber.App, redisClient *redis.Client, mongoClient *mongo.C
 	app.Post("/chats/send", middleware.UseExtractor(), handler.SendMessage)
 	app.Get("/chats/GetChatsByUserID", middleware.UseExtractor(), handler.GetChatsByUserID)
 	app.Get("/chats/messages", middleware.UseExtractor(), handler.GetMessages)
+	app.Get("/chats/GetRecentMessages", middleware.UseExtractor(), handler.GetRecentMessages)
+
 	app.Post("/chats/seen/:id", middleware.UseExtractor(), handler.MarkMessageAsSeen)
 	app.Get("/ws/chat/:roomID", middleware.UseExtractor(), websocket.New(handler.WebSocketHandler))
 }
