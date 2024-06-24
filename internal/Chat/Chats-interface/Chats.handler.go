@@ -21,8 +21,12 @@ func NewChatsHandler(service *Chatsapplication.ChatsService) *ChatsHandler {
 }
 
 func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
-	userID := c.Context().UserValue("_id").(primitive.ObjectID)
+	userID := c.Context().UserValue("_id").(string)
 
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
+	}
 	var request struct {
 		SenderID   primitive.ObjectID `json:"sender_id"`
 		ReceiverID primitive.ObjectID `json:"receiver_id"`
@@ -33,7 +37,7 @@ func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse request"})
 	}
 
-	if request.SenderID != userID && request.ReceiverID != userID {
+	if request.SenderID != objID && request.ReceiverID != objID {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -62,13 +66,17 @@ func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 }
 
 func (h *ChatsHandler) GetMessages(c *fiber.Ctx) error {
-	userID := c.Context().UserValue("_id").(primitive.ObjectID)
+	userID := c.Context().UserValue("_id").(string)
 
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
+	}
 	senderID := c.Query("sender_id")
 	receiverID := c.Query("receiver_id")
 
 	// Verify that the sender or receiver is the authenticated user
-	if senderID != userID.Hex() && receiverID != userID.Hex() {
+	if senderID != objID.Hex() && receiverID != objID.Hex() {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -81,9 +89,14 @@ func (h *ChatsHandler) GetMessages(c *fiber.Ctx) error {
 }
 
 func (h *ChatsHandler) GetChatsByUserID(c *fiber.Ctx) error {
-	userID := c.Context().UserValue("_id").(primitive.ObjectID)
+	userID := c.Context().UserValue("_id").(string)
 
-	messages, err := h.Service.GetChatsByUserID(userID)
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
+	}
+
+	messages, err := h.Service.GetChatsByUserID(objID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot get messages"})
 	}
@@ -92,8 +105,12 @@ func (h *ChatsHandler) GetChatsByUserID(c *fiber.Ctx) error {
 }
 
 func (h *ChatsHandler) MarkMessageAsSeen(c *fiber.Ctx) error {
-	userID := c.Context().UserValue("_id").(primitive.ObjectID)
+	userID := c.Context().UserValue("_id").(string)
 
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "StatusBadRequest"})
+	}
 	messageID := c.Params("id")
 
 	message, err := h.Service.GetMessageByID(messageID)
@@ -102,7 +119,7 @@ func (h *ChatsHandler) MarkMessageAsSeen(c *fiber.Ctx) error {
 	}
 
 	// Verify that the receiver is the authenticated user
-	if message.ReceiverID != userID {
+	if message.ReceiverID != objID {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -121,7 +138,10 @@ func (h *ChatsHandler) WebSocketHandler(c *websocket.Conn) {
 		if err != nil {
 			return
 		}
-		idUser, _ = primitive.ObjectIDFromHex(id)
+		idUser, err = primitive.ObjectIDFromHex(id)
+		if err != nil {
+			return
+		}
 	}
 
 	roomID := c.Params("roomID")
