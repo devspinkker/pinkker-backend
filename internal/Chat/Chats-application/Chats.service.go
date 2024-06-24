@@ -45,6 +45,9 @@ func (s *ChatsService) GetMessages(senderID, receiverID string) ([]*Chatsdomain.
 func (s *ChatsService) MarkMessageAsSeen(messageID string) error {
 	return s.ChatsRepository.MarkMessageAsSeen(messageID)
 }
+func (s *ChatsService) GetChatsByUserID(messageID string) ([]*Chatsdomain.ChatWithUsers, error) {
+	return s.ChatsRepository.GetChatsByUserID(messageID)
+}
 
 func (s *ChatsService) GetMessageByID(messageID string) (*Chatsdomain.Message, error) {
 	return s.ChatsRepository.GetMessageByID(messageID)
