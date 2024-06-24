@@ -72,56 +72,29 @@ func (h *ChatsHandler) GetMessages(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
 	}
-	senderID := c.Query("sender_id")
-	receiverID := c.Query("receiver_id")
 
-	// Verify that the sender or receiver is the authenticated user
-	if senderID != objID.Hex() && receiverID != objID.Hex() {
+	var senderID, receiverID primitive.ObjectID
+	if senderIDHex := c.Query("sender_id"); senderIDHex != "" {
+		senderID, err = primitive.ObjectIDFromHex(senderIDHex)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid sender_id"})
+		}
+	}
+
+	if receiverIDHex := c.Query("receiver_id"); receiverIDHex != "" {
+		receiverID, err = primitive.ObjectIDFromHex(receiverIDHex)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid receiver_id"})
+		}
+	}
+
+	if senderID != objID && receiverID != objID {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
 	messages, err := h.Service.GetMessages(senderID, receiverID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot get messages"})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(messages)
-}
-func (h *ChatsHandler) GetRecentMessages(c *fiber.Ctx) error {
-	userID := c.Context().UserValue("_id").(string)
-
-	objID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
-	}
-
-	var request struct {
-		User1ID string `json:"user1_id"`
-		User2ID string `json:"user2_id"`
-	}
-
-	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse request"})
-	}
-
-	user1ID, err := primitive.ObjectIDFromHex(request.User1ID)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user1 ID"})
-	}
-
-	user2ID, err := primitive.ObjectIDFromHex(request.User2ID)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user2 ID"})
-	}
-
-	// Ensure the authenticated user is part of the chat
-	if objID != user1ID && objID != user2ID {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
-	messages, err := h.Service.GetRecentMessages(user1ID, user2ID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot get recent messages"})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(messages)
