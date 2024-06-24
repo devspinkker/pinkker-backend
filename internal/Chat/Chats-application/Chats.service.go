@@ -4,6 +4,8 @@ import (
 	Chatsdomain "PINKKER-BACKEND/internal/Chat/Chats"
 	Chatsinfrastructure "PINKKER-BACKEND/internal/Chat/Chats-infrastructure"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ChatsService struct {
@@ -16,7 +18,7 @@ func NewChatsService(ChatsRepository *Chatsinfrastructure.ChatsRepository) *Chat
 	}
 }
 
-func (s *ChatsService) SendMessage(senderID, receiverID, content string) (*Chatsdomain.Message, string, error) {
+func (s *ChatsService) SendMessage(senderID, receiverID primitive.ObjectID, content string) (*Chatsdomain.Message, primitive.ObjectID, error) {
 	message := &Chatsdomain.Message{
 		SenderID:   senderID,
 		ReceiverID: receiverID,
@@ -27,7 +29,7 @@ func (s *ChatsService) SendMessage(senderID, receiverID, content string) (*Chats
 	}
 	savedMessage, err := s.ChatsRepository.SaveMessage(message)
 	if err != nil {
-		return message, "", err
+		return message, primitive.ObjectID{}, err
 	}
 
 	id, err := s.ChatsRepository.AddMessageToChat(senderID, receiverID, savedMessage.ID)
@@ -45,7 +47,7 @@ func (s *ChatsService) GetMessages(senderID, receiverID string) ([]*Chatsdomain.
 func (s *ChatsService) MarkMessageAsSeen(messageID string) error {
 	return s.ChatsRepository.MarkMessageAsSeen(messageID)
 }
-func (s *ChatsService) GetChatsByUserID(messageID string) ([]*Chatsdomain.ChatWithUsers, error) {
+func (s *ChatsService) GetChatsByUserID(messageID primitive.ObjectID) ([]*Chatsdomain.ChatWithUsers, error) {
 	return s.ChatsRepository.GetChatsByUserID(messageID)
 }
 

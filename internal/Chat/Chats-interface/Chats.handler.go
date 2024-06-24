@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ChatsHandler struct {
@@ -20,12 +21,12 @@ func NewChatsHandler(service *Chatsapplication.ChatsService) *ChatsHandler {
 }
 
 func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
-	userID := c.Context().UserValue("_id").(string)
+	userID := c.Context().UserValue("_id").(primitive.ObjectID)
 
 	var request struct {
-		SenderID   string `json:"sender_id"`
-		ReceiverID string `json:"receiver_id"`
-		Content    string `json:"content"`
+		SenderID   primitive.ObjectID `json:"sender_id"`
+		ReceiverID primitive.ObjectID `json:"receiver_id"`
+		Content    string             `json:"content"`
 	}
 
 	if err := c.BodyParser(&request); err != nil {
@@ -45,7 +46,7 @@ func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 		"message": message,
 	}
 
-	clients, err := utils.NewChatService().GetWebSocketClientsInRoom(Room)
+	clients, err := utils.NewChatService().GetWebSocketClientsInRoom(Room.Hex())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get WebSocket clients"})
 	}
@@ -61,13 +62,13 @@ func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 }
 
 func (h *ChatsHandler) GetMessages(c *fiber.Ctx) error {
-	userID := c.Context().UserValue("_id").(string)
+	userID := c.Context().UserValue("_id").(primitive.ObjectID)
 
 	senderID := c.Query("sender_id")
 	receiverID := c.Query("receiver_id")
 
 	// Verify that the sender or receiver is the authenticated user
-	if senderID != userID && receiverID != userID {
+	if senderID != userID.Hex() && receiverID != userID.Hex() {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
 	}
 
@@ -78,8 +79,9 @@ func (h *ChatsHandler) GetMessages(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(messages)
 }
+
 func (h *ChatsHandler) GetChatsByUserID(c *fiber.Ctx) error {
-	userID := c.Context().UserValue("_id").(string)
+	userID := c.Context().UserValue("_id").(primitive.ObjectID)
 
 	messages, err := h.Service.GetChatsByUserID(userID)
 	if err != nil {
@@ -88,8 +90,10 @@ func (h *ChatsHandler) GetChatsByUserID(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(messages)
 }
+
 func (h *ChatsHandler) MarkMessageAsSeen(c *fiber.Ctx) error {
-	userID := c.Context().UserValue("_id").(string)
+	userID := c.Context().UserValue("_id").(primitive.ObjectID)
+
 	messageID := c.Params("id")
 
 	message, err := h.Service.GetMessageByID(messageID)
@@ -111,13 +115,13 @@ func (h *ChatsHandler) MarkMessageAsSeen(c *fiber.Ctx) error {
 
 func (h *ChatsHandler) WebSocketHandler(c *websocket.Conn) {
 	token := c.Params("token", "null")
-	var idUser string
+	var idUser primitive.ObjectID
 	if token != "null" {
 		_, id, _, err := jwt.ExtractDataFromToken(token)
 		if err != nil {
 			return
 		}
-		idUser = id
+		idUser, _ = primitive.ObjectIDFromHex(id)
 	}
 
 	roomID := c.Params("roomID")

@@ -48,7 +48,7 @@ func (r *ChatsRepository) SaveMessage(message *Chatsdomain.Message) (*Chatsdomai
 	return &savedMessage, nil
 }
 
-func (r *ChatsRepository) AddMessageToChat(user1ID, user2ID, messageID string) (string, error) {
+func (r *ChatsRepository) AddMessageToChat(user1ID, user2ID, messageID primitive.ObjectID) (primitive.ObjectID, error) {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -72,26 +72,28 @@ func (r *ChatsRepository) AddMessageToChat(user1ID, user2ID, messageID string) (
 	// Realizar la actualización
 	_, err := collection.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
-		return "", err
+		return primitive.ObjectID{}, err
 	}
 
 	// Si fue una inserción (upsert), obtener el ID del documento insertado
 	var result bson.M
 	err = collection.FindOne(ctx, filter).Decode(&result)
 	if err != nil {
-		return "", err
+		return primitive.ObjectID{}, err
 	}
 
 	// Extraer el ID del documento
 	objectID, ok := result["_id"].(primitive.ObjectID)
 	if !ok {
-		return "", fmt.Errorf("could not convert _id to ObjectID")
+		return primitive.ObjectID{}, fmt.Errorf("could not convert _id to ObjectID")
 	}
 
-	return objectID.Hex(), nil
+	return objectID, nil
 }
 
-func (r *ChatsRepository) GetChatsByUserID(userID string) ([]*Chatsdomain.ChatWithUsers, error) {
+func (r *ChatsRepository) GetChatsByUserID(userID primitive.ObjectID) ([]*Chatsdomain.ChatWithUsers, error) {
+	// Convertir el userID de string a ObjectID
+
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -99,8 +101,8 @@ func (r *ChatsRepository) GetChatsByUserID(userID string) ([]*Chatsdomain.ChatWi
 	pipeline := bson.A{
 		bson.D{{Key: "$match", Value: bson.M{
 			"$or": bson.A{
-				bson.M{"user1_id": userID},
-				bson.M{"user2_id": userID},
+				bson.M{"user1_id": userID}, // Aquí utilizamos objID, que es de tipo primitive.ObjectID
+				bson.M{"user2_id": userID}, // Aquí también
 			},
 		}}},
 		bson.D{{Key: "$lookup", Value: bson.D{

@@ -1,31 +1,35 @@
 package Chatsdomain
 
-import "time"
+import (
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type Message struct {
-	ID         string    `bson:"_id,omitempty"`
-	SenderID   string    `bson:"sender_id"`
-	ReceiverID string    `bson:"receiver_id"`
-	Content    string    `bson:"content"`
-	Seen       bool      `bson:"seen"`
-	Notified   bool      `bson:"notified"`
-	CreatedAt  time.Time `bson:"created_at"`
+	ID         primitive.ObjectID `bson:"_id,omitempty"`
+	SenderID   primitive.ObjectID `bson:"sender_id"`
+	ReceiverID primitive.ObjectID `bson:"receiver_id"`
+	Content    string             `bson:"content"`
+	Seen       bool               `bson:"seen"`
+	Notified   bool               `bson:"notified"`
+	CreatedAt  time.Time          `bson:"created_at"`
 }
 
 type Chat struct {
-	ID         string    `bson:"_id,omitempty"`
-	User1ID    string    `bson:"user1_id"`
-	User2ID    string    `bson:"user2_id"`
-	MessageIDs []string  `bson:"message_ids"`
-	CreatedAt  time.Time `bson:"created_at"`
+	ID         string             `bson:"_id,omitempty"`
+	User1ID    primitive.ObjectID `bson:"user1_id"`
+	User2ID    primitive.ObjectID `bson:"user2_id"`
+	MessageIDs []string           `bson:"message_ids"`
+	CreatedAt  time.Time          `bson:"created_at"`
 }
 type ChatWithUsers struct {
-	ID         string    `bson:"_id,omitempty"`
-	User1ID    string    `bson:"user1_id"`
-	User2ID    string    `bson:"user2_id"`
-	MessageIDs []string  `bson:"message_ids"`
-	CreatedAt  time.Time `bson:"created_at"`
-	Users      []*User   `bson:"users"`
+	ID         string             `bson:"_id,omitempty"`
+	User1ID    primitive.ObjectID `bson:"user1_id"`
+	User2ID    primitive.ObjectID `bson:"user2_id"`
+	MessageIDs []string           `bson:"message_ids"`
+	CreatedAt  time.Time          `bson:"created_at"`
+	Users      []*User            `bson:"users"`
 }
 
 type User struct {
