@@ -17,19 +17,19 @@ type Message struct {
 }
 
 type Chat struct {
-	ID         string             `bson:"_id,omitempty"`
-	User1ID    primitive.ObjectID `bson:"user1_id"`
-	User2ID    primitive.ObjectID `bson:"user2_id"`
-	MessageIDs []string           `bson:"message_ids"`
-	CreatedAt  time.Time          `bson:"created_at"`
+	ID         string               `bson:"_id,omitempty"`
+	User1ID    primitive.ObjectID   `bson:"user1_id"`
+	User2ID    primitive.ObjectID   `bson:"user2_id"`
+	MessageIDs []primitive.ObjectID `bson:"message_ids"`
+	CreatedAt  time.Time            `bson:"created_at"`
 }
 type ChatWithUsers struct {
-	ID         string             `bson:"_id,omitempty"`
-	User1ID    primitive.ObjectID `bson:"user1_id"`
-	User2ID    primitive.ObjectID `bson:"user2_id"`
-	MessageIDs []string           `bson:"message_ids"`
-	CreatedAt  time.Time          `bson:"created_at"`
-	Users      []*User            `bson:"users"`
+	ID         string               `bson:"_id,omitempty"`
+	User1ID    primitive.ObjectID   `bson:"user1_id"`
+	User2ID    primitive.ObjectID   `bson:"user2_id"`
+	MessageIDs []primitive.ObjectID `bson:"message_ids"`
+	CreatedAt  time.Time            `bson:"created_at"`
+	Users      []*User              `bson:"users"`
 }
 
 type User struct {
