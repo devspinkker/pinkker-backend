@@ -43,6 +43,9 @@ func (s *ChatsService) SendMessage(senderID, receiverID primitive.ObjectID, cont
 func (s *ChatsService) GetMessages(senderID, receiverID string) ([]*Chatsdomain.Message, error) {
 	return s.ChatsRepository.GetMessages(senderID, receiverID)
 }
+func (s *ChatsService) GetRecentMessages(user1ID, user2ID primitive.ObjectID) ([]*Chatsdomain.Message, error) {
+	return s.ChatsRepository.GetRecentMessages(user1ID, user2ID)
+}
 
 func (s *ChatsService) MarkMessageAsSeen(messageID string) error {
 	return s.ChatsRepository.MarkMessageAsSeen(messageID)
