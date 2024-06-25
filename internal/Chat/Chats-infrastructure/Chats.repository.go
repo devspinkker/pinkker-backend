@@ -65,6 +65,7 @@ func (r *ChatsRepository) AddMessageToChat(user1ID, user2ID, messageID primitive
 			"created_at": time.Now(),
 		},
 		"$push": bson.M{"message_ids": messageID},
+		"$set":  bson.M{"LastMessage": time.Now()}, // Actualizar LastMessage a la fecha actual
 	}
 
 	opts := options.Update().SetUpsert(true)
@@ -129,6 +130,10 @@ func (r *ChatsRepository) GetChatsByUserID(userID primitive.ObjectID) ([]*Chatsd
 			}},
 			{Key: "as", Value: "users"},
 		}}},
+		bson.D{{Key: "$limit", Value: 20}},
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "LastMessage", Value: -1},
+		}}},
 	}
 
 	cursor, err := collection.Aggregate(ctx, pipeline)
@@ -188,9 +193,10 @@ func (r *ChatsRepository) GetMessages(user1ID, user2ID primitive.ObjectID) ([]*C
 
 	filterMessages := bson.M{"_id": bson.M{"$in": messageIDsAsInterface}}
 
-	// Buscar los mensajes en la colección de mensajes
+	// Buscar los mensajes en la colección de mensajes y ordenarlos por la fecha de creación
 	messageCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("messages")
-	cursor, err := messageCollection.Find(ctx, filterMessages)
+	opts := options.Find().SetSort(bson.M{"created_at": -1}) // Ordenar por fecha de creación descendente
+	cursor, err := messageCollection.Find(ctx, filterMessages, opts)
 	if err != nil {
 		return nil, err
 	}
