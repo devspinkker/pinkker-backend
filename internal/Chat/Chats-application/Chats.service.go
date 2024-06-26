@@ -40,8 +40,8 @@ func (s *ChatsService) SendMessage(senderID, receiverID primitive.ObjectID, cont
 	return message, id, nil
 }
 
-func (s *ChatsService) GetMessages(senderID, receiverID primitive.ObjectID) ([]*Chatsdomain.Message, error) {
-	return s.ChatsRepository.GetMessages(senderID, receiverID)
+func (s *ChatsService) GetMessages(objID, receiverID primitive.ObjectID) ([]*Chatsdomain.Message, error) {
+	return s.ChatsRepository.GetMessages(objID, receiverID)
 }
 
 func (s *ChatsService) MarkMessageAsSeen(messageID string) error {

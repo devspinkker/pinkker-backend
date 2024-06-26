@@ -289,7 +289,7 @@ func (r *ChatsRepository) GetChatsByUserID(userID primitive.ObjectID) ([]*Chatsd
 	return chats, nil
 }
 
-func (r *ChatsRepository) GetMessages(user1ID, user2ID primitive.ObjectID) ([]*Chatsdomain.Message, error) {
+func (r *ChatsRepository) GetMessages(objID, user2ID primitive.ObjectID) ([]*Chatsdomain.Message, error) {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -297,8 +297,8 @@ func (r *ChatsRepository) GetMessages(user1ID, user2ID primitive.ObjectID) ([]*C
 	// Primero, encontrar el chat entre user1ID y user2ID
 	filter := bson.M{
 		"$or": []bson.M{
-			{"user1_id": user1ID, "user2_id": user2ID},
-			{"user1_id": user2ID, "user2_id": user1ID},
+			{"user1_id": objID, "user2_id": user2ID},
+			{"user1_id": user2ID, "user2_id": objID},
 		},
 	}
 	var chat Chatsdomain.Chat
@@ -345,7 +345,12 @@ func (r *ChatsRepository) GetMessages(user1ID, user2ID primitive.ObjectID) ([]*C
 		}
 		messages = append(messages, &message)
 	}
-
+	if chat.NotifyA == objID {
+		err := r.UpdateNotificationFlag(chat.NotifyA, primitive.ObjectID{})
+		if err != nil {
+			return nil, err
+		}
+	}
 	return messages, nil
 }
 
