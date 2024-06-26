@@ -54,6 +54,6 @@ func (s *ChatsService) GetChatsByUserID(messageID primitive.ObjectID) ([]*Chatsd
 func (s *ChatsService) GetMessageByID(messageID string) (*Chatsdomain.Message, error) {
 	return s.ChatsRepository.GetMessageByID(messageID)
 }
-func (s *ChatsService) CreateChatOrGetChats(Idtoken, userId primitive.ObjectID) (*Chatsdomain.Chat, error) {
+func (s *ChatsService) CreateChatOrGetChats(Idtoken, userId primitive.ObjectID) (*Chatsdomain.ChatWithUsers, error) {
 	return s.ChatsRepository.CreateChatOrGetChats(Idtoken, userId)
 }
