@@ -23,14 +23,17 @@ type Chat struct {
 	MessageIDs  []primitive.ObjectID `bson:"message_ids"`
 	CreatedAt   time.Time            `bson:"created_at"`
 	LastMessage time.Time            `bson:"LastMessage"`
+	NotifyA     primitive.ObjectID   `bson:"NotifyA"`
 }
 type ChatWithUsers struct {
-	ID         primitive.ObjectID   `bson:"_id,omitempty"`
-	User1ID    primitive.ObjectID   `bson:"user1_id"`
-	User2ID    primitive.ObjectID   `bson:"user2_id"`
-	MessageIDs []primitive.ObjectID `bson:"message_ids"`
-	CreatedAt  time.Time            `bson:"created_at"`
-	Users      []*User              `bson:"users"`
+	ID          primitive.ObjectID   `bson:"_id,omitempty"`
+	User1ID     primitive.ObjectID   `bson:"user1_id"`
+	User2ID     primitive.ObjectID   `bson:"user2_id"`
+	MessageIDs  []primitive.ObjectID `bson:"message_ids"`
+	CreatedAt   time.Time            `bson:"created_at"`
+	Users       []*User              `bson:"users"`
+	LastMessage time.Time            `bson:"LastMessage"`
+	NotifyA     primitive.ObjectID   `bson:"NotifyA"`
 }
 
 type User struct {

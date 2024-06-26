@@ -82,7 +82,18 @@ func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to get WebSocket clients"})
 	}
-
+	connectedClientsCount := len(clients)
+	if connectedClientsCount == 0 {
+		err = h.Service.UpdateNotificationFlag(Room, primitive.ObjectID{})
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "UpdateNotificationFlag"})
+		}
+	} else {
+		err = h.Service.UpdateNotificationFlag(Room, request.ReceiverID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "UpdateNotificationFlag"})
+		}
+	}
 	for _, client := range clients {
 		err = client.WriteJSON(notification)
 		if err != nil {
