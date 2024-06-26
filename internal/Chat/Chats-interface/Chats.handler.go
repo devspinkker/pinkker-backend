@@ -56,7 +56,6 @@ func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
 	}
 	var request struct {
-		SenderID   primitive.ObjectID `json:"sender_id"`
 		ReceiverID primitive.ObjectID `json:"receiver_id"`
 		Content    string             `json:"content"`
 	}
@@ -65,11 +64,7 @@ func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse request"})
 	}
 
-	if request.SenderID != objID && request.ReceiverID != objID {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
-	message, Room, err := h.Service.SendMessage(request.SenderID, request.ReceiverID, request.Content)
+	message, Room, err := h.Service.SendMessage(objID, request.ReceiverID, request.Content)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
