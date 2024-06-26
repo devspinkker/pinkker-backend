@@ -24,6 +24,88 @@ func NewChatsRepository(redisClient *redis.Client, mongoClient *mongo.Client) *C
 		mongoClient: mongoClient,
 	}
 }
+func (r *ChatsRepository) usersExist(user1ID, user2ID primitive.ObjectID) (bool, error) {
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var userCount int64
+	var err error
+
+	// Verificar si user1 existe
+	userCount, err = collection.CountDocuments(ctx, bson.M{"_id": user1ID})
+	if err != nil || userCount == 0 {
+		return false, err
+	}
+
+	// Verificar si user2 existe
+	userCount, err = collection.CountDocuments(ctx, bson.M{"_id": user2ID})
+	if err != nil || userCount == 0 {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// Crear un nuevo chat si ambos usuarios existen
+func (r *ChatsRepository) CreateChatOrGetChats(user1ID, user2ID primitive.ObjectID) (*Chatsdomain.Chat, error) {
+	// Verificar si ambos usuarios existen
+	exist, err := r.usersExist(user1ID, user2ID)
+	if err != nil {
+		return nil, fmt.Errorf("error checking users existence: %v", err)
+	}
+	if !exist {
+		return nil, fmt.Errorf("one or both users do not exist")
+	}
+
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Verificar si ya existe un chat entre los dos usuarios
+	filter := bson.M{
+		"$or": []bson.M{
+			{"user1_id": user1ID, "user2_id": user2ID},
+			{"user1_id": user2ID, "user2_id": user1ID},
+		},
+	}
+
+	var existingChat Chatsdomain.Chat
+	err = collection.FindOne(ctx, filter).Decode(&existingChat)
+	if err == nil {
+		// El chat ya existe, devolverlo
+		return &existingChat, nil
+	} else if err != mongo.ErrNoDocuments {
+		// Ocurrió un error diferente al "documento no encontrado"
+		return nil, fmt.Errorf("error finding chat: %v", err)
+	}
+
+	// El chat no existe, crearlo
+	newChat := Chatsdomain.Chat{
+		User1ID:     user1ID,
+		User2ID:     user2ID,
+		CreatedAt:   time.Now(),
+		MessageIDs:  []primitive.ObjectID{},
+		LastMessage: time.Now(),
+	}
+
+	result, err := collection.InsertOne(ctx, newChat)
+	if err != nil {
+		return nil, fmt.Errorf("error creating chat: %v", err)
+	}
+
+	insertedID := result.InsertedID.(primitive.ObjectID)
+
+	filter = bson.M{"_id": insertedID}
+
+	var createdChat Chatsdomain.Chat
+	err = collection.FindOne(ctx, filter).Decode(&createdChat)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving created chat: %v", err)
+	}
+
+	return &createdChat, nil
+}
 
 func (r *ChatsRepository) SaveMessage(message *Chatsdomain.Message) (*Chatsdomain.Message, error) {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("messages")
