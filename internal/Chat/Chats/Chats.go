@@ -17,16 +17,15 @@ type Message struct {
 }
 
 type Chat struct {
-	ID         string               `bson:"_id,omitempty"`
-	User1ID    primitive.ObjectID   `bson:"user1_id"`
-	User2ID    primitive.ObjectID   `bson:"user2_id"`
-	MessageIDs []primitive.ObjectID `bson:"message_ids"`
-	CreatedAt  time.Time            `bson:"created_at"`
-LastMessage  time.Time            `bson:"LastMessage"`
-
+	ID          primitive.ObjectID   `bson:"_id,omitempty"`
+	User1ID     primitive.ObjectID   `bson:"user1_id"`
+	User2ID     primitive.ObjectID   `bson:"user2_id"`
+	MessageIDs  []primitive.ObjectID `bson:"message_ids"`
+	CreatedAt   time.Time            `bson:"created_at"`
+	LastMessage time.Time            `bson:"LastMessage"`
 }
 type ChatWithUsers struct {
-	ID         string               `bson:"_id,omitempty"`
+	ID         primitive.ObjectID   `bson:"_id,omitempty"`
 	User1ID    primitive.ObjectID   `bson:"user1_id"`
 	User2ID    primitive.ObjectID   `bson:"user2_id"`
 	MessageIDs []primitive.ObjectID `bson:"message_ids"`
