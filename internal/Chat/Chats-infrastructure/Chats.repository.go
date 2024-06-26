@@ -24,6 +24,24 @@ func NewChatsRepository(redisClient *redis.Client, mongoClient *mongo.Client) *C
 		mongoClient: mongoClient,
 	}
 }
+func (r *ChatsRepository) UpdateNotificationFlag(chatID primitive.ObjectID, notifyAObj primitive.ObjectID) error {
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	notifyA := notifyAObj
+
+	// Update the NotifyA field in the chat document
+	filter := bson.M{"_id": chatID}
+	update := bson.M{"$set": bson.M{"NotifyA": notifyA}}
+
+	_, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 func (r *ChatsRepository) usersExist(user1ID, user2ID primitive.ObjectID) (bool, error) {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -312,7 +330,7 @@ func (r *ChatsRepository) GetMessages(user1ID, user2ID primitive.ObjectID) ([]*C
 
 	// Buscar los mensajes en la colección de mensajes y ordenarlos por la fecha de creación
 	messageCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("messages")
-	opts := options.Find().SetSort(bson.M{"created_at": -1}) // Ordenar por fecha de creación descendente
+	opts := options.Find().SetSort(bson.M{"created_at": 1}) // Ordenar por fecha de creación descendente
 	cursor, err := messageCollection.Find(ctx, filterMessages, opts)
 	if err != nil {
 		return nil, err

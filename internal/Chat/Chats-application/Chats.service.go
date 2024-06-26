@@ -50,6 +50,9 @@ func (s *ChatsService) MarkMessageAsSeen(messageID string) error {
 func (s *ChatsService) GetChatsByUserID(messageID primitive.ObjectID) ([]*Chatsdomain.ChatWithUsers, error) {
 	return s.ChatsRepository.GetChatsByUserID(messageID)
 }
+func (s *ChatsService) UpdateNotificationFlag(chatID primitive.ObjectID, receiverID primitive.ObjectID) error {
+	return s.ChatsRepository.UpdateNotificationFlag(chatID, receiverID)
+}
 
 func (s *ChatsService) GetMessageByID(messageID string) (*Chatsdomain.Message, error) {
 	return s.ChatsRepository.GetMessageByID(messageID)
