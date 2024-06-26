@@ -112,13 +112,7 @@ func (h *ChatsHandler) GetMessages(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
 	}
 
-	var senderID, receiverID primitive.ObjectID
-	if senderIDHex := c.Query("sender_id"); senderIDHex != "" {
-		senderID, err = primitive.ObjectIDFromHex(senderIDHex)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid sender_id"})
-		}
-	}
+	var receiverID primitive.ObjectID
 
 	if receiverIDHex := c.Query("receiver_id"); receiverIDHex != "" {
 		receiverID, err = primitive.ObjectIDFromHex(receiverIDHex)
@@ -126,12 +120,7 @@ func (h *ChatsHandler) GetMessages(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid receiver_id"})
 		}
 	}
-
-	if senderID != objID && receiverID != objID {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
-	}
-
-	messages, err := h.Service.GetMessages(senderID, receiverID)
+	messages, err := h.Service.GetMessages(objID, receiverID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot get messages"})
 	}
