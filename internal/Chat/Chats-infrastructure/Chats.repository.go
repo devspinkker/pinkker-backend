@@ -184,6 +184,13 @@ func (r *ChatsRepository) SaveMessage(message *Chatsdomain.Message) (*Chatsdomai
 }
 
 func (r *ChatsRepository) AddMessageToChat(user1ID, user2ID, messageID primitive.ObjectID) (primitive.ObjectID, error) {
+	exist, err := r.usersExist(user1ID, user2ID)
+	if err != nil {
+		return primitive.ObjectID{}, fmt.Errorf("error checking users existence: %v", err)
+	}
+	if !exist {
+		return primitive.ObjectID{}, fmt.Errorf("one or both users do not exist")
+	}
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -206,7 +213,7 @@ func (r *ChatsRepository) AddMessageToChat(user1ID, user2ID, messageID primitive
 	opts := options.Update().SetUpsert(true)
 
 	// Realizar la actualización
-	_, err := collection.UpdateOne(ctx, filter, update, opts)
+	_, err = collection.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
 		return primitive.ObjectID{}, err
 	}
