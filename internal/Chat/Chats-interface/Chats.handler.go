@@ -19,6 +19,34 @@ type ChatsHandler struct {
 func NewChatsHandler(service *Chatsapplication.ChatsService) *ChatsHandler {
 	return &ChatsHandler{Service: service}
 }
+func (h *ChatsHandler) CreateChatOrGetChats(c *fiber.Ctx) error {
+	// Obtener el ID del usuario actual desde el contexto
+	userID := c.Context().UserValue("_id").(string)
+
+	userObjID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
+	}
+
+	var body struct {
+		OtherUserID string `json:"other_user_id"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	otherUserObjID, err := primitive.ObjectIDFromHex(body.OtherUserID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid other user ID"})
+	}
+
+	chat, err := h.Service.CreateChatOrGetChats(userObjID, otherUserObjID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot create chat"})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(chat)
+}
 
 func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 	userID := c.Context().UserValue("_id").(string)
