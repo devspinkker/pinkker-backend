@@ -24,6 +24,71 @@ func NewChatsRepository(redisClient *redis.Client, mongoClient *mongo.Client) *C
 		mongoClient: mongoClient,
 	}
 }
+func (r *ChatsRepository) GetMessages(objID, user2ID primitive.ObjectID) ([]*Chatsdomain.Message, error) {
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Primero, encontrar el chat entre user1ID y user2ID
+	filter := bson.M{
+		"$or": []bson.M{
+			{"user1_id": objID, "user2_id": user2ID},
+			{"user1_id": user2ID, "user2_id": objID},
+		},
+	}
+	var chat Chatsdomain.Chat
+	err := collection.FindOne(ctx, filter).Decode(&chat)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verificar si hay mensajes en el chat
+	if len(chat.MessageIDs) == 0 {
+		return []*Chatsdomain.Message{}, nil
+	}
+
+	// Obtener los últimos 20 mensajes
+	var messageIDs []primitive.ObjectID
+	if len(chat.MessageIDs) > 20 {
+		messageIDs = chat.MessageIDs[len(chat.MessageIDs)-20:]
+	} else {
+		messageIDs = chat.MessageIDs
+	}
+
+	// Preparar un filtro para buscar los mensajes por sus IDs
+	messageIDsAsInterface := make([]interface{}, len(messageIDs))
+	for i, id := range messageIDs {
+		messageIDsAsInterface[i] = id
+	}
+
+	filterMessages := bson.M{"_id": bson.M{"$in": messageIDsAsInterface}}
+
+	// Buscar los mensajes en la colección de mensajes y ordenarlos por la fecha de creación
+	messageCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("messages")
+	opts := options.Find().SetSort(bson.M{"created_at": 1}) // Ordenar por fecha de creación descendente
+	cursor, err := messageCollection.Find(ctx, filterMessages, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var messages []*Chatsdomain.Message
+	for cursor.Next(ctx) {
+		var message Chatsdomain.Message
+		if err := cursor.Decode(&message); err != nil {
+			return nil, err
+		}
+		messages = append(messages, &message)
+	}
+	if chat.NotifyA == objID {
+		err := r.UpdateNotificationFlag(chat.ID, primitive.ObjectID{})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return messages, nil
+}
+
 func (r *ChatsRepository) UpdateNotificationFlag(chatID primitive.ObjectID, notifyAObj primitive.ObjectID) error {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -294,71 +359,6 @@ func (r *ChatsRepository) GetChatsByUserID(userID primitive.ObjectID) ([]*Chatsd
 	}
 
 	return chats, nil
-}
-
-func (r *ChatsRepository) GetMessages(objID, user2ID primitive.ObjectID) ([]*Chatsdomain.Message, error) {
-	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// Primero, encontrar el chat entre user1ID y user2ID
-	filter := bson.M{
-		"$or": []bson.M{
-			{"user1_id": objID, "user2_id": user2ID},
-			{"user1_id": user2ID, "user2_id": objID},
-		},
-	}
-	var chat Chatsdomain.Chat
-	err := collection.FindOne(ctx, filter).Decode(&chat)
-	if err != nil {
-		return nil, err
-	}
-
-	// Verificar si hay mensajes en el chat
-	if len(chat.MessageIDs) == 0 {
-		return []*Chatsdomain.Message{}, nil
-	}
-
-	// Obtener los últimos 20 mensajes
-	var messageIDs []primitive.ObjectID
-	if len(chat.MessageIDs) > 20 {
-		messageIDs = chat.MessageIDs[len(chat.MessageIDs)-20:]
-	} else {
-		messageIDs = chat.MessageIDs
-	}
-
-	// Preparar un filtro para buscar los mensajes por sus IDs
-	messageIDsAsInterface := make([]interface{}, len(messageIDs))
-	for i, id := range messageIDs {
-		messageIDsAsInterface[i] = id
-	}
-
-	filterMessages := bson.M{"_id": bson.M{"$in": messageIDsAsInterface}}
-
-	// Buscar los mensajes en la colección de mensajes y ordenarlos por la fecha de creación
-	messageCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("messages")
-	opts := options.Find().SetSort(bson.M{"created_at": 1}) // Ordenar por fecha de creación descendente
-	cursor, err := messageCollection.Find(ctx, filterMessages, opts)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var messages []*Chatsdomain.Message
-	for cursor.Next(ctx) {
-		var message Chatsdomain.Message
-		if err := cursor.Decode(&message); err != nil {
-			return nil, err
-		}
-		messages = append(messages, &message)
-	}
-	if chat.NotifyA == objID {
-		err := r.UpdateNotificationFlag(chat.NotifyA, primitive.ObjectID{})
-		if err != nil {
-			return nil, err
-		}
-	}
-	return messages, nil
 }
 
 func (r *ChatsRepository) MarkMessageAsSeen(messageID string) error {
