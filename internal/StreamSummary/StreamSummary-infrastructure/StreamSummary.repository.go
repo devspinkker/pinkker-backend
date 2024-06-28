@@ -62,46 +62,51 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
 	GoMongoDBCollAdvertisements := GoMongoDB.Collection("Advertisements")
 
-	// Filtrar por el ID del usuario
 	filter := bson.M{"_id": idValueObj}
 
-	// Buscar el usuario por su ID
 	result := GoMongoDBCollUsers.FindOne(ctx, filter)
 	if result.Err() != nil {
 		return result.Err()
 	}
 
-	filter = bson.M{"StreamerID": AddAds.StreamerID}
+	key := "ADS_" + idValueObj.Hex()
+	exists, err := r.redisClient.Exists(ctx, key).Result()
+	if err != nil {
+		return err
+	}
+	if exists == 1 {
+		return nil
+	}
 
+	filterSummary := bson.M{"StreamerID": AddAds.StreamerID}
 	opts := options.FindOne().SetSort(bson.D{{Key: "StartOfStream", Value: -1}})
-
 	var streamSummary StreamSummarydomain.StreamSummary
-	err := GoMongoDBCollStreamSummary.FindOne(ctx, filter, opts).Decode(&streamSummary)
+	err = GoMongoDBCollStreamSummary.FindOne(ctx, filterSummary, opts).Decode(&streamSummary)
 	if err != nil {
 		return err
 	}
 
-	update := bson.M{
-		"$inc": bson.M{
-			"Advertisements": 1,
-		},
+	updateStream := bson.M{
+		"$inc": bson.M{"Advertisements": 1},
 	}
-	filterUpdata := bson.M{"_id": streamSummary.ID}
-	_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, filterUpdata, update)
+	filterUpdate := bson.M{"_id": streamSummary.ID}
+	_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, filterUpdate, updateStream)
 	if err != nil {
 		return err
 	}
 
 	advertisementFilter := bson.M{"_id": AddAds.AdvertisementsId}
-	advertisementUpdate := bson.M{
-		"$inc": bson.M{
-			"Impressions": 1,
-		},
-	}
+	advertisementUpdate := bson.M{"$inc": bson.M{"Impressions": 1}}
 	_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, advertisementUpdate)
 	if err != nil {
 		return err
 	}
+
+	err = r.redisClient.Set(ctx, key, "true", time.Minute).Err()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
