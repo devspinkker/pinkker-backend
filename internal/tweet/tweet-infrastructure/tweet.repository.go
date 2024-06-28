@@ -59,6 +59,16 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 	// Calcular el nuevo límite para el pipeline secundario
 	newLimit := limit - len(tweetsWithUserInfo)
 	if newLimit > 0 {
+		var recommendedPostsIDs []interface{}
+		for _, clip := range tweetsWithUserInfo {
+			recommendedPostsIDs = append(recommendedPostsIDs, clip.ID)
+		}
+
+		excludeFilter := bson.D{
+			{Key: "_id", Value: bson.D{
+				{Key: "$nin", Value: append(excludedIDs, recommendedPostsIDs...)},
+			}},
+		}
 		randomTweets, err := t.getRandomTweets(ctx, collTweets, excludeFilter, newLimit)
 		if err != nil {
 			return nil, err
