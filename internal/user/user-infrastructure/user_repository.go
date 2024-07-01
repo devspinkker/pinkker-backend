@@ -31,6 +31,14 @@ func NewUserRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Us
 		mongoClient: mongoClient,
 	}
 }
+func (s *UserRepository) SubscribeToRoom(roomID string) *redis.PubSub {
+	sub := s.redisClient.Subscribe(context.Background(), roomID)
+	return sub
+}
+
+func (s *UserRepository) CloseSubscription(sub *redis.PubSub) error {
+	return sub.Close()
+}
 func (u *UserRepository) PanelAdminPinkkerInfoUser(PanelAdminPinkkerInfoUserReq domain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) (domain.User, streamdomain.Stream, error) {
 	err := u.AutCode(id, PanelAdminPinkkerInfoUserReq.Code)
 	if err != nil {

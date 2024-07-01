@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/websocket/v2"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -21,6 +22,14 @@ func NewChatService(roomRepository *infrastructure.UserRepository) *UserService 
 	return &UserService{
 		roomRepository: roomRepository,
 	}
+}
+
+func (u *UserService) SubscribeToRoom(roomID string) *redis.PubSub {
+	sub := u.roomRepository.SubscribeToRoom(roomID)
+	return sub
+}
+func (u *UserService) CloseSubscription(sub *redis.PubSub) error {
+	return u.roomRepository.CloseSubscription(sub)
 }
 
 // signup

@@ -30,6 +30,204 @@ func NewStreamRepository(redisClient *redis.Client, mongoClient *mongo.Client) *
 	}
 }
 
+func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
+	session, err := r.mongoClient.StartSession()
+	if err != nil {
+		return err
+	}
+	defer session.EndSession(context.Background())
+
+	err = session.StartTransaction()
+	if err != nil {
+		return err
+	}
+
+	ctx := mongo.NewSessionContext(context.Background(), session)
+
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
+	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
+	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
+
+	filterUsers := bson.D{
+		{Key: "KeyTransmission", Value: Key},
+	}
+
+	var userFind userdomain.User
+	err = GoMongoDBCollUsers.FindOne(ctx, filterUsers).Decode(&userFind)
+	if err != nil {
+		session.AbortTransaction(ctx)
+		return err
+	}
+
+	filterStreams := bson.D{
+		{Key: "StreamerID", Value: userFind.ID},
+	}
+	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
+	updateStreams := bson.D{
+		{Key: "$set", Value: bson.D{
+			{Key: "Online", Value: state},
+			{Key: "StartDate", Value: time.Now()},
+		}},
+	}
+	var StreamFind streamdomain.Stream
+
+	err = GoMongoDBCollStreams.FindOneAndUpdate(ctx, filterStreams, updateStreams, options).Decode(&StreamFind)
+	if err != nil {
+		session.AbortTransaction(ctx)
+		return err
+	}
+
+	filterUsers = bson.D{
+		{Key: "_id", Value: userFind.ID},
+	}
+
+	updateUsers := bson.D{
+		{Key: "$set", Value: bson.D{
+			{Key: "Online", Value: state},
+		}},
+	}
+
+	_, err = GoMongoDBCollUsers.UpdateOne(ctx, filterUsers, updateUsers)
+	if err != nil {
+		session.AbortTransaction(ctx)
+		return err
+	}
+	notifyOnlineStreamer := []string{}
+	if state {
+		for _, followInfo := range userFind.Followers {
+			if followInfo.Notifications {
+				notifyOnlineStreamer = append(notifyOnlineStreamer, followInfo.Email)
+			}
+		}
+		// _ = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
+
+		// modo de chat cuandos se prende
+		exist, err := r.redisClient.Exists(context.Background(), StreamFind.ID.Hex()).Result()
+		if err != nil {
+			return err
+		}
+		if exist == 1 {
+			err := r.redisClient.Set(context.Background(), StreamFind.ID.Hex(), StreamFind.ModChat, 0).Err()
+			if err != nil {
+				return err
+			}
+		} else {
+			err := r.redisClient.Set(context.Background(), StreamFind.ID.Hex(), StreamFind.ModChat, 0).Err()
+			if err != nil {
+				return err
+			}
+		}
+		startFollowersCount := len(userFind.Followers)
+		startSubsCount := len(userFind.Subscriptions)
+
+		// aqui quiero crear el resumen del Stream con valores predeterminnados
+		summary := StreamSummarydomain.StreamSummary{
+			EndOfStream:          time.Now(),
+			AverageViewers:       0,
+			AverageViewersByTime: make(map[string]int),
+			MaxViewers:           0,
+			NewFollowers:         0,
+			NewSubscriptions:     0,
+			Advertisements:       0,
+			StartOfStream:        time.Now(),
+			StreamerID:           userFind.ID,
+			StartFollowersCount:  startFollowersCount,
+			StartSubsCount:       startSubsCount,
+		}
+
+		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err := r.redisClient.Del(context.Background(), StreamFind.ID.Hex()).Result()
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		err = r.publishNotification("stream_on", userFind.NameUser, userFind.ID)
+		if err != nil {
+			session.AbortTransaction(ctx)
+			return err
+		}
+
+		latestSummary, err := r.FindLatestStreamSummaryByStreamerID(userFind.ID)
+		if err != nil {
+			session.AbortTransaction(ctx)
+			return err
+		}
+		newFollowersCount := len(userFind.Followers) - latestSummary.StartFollowersCount
+		newSubsCount := len(userFind.Subscriptions) - latestSummary.StartSubsCount
+		AverageViewers := 0
+		maxViewers := 0
+		totalCount := 0
+
+		for _, viewers := range latestSummary.AverageViewersByTime {
+			AverageViewers += viewers
+			totalCount++
+			if viewers > maxViewers {
+				maxViewers = viewers
+			}
+		}
+
+		if totalCount > 0 {
+			AverageViewers = AverageViewers / totalCount
+		}
+
+		// Actualizar el resumen del stream
+		updateSummary := bson.D{
+			{Key: "$set", Value: bson.D{
+				{Key: "EndOfStream", Value: time.Now()},
+				{Key: "NewFollowers", Value: newFollowersCount},
+				{Key: "NewSubscriptions", Value: newSubsCount},
+				{Key: "AverageViewers", Value: AverageViewers},
+				{Key: "MaxViewers", Value: maxViewers},
+			}},
+		}
+
+		_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, bson.M{"_id": latestSummary.ID}, updateSummary)
+		if err != nil {
+			return err
+		}
+		streamDuration := time.Since(latestSummary.StartOfStream)
+		totalTimeOnline := StreamFind.TotalTimeOnlineSeconds
+		totalTimeOnline += int64(streamDuration.Seconds())
+
+		updateStream := bson.D{
+			{Key: "$set", Value: bson.D{
+				{Key: "TotalTimeOnline", Value: totalTimeOnline},
+			}},
+		}
+
+		// Actualizar el documento de Stream
+		_, err = GoMongoDBCollStreams.UpdateOne(ctx, bson.M{"_id": StreamFind.ID}, updateStream)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = session.CommitTransaction(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (r *StreamRepository) publishNotification(Type string, streamerName string, id primitive.ObjectID) error {
+	message := map[string]interface{}{
+		"type":     Type,
+		"Nameuser": streamerName,
+		"id":       id,
+	}
+
+	err := r.redisClient.Publish(context.Background(), "pinker_notifications", message).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *StreamRepository) CommercialInStreamSelectAdvertisements(data string) (advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
@@ -412,184 +610,6 @@ func (r *StreamRepository) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID)
 		return nil, errors.New("no se encontraron streams")
 	}
 	return streams, nil
-}
-func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
-	session, err := r.mongoClient.StartSession()
-	if err != nil {
-		return err
-	}
-	defer session.EndSession(context.Background())
-
-	err = session.StartTransaction()
-	if err != nil {
-		return err
-	}
-
-	ctx := mongo.NewSessionContext(context.Background(), session)
-
-	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
-	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
-	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
-
-	filterUsers := bson.D{
-		{Key: "KeyTransmission", Value: Key},
-	}
-
-	var userFind userdomain.User
-	err = GoMongoDBCollUsers.FindOne(ctx, filterUsers).Decode(&userFind)
-	if err != nil {
-		session.AbortTransaction(ctx)
-		return err
-	}
-
-	filterStreams := bson.D{
-		{Key: "StreamerID", Value: userFind.ID},
-	}
-	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
-	updateStreams := bson.D{
-		{Key: "$set", Value: bson.D{
-			{Key: "Online", Value: state},
-			{Key: "StartDate", Value: time.Now()},
-		}},
-	}
-	var StreamFind streamdomain.Stream
-
-	err = GoMongoDBCollStreams.FindOneAndUpdate(ctx, filterStreams, updateStreams, options).Decode(&StreamFind)
-	if err != nil {
-		session.AbortTransaction(ctx)
-		return err
-	}
-
-	filterUsers = bson.D{
-		{Key: "_id", Value: userFind.ID},
-	}
-
-	updateUsers := bson.D{
-		{Key: "$set", Value: bson.D{
-			{Key: "Online", Value: state},
-		}},
-	}
-
-	_, err = GoMongoDBCollUsers.UpdateOne(ctx, filterUsers, updateUsers)
-	if err != nil {
-		session.AbortTransaction(ctx)
-		return err
-	}
-	notifyOnlineStreamer := []string{}
-	if state {
-		for _, followInfo := range userFind.Followers {
-			if followInfo.Notifications {
-				notifyOnlineStreamer = append(notifyOnlineStreamer, followInfo.Email)
-			}
-		}
-		// _ = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
-
-		// modo de chat cuandos se prende
-		exist, err := r.redisClient.Exists(context.Background(), StreamFind.ID.Hex()).Result()
-		if err != nil {
-			return err
-		}
-		if exist == 1 {
-			err := r.redisClient.Set(context.Background(), StreamFind.ID.Hex(), StreamFind.ModChat, 0).Err()
-			if err != nil {
-				return err
-			}
-		} else {
-			err := r.redisClient.Set(context.Background(), StreamFind.ID.Hex(), StreamFind.ModChat, 0).Err()
-			if err != nil {
-				return err
-			}
-		}
-		startFollowersCount := len(userFind.Followers)
-		startSubsCount := len(userFind.Subscriptions)
-
-		// aqui quiero crear el resumen del Stream con valores predeterminnados
-		summary := StreamSummarydomain.StreamSummary{
-			EndOfStream:          time.Now(),
-			AverageViewers:       0,
-			AverageViewersByTime: make(map[string]int),
-			MaxViewers:           0,
-			NewFollowers:         0,
-			NewSubscriptions:     0,
-			Advertisements:       0,
-			StartOfStream:        time.Now(),
-			StreamerID:           userFind.ID,
-			StartFollowersCount:  startFollowersCount,
-			StartSubsCount:       startSubsCount,
-		}
-
-		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
-		if err != nil {
-			return err
-		}
-	} else {
-		_, err := r.redisClient.Del(context.Background(), StreamFind.ID.Hex()).Result()
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		latestSummary, err := r.FindLatestStreamSummaryByStreamerID(userFind.ID)
-		if err != nil {
-			session.AbortTransaction(ctx)
-			return err
-		}
-		newFollowersCount := len(userFind.Followers) - latestSummary.StartFollowersCount
-		newSubsCount := len(userFind.Subscriptions) - latestSummary.StartSubsCount
-		AverageViewers := 0
-		maxViewers := 0
-		totalCount := 0
-
-		for _, viewers := range latestSummary.AverageViewersByTime {
-			AverageViewers += viewers
-			totalCount++
-			if viewers > maxViewers {
-				maxViewers = viewers
-			}
-		}
-
-		if totalCount > 0 {
-			AverageViewers = AverageViewers / totalCount
-		}
-
-		// Actualizar el resumen del stream
-		updateSummary := bson.D{
-			{Key: "$set", Value: bson.D{
-				{Key: "EndOfStream", Value: time.Now()},
-				{Key: "NewFollowers", Value: newFollowersCount},
-				{Key: "NewSubscriptions", Value: newSubsCount},
-				{Key: "AverageViewers", Value: AverageViewers},
-				{Key: "MaxViewers", Value: maxViewers},
-			}},
-		}
-
-		_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, bson.M{"_id": latestSummary.ID}, updateSummary)
-		if err != nil {
-			return err
-		}
-		streamDuration := time.Since(latestSummary.StartOfStream)
-		totalTimeOnline := StreamFind.TotalTimeOnlineSeconds
-		totalTimeOnline += int64(streamDuration.Seconds())
-
-		updateStream := bson.D{
-			{Key: "$set", Value: bson.D{
-				{Key: "TotalTimeOnline", Value: totalTimeOnline},
-			}},
-		}
-
-		// Actualizar el documento de Stream
-		_, err = GoMongoDBCollStreams.UpdateOne(ctx, bson.M{"_id": StreamFind.ID}, updateStream)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = session.CommitTransaction(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (r *StreamRepository) FindLatestStreamSummaryByStreamerID(streamerID primitive.ObjectID) (*StreamSummarydomain.StreamSummary, error) {

@@ -13,6 +13,7 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -24,6 +25,35 @@ type UserHandler struct {
 func NewUserHandler(chatService *application.UserService) *UserHandler {
 	return &UserHandler{
 		userService: chatService,
+	}
+}
+func (h *UserHandler) Pinker_notifications(c *websocket.Conn) error {
+
+	sub := h.userService.SubscribeToRoom("pinker_notifications")
+
+	for {
+		go func() {
+			for {
+				_, _, err := c.ReadMessage()
+				if err != nil {
+					h.userService.CloseSubscription(sub)
+					c.Close()
+					return
+				}
+			}
+		}()
+
+		message, err := sub.ReceiveMessage(context.Background())
+		if err != nil {
+			h.userService.CloseSubscription(sub)
+			return err
+		}
+
+		err = c.WriteMessage(websocket.TextMessage, []byte(message.Payload))
+		if err != nil {
+			h.userService.CloseSubscription(sub)
+			return err
+		}
 	}
 }
 func (h *UserHandler) PanelAdminPinkkerInfoUser(c *fiber.Ctx) error {
