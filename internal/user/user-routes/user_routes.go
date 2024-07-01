@@ -69,5 +69,20 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 			}
 		}
 	}))
+	App.Get("/ws/pinker_notifications", websocket.New(func(c *websocket.Conn) {
+		UserHandler.Pinker_notifications(c)
+		defer func() {
+			_ = c.Close()
+		}()
+		for {
+			errReceiveMessageFromRoom := UserHandler.Pinker_notifications(c)
+			if errReceiveMessageFromRoom != nil {
+				c.WriteMessage(websocket.TextMessage, []byte(errReceiveMessageFromRoom.Error()))
+				c.Close()
+				return
+			}
+		}
+
+	}))
 
 }
