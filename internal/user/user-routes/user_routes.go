@@ -4,6 +4,7 @@ import (
 	application "PINKKER-BACKEND/internal/user/user-application"
 	infrastructure "PINKKER-BACKEND/internal/user/user-infrastructure"
 	interfaces "PINKKER-BACKEND/internal/user/user-interfaces"
+	"PINKKER-BACKEND/pkg/jwt"
 	"PINKKER-BACKEND/pkg/middleware"
 	"PINKKER-BACKEND/pkg/utils"
 
@@ -69,18 +70,25 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 			}
 		}
 	}))
-	App.Get("/ws/pinker_notifications", websocket.New(func(c *websocket.Conn) {
+	App.Get("/ws/pinker_notifications/:token", websocket.New(func(c *websocket.Conn) {
 		UserHandler.Pinker_notifications(c)
 		defer func() {
 			_ = c.Close()
 		}()
-		for {
-			errReceiveMessageFromRoom := UserHandler.Pinker_notifications(c)
-			if errReceiveMessageFromRoom != nil {
-				c.WriteMessage(websocket.TextMessage, []byte(errReceiveMessageFromRoom.Error()))
-				c.Close()
+		token := c.Params("token", "null")
+		if token != "null" {
+			_, _, _, err := jwt.ExtractDataFromToken(token)
+			if err != nil {
 				return
 			}
+
+		}
+
+		errReceiveMessageFromRoom := UserHandler.Pinker_notifications(c)
+		if errReceiveMessageFromRoom != nil {
+			c.WriteMessage(websocket.TextMessage, []byte(errReceiveMessageFromRoom.Error()))
+			c.Close()
+			return
 		}
 
 	}))
