@@ -6,12 +6,12 @@ import (
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -101,7 +101,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		// 	}
 		// }
 		// _ = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
-		err = r.publishNotification("stream_on", userFind.NameUser, userFind.ID)
+		err = r.publishNotification("stream_on", userFind.NameUser, userFind.ID.Hex(), StreamFind.StreamTitle, userFind.Avatar)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -211,20 +211,26 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 
 	return nil
 }
-func (r *StreamRepository) publishNotification(Type string, streamerName string, id primitive.ObjectID) error {
+func (r *StreamRepository) publishNotification(Type, streamerName, id, Title, Avatar string) error {
 	message := map[string]interface{}{
-		"type":     Type,
+		"Type":     Type,
 		"Nameuser": streamerName,
-		"id":       id,
+		"ID":       id,
+		"Title":    Title,
+		"Avatar":   Avatar,
 	}
 
-	err := r.redisClient.Publish(context.Background(), "pinker_notifications", message).Err()
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+
+	err = r.redisClient.Publish(context.Background(), "pinker_notifications", string(jsonMessage)).Err()
 	if err != nil {
 		return err
 	}
 	return nil
 }
-
 func (r *StreamRepository) CommercialInStreamSelectAdvertisements(data string) (advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
