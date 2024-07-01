@@ -93,15 +93,18 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		session.AbortTransaction(ctx)
 		return err
 	}
-	notifyOnlineStreamer := []string{}
 	if state {
-		for _, followInfo := range userFind.Followers {
-			if followInfo.Notifications {
-				notifyOnlineStreamer = append(notifyOnlineStreamer, followInfo.Email)
-			}
-		}
+		// notifyOnlineStreamer := []string{}
+		// for _, followInfo := range userFind.Followers {
+		// 	if followInfo.Notifications {
+		// 		notifyOnlineStreamer = append(notifyOnlineStreamer, followInfo.Email)
+		// 	}
+		// }
 		// _ = helpers.ResendNotificationStreamerOnline(userFind.NameUser, notifyOnlineStreamer)
-
+		err = r.publishNotification("stream_on", userFind.NameUser, userFind.ID)
+		if err != nil {
+			fmt.Println(err)
+		}
 		// modo de chat cuandos se prende
 		exist, err := r.redisClient.Exists(context.Background(), StreamFind.ID.Hex()).Result()
 		if err != nil {
@@ -144,12 +147,6 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		_, err := r.redisClient.Del(context.Background(), StreamFind.ID.Hex()).Result()
 		if err != nil {
 			fmt.Println(err)
-		}
-
-		err = r.publishNotification("stream_on", userFind.NameUser, userFind.ID)
-		if err != nil {
-			session.AbortTransaction(ctx)
-			return err
 		}
 
 		latestSummary, err := r.FindLatestStreamSummaryByStreamerID(userFind.ID)
