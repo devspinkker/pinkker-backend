@@ -55,6 +55,7 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 		})
 	}
 	d.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", nameUser, idReq.Pixeles, idReq.Text)
+	d.NotifyActivityToChat(idReq.ToUser, nameUser, idReq.Pixeles, idReq.Text)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})
@@ -79,6 +80,18 @@ func (d *DonationHandler) NotifyActivityFeed(room, user string, Pixeles float64,
 	}
 
 	return nil
+}
+
+func (d *DonationHandler) NotifyActivityToChat(idReq primitive.ObjectID, user string, Pixeles float64, text string) error {
+
+	notification := map[string]interface{}{
+		"action":  "DonatePixels",
+		"Pixeles": Pixeles,
+		"data":    user,
+		"text":    text,
+	}
+	return d.VodServise.PublishNotification(idReq, notification)
+
 }
 func (d *DonationHandler) Mydonors(c *fiber.Ctx) error {
 	IdUserToken := c.Context().UserValue("_id").(string)

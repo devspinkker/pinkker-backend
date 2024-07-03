@@ -2,6 +2,7 @@ package subscriptioninfrastructure
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -472,5 +473,30 @@ func (u *SubscriptionRepository) DeleteRedisUserChatInOneRoom(userToDelete, IdRo
 	}
 	userHashKey := "userInformation:" + userFolloer.NameUser + ":inTheRoom:" + stream.ID.Hex()
 	_, err = u.redisClient.Del(context.Background(), userHashKey).Result()
+	return err
+}
+func (u *SubscriptionRepository) GetStreamByStreamerID(user primitive.ObjectID) (streamdomain.Stream, error) {
+	GoMongoDBColl := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollStreams := GoMongoDBColl.Collection("Streams")
+	filter := bson.M{"StreamerID": user}
+	var stream streamdomain.Stream
+	err := GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&stream)
+	return stream, err
+}
+func (u *SubscriptionRepository) PublishNotification(roomID string, noty map[string]interface{}) error {
+
+	chatMessageJSON, err := json.Marshal(noty)
+	if err != nil {
+		return err
+	}
+	err = u.redisClient.Publish(
+		context.Background(),
+		roomID+"action",
+		string(chatMessageJSON),
+	).Err()
+	if err != nil {
+		return err
+	}
+
 	return err
 }

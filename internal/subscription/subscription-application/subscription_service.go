@@ -31,6 +31,14 @@ func (D *SubscriptionService) GetSubsChat(id primitive.ObjectID) ([]subscription
 
 	return Donations, err
 }
+func (D *SubscriptionService) PublishNotification(roomID primitive.ObjectID, noty map[string]interface{}) error {
+	stream, err := D.roomRepository.GetStreamByStreamerID(roomID)
+	if err != nil {
+		return err
+	}
+	return D.roomRepository.PublishNotification(stream.ID.Hex(), noty)
+
+}
 func (D *SubscriptionService) UpdataSubsChat(id, ToUser primitive.ObjectID) error {
 	err := D.roomRepository.UpdataSubsChat(id, ToUser)
 
