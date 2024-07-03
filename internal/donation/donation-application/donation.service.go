@@ -17,6 +17,14 @@ func NewDonationService(DonationRepository *donationtinfrastructure.DonationRepo
 		DonationRepository: DonationRepository,
 	}
 }
+func (D *DonationService) PublishNotification(roomID primitive.ObjectID, noty map[string]interface{}) error {
+	stream, err := D.DonationRepository.GetStreamByStreamerID(roomID)
+	if err != nil {
+		return err
+	}
+	return D.DonationRepository.PublishNotification(stream.ID.Hex(), noty)
+
+}
 
 // FromUser tiene pixeles?
 func (D *DonationService) UserHasNumberPikels(FromUser primitive.ObjectID, Pixeles float64) error {

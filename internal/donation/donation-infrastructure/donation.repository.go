@@ -2,8 +2,10 @@ package donationtinfrastructure
 
 import (
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
+	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	"PINKKER-BACKEND/pkg/utils"
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -45,6 +47,31 @@ func (D *DonationRepository) GetWebSocketClientsInRoom(roomID string) ([]*websoc
 	clients, err := utils.NewChatService().GetWebSocketClientsInRoom(roomID)
 
 	return clients, err
+}
+func (D *DonationRepository) GetStreamByStreamerID(user primitive.ObjectID) (streamdomain.Stream, error) {
+	GoMongoDBColl := D.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollStreams := GoMongoDBColl.Collection("Streams")
+	filter := bson.M{"StreamerID": user}
+	var stream streamdomain.Stream
+	err := GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&stream)
+	return stream, err
+}
+func (D *DonationRepository) PublishNotification(roomID string, noty map[string]interface{}) error {
+
+	chatMessageJSON, err := json.Marshal(noty)
+	if err != nil {
+		return err
+	}
+	err = D.redisClient.Publish(
+		context.Background(),
+		roomID+"action",
+		string(chatMessageJSON),
+	).Err()
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 // DonatePixels transfiere pixeles de un usuario a otro

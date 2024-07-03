@@ -60,6 +60,8 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 		})
 	}
 	h.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", user, idReq.Text)
+	h.NotifyActivityToChat(idReq.ToUser, user, idReq.Text)
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})
@@ -83,6 +85,16 @@ func (h *SubscriptionHandler) NotifyActivityFeed(room, user string, text string)
 		}
 	}
 
+	return nil
+}
+func (h *SubscriptionHandler) NotifyActivityToChat(UserToken primitive.ObjectID, user string, text string) error {
+
+	notification := map[string]interface{}{
+		"action": "Subs",
+		"Text":   text,
+		"data":   user,
+	}
+	h.subscriptionService.PublishNotification(UserToken, notification)
 	return nil
 }
 
