@@ -203,18 +203,15 @@ func (u *UserRepository) PanelAdminPinkkerPartnerUser(PanelAdminPinkkerInfoUserR
 	return nil
 }
 func (u *UserRepository) CreateAdmin(CreateAdmin domain.CreateAdmin, id primitive.ObjectID) error {
-	// Autenticar el código
 	err := u.AutCode(id, CreateAdmin.Code)
 	if err != nil {
 		return err
 	}
 	ctx := context.TODO()
 
-	// Conectar a la base de datos y obtener la colección de usuarios
 	db := u.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollUsers := db.Collection("Users")
 
-	// Crear el filtro para encontrar al usuario
 	var userFilter bson.M
 	if CreateAdmin.IdUser != primitive.NilObjectID {
 		userFilter = bson.M{"_id": CreateAdmin.IdUser}
@@ -398,8 +395,7 @@ func (u *UserRepository) GetUserByNameUserIndex(NameUser string) ([]*domain.GetU
 
 func (u *UserRepository) FindUserById(id primitive.ObjectID) (*domain.User, error) {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	var FindUserInDb primitive.D
-	FindUserInDb = bson.D{
+	FindUserInDb := bson.D{
 		{Key: "_id", Value: id},
 	}
 	var FindUserById *domain.User
@@ -813,6 +809,9 @@ func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error 
 		},
 	}
 	_, err := GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		return err
+	}
 	filterStream := bson.M{"StreamerID": id}
 	updateStream := bson.M{
 		"$set": bson.M{
