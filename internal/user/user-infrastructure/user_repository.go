@@ -202,6 +202,50 @@ func (u *UserRepository) PanelAdminPinkkerPartnerUser(PanelAdminPinkkerInfoUserR
 
 	return nil
 }
+func (u *UserRepository) CreateAdmin(CreateAdmin domain.CreateAdmin, id primitive.ObjectID) error {
+	// Autenticar el código
+	err := u.AutCode(id, CreateAdmin.Code)
+	if err != nil {
+		return err
+	}
+	ctx := context.TODO()
+
+	// Conectar a la base de datos y obtener la colección de usuarios
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := db.Collection("Users")
+
+	// Crear el filtro para encontrar al usuario
+	var userFilter bson.M
+	if CreateAdmin.IdUser != primitive.NilObjectID {
+		userFilter = bson.M{"_id": CreateAdmin.IdUser}
+	} else if CreateAdmin.NameUser != "" {
+		userFilter = bson.M{"NameUser": CreateAdmin.NameUser}
+	} else {
+		return errors.New("IdUser and NameUser are empty")
+	}
+
+	var userResult domain.User
+	err = GoMongoDBCollUsers.FindOne(ctx, userFilter).Decode(&userResult)
+	if err != nil {
+		return err
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"PanelAdminPinkker.Level": CreateAdmin.Level,
+			"PanelAdminPinkker.Asset": true,
+			"PanelAdminPinkker.Code":  CreateAdmin.NewCode,
+			"PanelAdminPinkker.Date":  time.Now(),
+		},
+	}
+
+	_, err = GoMongoDBCollUsers.UpdateOne(ctx, userFilter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func (u *UserRepository) AutCode(id primitive.ObjectID, code string) error {
 	db := u.mongoClient.Database("PINKKER-BACKEND")
@@ -218,6 +262,7 @@ func (u *UserRepository) AutCode(id primitive.ObjectID, code string) error {
 	}
 	return nil
 }
+
 func (u *UserRepository) SaveUserRedis(User *domain.User) (string, error) {
 
 	code := helpers.GenerateRandomCode()
