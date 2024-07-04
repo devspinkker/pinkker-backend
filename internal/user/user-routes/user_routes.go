@@ -48,6 +48,8 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/user/EditSocialNetworks", middleware.UseExtractor(), UserHandler.EditSocialNetworks)
 
 	App.Post("/user/PanelAdminPinkker/InfoUser", middleware.UseExtractor(), UserHandler.PanelAdminPinkkerInfoUser)
+	App.Post("/user/PanelAdminPinkker/	", middleware.UseExtractor(), UserHandler.CreateAdmin)
+
 	App.Post("/user/PanelAdminPinkker/banStreamer", middleware.UseExtractor(), UserHandler.PanelAdminPinkkerbanStreamer)
 	App.Post("/user/PanelAdminPinkker/RemoveBanStreamer", middleware.UseExtractor(), UserHandler.PanelAdminRemoveBanStreamer)
 	App.Post("/user/PanelAdminPinkker/PanelAdminPinkkerPartnerUser", middleware.UseExtractor(), UserHandler.PanelAdminPinkkerPartnerUser)

@@ -203,3 +203,8 @@ func (u *UserService) PanelAdminRemoveBanStreamer(dt userdomain.PanelAdminPinkke
 	err := u.roomRepository.PanelAdminRemoveBanStreamer(dt, id)
 	return err
 }
+
+func (u *UserService) CreateAdmin(CreateAdmin domain.CreateAdmin, id primitive.ObjectID) error {
+	err := u.roomRepository.CreateAdmin(CreateAdmin, id)
+	return err
+}

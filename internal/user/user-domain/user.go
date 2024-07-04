@@ -114,6 +114,13 @@ type PanelAdminPinkkerInfoUserReq struct {
 	IdUser   primitive.ObjectID `json:"IdUser,omitempty" bson:"IdUser"`
 	NameUser string             `json:"NameUser,omitempty" bson:"NameUser"`
 }
+type CreateAdmin struct {
+	Code     string             `json:"Code,omitempty" bson:"Code"`
+	IdUser   primitive.ObjectID `json:"IdUser,omitempty" bson:"IdUser"`
+	NameUser string             `json:"NameUser,omitempty" bson:"NameUser"`
+	Level    int                `json:"Level,omitempty" bson:"Level"`
+	NewCode  string             `json:"NewCode,omitempty" bson:"NewCode" validate:"required,min=5,max=20" `
+}
 
 func (u *PanelAdminPinkkerInfoUserReq) ValidateUser() error {
 	validate := validator.New()
