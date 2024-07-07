@@ -114,11 +114,11 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, followingIDs []pr
 }
 
 func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.D, limit int, clipsDB *mongo.Collection) ([]clipdomain.Clip, error) {
-	timeLimit := time.Now().Add(-48 * time.Hour)
+	// timeLimit := time.Now().Add(-48 * time.Hour)
 
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: bson.D{
-			{Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: timeLimit}}},
+			// {Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: timeLimit}}},
 		}}},
 		bson.D{{Key: "$match", Value: excludeFilter}},
 		bson.D{{Key: "$addFields", Value: bson.D{
@@ -231,7 +231,7 @@ func (c *ClipRepository) SaveClip(clip *clipdomain.Clip) (*clipdomain.Clip, erro
 	}
 
 	if resultuserCollection.ModifiedCount == 0 {
-		return clip, errors.New("No se encontraron documentos para actualizar.")
+		return clip, errors.New("no se encontraron documentos para actualizar")
 	}
 
 	return clip, err
@@ -291,8 +291,7 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Cli
 
 func (c *ClipRepository) FindUser(totalKey string) (*userdomain.User, error) {
 	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	var FindUserInDb primitive.D
-	FindUserInDb = bson.D{
+	FindUserInDb := bson.D{
 		{Key: "KeyTransmission", Value: totalKey},
 	}
 	var findUserInDbExist *userdomain.User
@@ -301,8 +300,7 @@ func (c *ClipRepository) FindUser(totalKey string) (*userdomain.User, error) {
 }
 func (c *ClipRepository) FindUserId(FindUserId string) (*userdomain.User, error) {
 	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	var FindUserInDb primitive.D
-	FindUserInDb = bson.D{
+	FindUserInDb := bson.D{
 		{Key: "NameUser", Value: FindUserId},
 	}
 	var findUserInDbExist *userdomain.User
@@ -311,8 +309,7 @@ func (c *ClipRepository) FindUserId(FindUserId string) (*userdomain.User, error)
 }
 func (c *ClipRepository) FindCategorieStream(StreamerID primitive.ObjectID) (*streamdomain.Stream, error) {
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
-	var FindInDb primitive.D
-	FindInDb = bson.D{
+	FindInDb := bson.D{
 		{Key: "StreamerID", Value: StreamerID},
 	}
 	var findStream *streamdomain.Stream
@@ -323,10 +320,10 @@ func (c *ClipRepository) GetClipsNameUser(page int, GetClipsNameUser string) ([]
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
 	options := options.Find()
-	options.SetSort(bson.D{{"TimeStamp", -1}})
+	options.SetSort(bson.D{{Key: "TimeStamp", Value: -1}})
 	options.SetSkip(int64((page - 1) * 10))
 	options.SetLimit(10)
-	filter := bson.D{{"NameUserCreator", GetClipsNameUser}}
+	filter := bson.D{{Key: "NameUser", Value: GetClipsNameUser}}
 
 	cursor, err := GoMongoDBColl.Find(context.Background(), filter, options)
 	if err != nil {
@@ -345,17 +342,17 @@ func (c *ClipRepository) GetClipsCategory(page int, Category string, lastClipID 
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
 	options := options.Find()
-	options.SetSort(bson.D{{"_id", -1}})
+	options.SetSort(bson.D{{Key: "_id", Value: -1}})
 	options.SetSkip(int64((page - 1) * 10))
 	options.SetLimit(10)
 
 	filter := bson.D{}
 	if Category != "" {
-		filter = bson.D{{"Category", Category}}
+		filter = bson.D{{Key: "Category", Value: Category}}
 	}
 
 	if !lastClipID.IsZero() {
-		filter = append(filter, bson.E{"_id", bson.M{"$lt": lastClipID}})
+		filter = append(filter, bson.E{Key: "_id", Value: bson.M{"$lt": lastClipID}})
 	}
 
 	cursor, err := GoMongoDBColl.Find(context.Background(), filter, options)
