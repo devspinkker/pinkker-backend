@@ -13,7 +13,7 @@ type Clip struct {
 	ID              primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
 	NameUserCreator string               `json:"nameUserCreator" bson:"NameUserCreator"`
 	IDCreator       primitive.ObjectID   `json:"idCreator" bson:"IDCreator"`
-	NameUser        string               `json:"streamerId" bson:"StreamerID"`
+	NameUser        string               `json:"NameUser" bson:"NameUser"`
 	StreamThumbnail string               `json:"streamThumbnail" bson:"StreamThumbnail"`
 	Category        string               `json:"category" bson:"Category"`
 	UserID          primitive.ObjectID   `json:"UserID" bson:"UserID"`
