@@ -187,9 +187,9 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		if err != nil {
 			return err
 		}
-		streamDuration := time.Since(latestSummary.StartOfStream)
-		totalTimeOnline := StreamFind.TotalTimeOnlineSeconds
-		totalTimeOnline += int64(streamDuration.Seconds())
+		streamDuration := time.Since(latestSummary.StartOfStream).Hours()
+		totalTimeOnline := StreamFind.TotalTimeOnline
+		totalTimeOnline += streamDuration
 
 		updateStream := bson.D{
 			{Key: "$set", Value: bson.D{
