@@ -430,7 +430,7 @@ func (clip *ClipHandler) CommentClip(c *fiber.Ctx) error {
 		})
 	}
 
-	errLike := clip.ClipService.CommentClip(req.IdClip, idValueToken, nameuser, req.CommentClip)
+	comment, errLike := clip.ClipService.CommentClip(req.IdClip, idValueToken, nameuser, req.CommentClip)
 	if errLike != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -439,6 +439,7 @@ func (clip *ClipHandler) CommentClip(c *fiber.Ctx) error {
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "commented",
+		"data":    comment,
 	})
 }
 func (clip *ClipHandler) LikeCommentClip(c *fiber.Ctx) error {
