@@ -72,7 +72,7 @@ func (c *ClipRepository) getFirstFourCategories(user *userdomain.User) []string 
 
 // getRelevantClips obtiene los clips relevantes basados en los seguidores y categorías del usuario
 func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Collection, followingIDs []primitive.ObjectID, excludeFilter bson.D, categories []string, limit int) ([]clipdomain.Clip, error) {
-	timeLimit := time.Now().Add(-48 * time.Hour)
+	timeLimit := time.Now().Add(-72 * time.Hour)
 	pipeline := mongo.Pipeline{
 		// Filtrar por categorías y clips creados en las últimas 48 horas
 		bson.D{{Key: "$match", Value: bson.M{
@@ -565,18 +565,17 @@ func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID) error {
 	_, err := GoMongoDBColl.UpdateOne(context.Background(), filter, update)
 	return err
 }
-
-func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username, comment string) (clipdomain.ClipComment, error) {
+func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username, comment string) (clipdomain.ClipCommentGet, error) {
 	ctx := context.Background()
 	db := c.mongoClient.Database("PINKKER-BACKEND")
 
 	clipCollection := db.Collection("Clips")
 	count, err := clipCollection.CountDocuments(ctx, bson.M{"_id": clipID})
 	if err != nil {
-		return clipdomain.ClipComment{}, err
+		return clipdomain.ClipCommentGet{}, err
 	}
 	if count == 0 {
-		return clipdomain.ClipComment{}, errors.New("el clip no existe")
+		return clipdomain.ClipCommentGet{}, errors.New("el clip no existe")
 	}
 
 	commentCollection := db.Collection("CommentsClips")
@@ -590,7 +589,7 @@ func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username
 	}
 	insertResult, err := commentCollection.InsertOne(ctx, commentDoc)
 	if err != nil {
-		return clipdomain.ClipComment{}, err
+		return clipdomain.ClipCommentGet{}, err
 	}
 
 	// Actualizar la información del usuario con el ID del comentario creado
@@ -598,10 +597,52 @@ func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username
 	update := bson.D{{Key: "$addToSet", Value: bson.D{{Key: "ClipsComment", Value: insertResult.InsertedID}}}}
 	_, err = userCollection.UpdateOne(ctx, bson.M{"_id": userID}, update)
 	if err != nil {
-		return clipdomain.ClipComment{}, err
+		return clipdomain.ClipCommentGet{}, err
 	}
-	commentDoc.ID = insertResult.InsertedID.(primitive.ObjectID)
-	return commentDoc, nil
+
+	// Obtener el comentario con los datos del usuario
+	cursor, err := commentCollection.Aggregate(ctx, mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.M{"_id": insertResult.InsertedID}}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "clipId", Value: 1},
+			{Key: "UserID", Value: "$UserID"},
+			{Key: "FullName", Value: "$UserInfo.FullName"},
+			{Key: "Avatar", Value: "$UserInfo.Avatar"},
+			{Key: "comment", Value: 1},
+			{Key: "createdAt", Value: 1},
+			{Key: "likes", Value: 1},
+			{Key: "nameUser", Value: 1},
+		}}},
+	})
+	if err != nil {
+		return clipdomain.ClipCommentGet{}, err
+	}
+	defer cursor.Close(ctx)
+
+	var comments []clipdomain.ClipCommentGet
+	for cursor.Next(ctx) {
+		var comment clipdomain.ClipCommentGet
+		if err := cursor.Decode(&comment); err != nil {
+			return clipdomain.ClipCommentGet{}, err
+		}
+		comments = append(comments, comment)
+	}
+	if err := cursor.Err(); err != nil {
+		return clipdomain.ClipCommentGet{}, err
+	}
+
+	if len(comments) > 0 {
+		return comments[0], nil
+	}
+
+	return clipdomain.ClipCommentGet{}, errors.New("no se encontró ningún comentario")
 }
 
 func (c *ClipRepository) LikeComment(commentID, userID primitive.ObjectID) error {
