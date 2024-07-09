@@ -71,28 +71,61 @@ func (c *ClipRepository) getFirstFourCategories(user *userdomain.User) []string 
 }
 
 // getRelevantClips obtiene los clips relevantes basados en los seguidores y categorías del usuario
-func (c *ClipRepository) getRelevantClips(ctx context.Context, followingIDs []primitive.ObjectID, excludeFilter bson.D, categories []string, limit int, clipsDB *mongo.Collection) ([]clipdomain.Clip, error) {
+func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Collection, followingIDs []primitive.ObjectID, excludeFilter bson.D, categories []string, limit int) ([]clipdomain.Clip, error) {
+	timeLimit := time.Now().Add(-48 * time.Hour)
 	pipeline := mongo.Pipeline{
-		bson.D{{Key: "$match", Value: bson.D{
-			{Key: "likes", Value: bson.D{{Key: "$in", Value: followingIDs}}},
-			{Key: "category", Value: bson.D{{Key: "$in", Value: categories}}},
+		// Filtrar por categorías y clips creados en las últimas 48 horas
+		bson.D{{Key: "$match", Value: bson.M{
+			"Category":             bson.M{"$in": categories},
+			"timestamps.createdAt": bson.M{"$gte": timeLimit},
 		}}},
+		// Aplicar filtro adicional para excluir ciertos clips
 		bson.D{{Key: "$match", Value: excludeFilter}},
+		// Agregar campos auxiliares
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "likesArray", Value: bson.D{
-				{Key: "$ifNull", Value: bson.A{"$likes", bson.A{}}},
-			}},
+			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
+			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$likes", followingIDs}}}},
 		}}},
+		// Calcular el factor de relevancia
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "relevanceFactor", Value: bson.D{
-				{Key: "$multiply", Value: []interface{}{
-					bson.D{{Key: "$log10", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$views", 1}}}}},
-					bson.D{{Key: "$size", Value: bson.D{{Key: "$setIntersection", Value: []interface{}{"$likesArray", followingIDs}}}}},
-				}},
-			}},
+			{Key: "relevanceFactor", Value: bson.D{{Key: "$add", Value: bson.A{
+				// Ponderar más fuertemente los clips de los usuarios seguidos
+				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$cond", Value: bson.D{
+					{Key: "if", Value: "$isFollowingUser"},
+					{Key: "then", Value: 5}, // Mayor ponderación para los clips de usuarios seguidos
+					{Key: "else", Value: 0},
+				}}}, 3}}},
+				// Ponderar más fuertemente los "me gusta" de los usuarios seguidos
+				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$likedByFollowing"}}, 15}}},
+				// Frescura del clip
+				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$timestamps.createdAt"}}}, 3600000}}}}}},
+			}}}},
 		}}},
-		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceFactor", Value: -1}}}},
+		// Ordenar por factor de relevancia en orden descendente
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "relevanceFactor", Value: -1},
+		}}},
+		// Limitar el número de resultados
 		bson.D{{Key: "$limit", Value: limit}},
+		// Proyección de los campos necesarios
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "NameUserCreator", Value: 1},
+			{Key: "IDCreator", Value: 1},
+			{Key: "NameUser", Value: 1},
+			{Key: "StreamThumbnail", Value: 1},
+			{Key: "Category", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Avatar", Value: 1},
+			{Key: "ClipTitle", Value: 1},
+			{Key: "url", Value: 1},
+			{Key: "likes", Value: 1},
+			{Key: "duration", Value: 1},
+			{Key: "views", Value: 1},
+			{Key: "cover", Value: 1},
+			{Key: "comments", Value: 1},
+			{Key: "timestamps", Value: 1},
+		}}},
 	}
 
 	cursor, err := clipsDB.Aggregate(ctx, pipeline)
@@ -114,27 +147,30 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, followingIDs []pr
 }
 
 func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.D, limit int, clipsDB *mongo.Collection) ([]clipdomain.Clip, error) {
-	// timeLimit := time.Now().Add(-48 * time.Hour)
 
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: bson.D{
 			// {Key: "timestamps.createdAt", Value: bson.D{{Key: "$gte", Value: timeLimit}}},
 		}}},
 		bson.D{{Key: "$match", Value: excludeFilter}},
+		// Agregar campos auxiliares
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$likes", bson.A{}}}}}}},
 		}}},
+		// Calcular el factor de relevancia
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
 				// Ponderar más fuertemente los likes
 				bson.D{{Key: "$multiply", Value: bson.A{"$likeCount", 5}}},
-				// Frescura del post
-				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
+				// Frescura del clip
+				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$timestamps.createdAt"}}}, 86400000}}}}}},
 			}}}},
 		}}},
+		// Ordenar por factor de relevancia en orden descendente
 		bson.D{{Key: "$sort", Value: bson.D{
 			{Key: "relevanceScore", Value: -1},
 		}}},
+		// Limitar el número de resultados
 		bson.D{{Key: "$limit", Value: limit}},
 	}
 
@@ -152,6 +188,7 @@ func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.
 		}
 		clips = append(clips, clip)
 	}
+
 	return clips, nil
 }
 
@@ -175,7 +212,7 @@ func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, exc
 		return c.getRandomClips(ctx, excludeFilter, limit-len(recommendedClips), clipsDB)
 	}
 
-	recommendedClips, err = c.getRelevantClips(ctx, followingIDs, excludeFilter, categories, limit, clipsDB)
+	recommendedClips, err = c.getRelevantClips(ctx, clipsDB, followingIDs, excludeFilter, categories, limit)
 	if err != nil {
 		recommendedClips = []clipdomain.Clip{}
 	}
@@ -192,7 +229,6 @@ func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, exc
 			}},
 		}
 		randomClips, err := c.getRandomClips(ctx, excludeFilter, limit-len(recommendedClips), clipsDB)
-		fmt.Println("A")
 		if err != nil {
 			fmt.Println(err)
 
@@ -530,17 +566,17 @@ func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID) error {
 	return err
 }
 
-func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username, comment string) error {
+func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username, comment string) (clipdomain.ClipComment, error) {
 	ctx := context.Background()
 	db := c.mongoClient.Database("PINKKER-BACKEND")
 
 	clipCollection := db.Collection("Clips")
 	count, err := clipCollection.CountDocuments(ctx, bson.M{"_id": clipID})
 	if err != nil {
-		return err
+		return clipdomain.ClipComment{}, err
 	}
 	if count == 0 {
-		return errors.New("el clip no existe")
+		return clipdomain.ClipComment{}, errors.New("el clip no existe")
 	}
 
 	commentCollection := db.Collection("CommentsClips")
@@ -554,7 +590,7 @@ func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username
 	}
 	insertResult, err := commentCollection.InsertOne(ctx, commentDoc)
 	if err != nil {
-		return err
+		return clipdomain.ClipComment{}, err
 	}
 
 	// Actualizar la información del usuario con el ID del comentario creado
@@ -562,10 +598,10 @@ func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username
 	update := bson.D{{Key: "$addToSet", Value: bson.D{{Key: "ClipsComment", Value: insertResult.InsertedID}}}}
 	_, err = userCollection.UpdateOne(ctx, bson.M{"_id": userID}, update)
 	if err != nil {
-		return err
+		return clipdomain.ClipComment{}, err
 	}
-
-	return nil
+	commentDoc.ID = insertResult.InsertedID.(primitive.ObjectID)
+	return commentDoc, nil
 }
 
 func (c *ClipRepository) LikeComment(commentID, userID primitive.ObjectID) error {

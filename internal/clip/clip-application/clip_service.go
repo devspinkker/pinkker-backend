@@ -110,14 +110,12 @@ func (u *ClipService) ClipsRecommended(idT primitive.ObjectID, excludeIDs []prim
 	clips, err := u.ClipRepository.ClipsRecommended(idT, limit, excludeIDs)
 	return clips, err
 }
-func (u *ClipService) CommentClip(clipID, userID primitive.ObjectID, username, comment string) error {
-	err := u.ClipRepository.CommentClip(clipID, userID, username, comment)
-	return err
+func (u *ClipService) CommentClip(clipID, userID primitive.ObjectID, username, comment string) (clipdomain.ClipComment, error) {
+	return u.ClipRepository.CommentClip(clipID, userID, username, comment)
 }
 
 func (u *ClipService) LikeCommentClip(idClip primitive.ObjectID, idValueToken primitive.ObjectID) error {
-	err := u.ClipRepository.LikeComment(idClip, idValueToken)
-	return err
+	return u.ClipRepository.LikeComment(idClip, idValueToken)
 }
 
 func (u *ClipService) UnlikeComment(idClip primitive.ObjectID, idValueToken primitive.ObjectID) error {
