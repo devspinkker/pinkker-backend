@@ -110,7 +110,7 @@ func (u *ClipService) ClipsRecommended(idT primitive.ObjectID, excludeIDs []prim
 	clips, err := u.ClipRepository.ClipsRecommended(idT, limit, excludeIDs)
 	return clips, err
 }
-func (u *ClipService) CommentClip(clipID, userID primitive.ObjectID, username, comment string) (clipdomain.ClipComment, error) {
+func (u *ClipService) CommentClip(clipID, userID primitive.ObjectID, username, comment string) (clipdomain.ClipCommentGet, error) {
 	return u.ClipRepository.CommentClip(clipID, userID, username, comment)
 }
 
