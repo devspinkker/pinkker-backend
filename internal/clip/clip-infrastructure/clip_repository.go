@@ -30,6 +30,84 @@ func NewClipRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Cl
 	}
 }
 
+func (c *ClipRepository) GetClipsByTitle(title string, limit int) ([]clipdomain.Clip, error) {
+	ctx := context.Background()
+	clipsDB := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+
+	// Crear un índice en el campo ClipTitle
+	indexModel := mongo.IndexModel{
+		Keys: bson.D{{Key: "ClipTitle", Value: "text"}},
+	}
+	_, err := clipsDB.Indexes().CreateOne(ctx, indexModel)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := bson.M{
+		"$text": bson.M{"$search": title},
+	}
+
+	// Construir el pipeline de agregación
+	pipeline := mongo.Pipeline{
+		// Filtrar por el título del clip
+		bson.D{{Key: "$match", Value: filter}},
+		// Agregar campos auxiliares
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "relevanceFactor", Value: bson.D{{Key: "$add", Value: bson.A{
+				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$cond", Value: bson.D{
+					{Key: "if", Value: bson.M{"$regexMatch": bson.M{"input": "$ClipTitle", "regex": primitive.Regex{Pattern: title, Options: "i"}}}},
+					{Key: "then", Value: 10}, // Mayor ponderación para coincidencias en el título
+					{Key: "else", Value: 0},
+				}}}, 3}}},
+				bson.D{{Key: "$divide", Value: bson.A{"$views", 100}}}, // Ponderar por la cantidad de vistas
+				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$timestamps.createdAt"}}}, 3600000}}}}}}, // Frescura del clip
+			}}}},
+		}}},
+		// Ordenar por factor de relevancia en orden descendente
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "relevanceFactor", Value: -1},
+		}}},
+		// Limitar el número de resultados
+		bson.D{{Key: "$limit", Value: limit}},
+		// Proyección de los campos necesarios
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "NameUserCreator", Value: 1},
+			{Key: "IDCreator", Value: 1},
+			{Key: "NameUser", Value: 1},
+			{Key: "StreamThumbnail", Value: 1},
+			{Key: "Category", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Avatar", Value: 1},
+			{Key: "ClipTitle", Value: 1},
+			{Key: "url", Value: 1},
+			{Key: "likes", Value: 1},
+			{Key: "duration", Value: 1},
+			{Key: "views", Value: 1},
+			{Key: "cover", Value: 1},
+			{Key: "comments", Value: 1},
+			{Key: "timestamps", Value: 1},
+		}}},
+	}
+
+	cursor, err := clipsDB.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var clips []clipdomain.Clip
+	for cursor.Next(ctx) {
+		var clip clipdomain.Clip
+		if err := cursor.Decode(&clip); err != nil {
+			return nil, err
+		}
+		clips = append(clips, clip)
+	}
+
+	return clips, nil
+}
+
 // getUser obtiene un usuario de la colección Users
 func (c *ClipRepository) getUser(ctx context.Context, idT primitive.ObjectID, UsersDb *mongo.Collection) (*userdomain.User, error) {
 	var user *userdomain.User
