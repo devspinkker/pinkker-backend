@@ -27,6 +27,21 @@ func NewClipHandler(ClipService *clipapplication.ClipService) *ClipHandler {
 		ClipService: ClipService,
 	}
 }
+func (clip *ClipHandler) GetClipsByTitle(c *fiber.Ctx) error {
+	title := c.Query("title", "")
+
+	clipsGet, err := clip.ClipService.GetClipsByTitle(title)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "err",
+			"data":    err,
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+		"data":    clipsGet,
+	})
+}
 
 func (clip *ClipHandler) GetClipId(c *fiber.Ctx) error {
 	clipIDStr := c.Query("clipId")

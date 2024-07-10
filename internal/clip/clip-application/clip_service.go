@@ -110,6 +110,11 @@ func (u *ClipService) ClipsRecommended(idT primitive.ObjectID, excludeIDs []prim
 	clips, err := u.ClipRepository.ClipsRecommended(idT, limit, excludeIDs)
 	return clips, err
 }
+func (u *ClipService) GetClipsByTitle(title string) ([]clipdomain.Clip, error) {
+	limit := 10
+	clips, err := u.ClipRepository.GetClipsByTitle(title, limit)
+	return clips, err
+}
 func (u *ClipService) CommentClip(clipID, userID primitive.ObjectID, username, comment string) (clipdomain.ClipCommentGet, error) {
 	return u.ClipRepository.CommentClip(clipID, userID, username, comment)
 }
