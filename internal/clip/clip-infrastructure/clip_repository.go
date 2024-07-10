@@ -44,53 +44,12 @@ func (c *ClipRepository) GetClipsByTitle(title string, limit int) ([]clipdomain.
 	}
 
 	filter := bson.M{
-		"$text": bson.M{"$search": title},
+		"ClipTitle": primitive.Regex{Pattern: title, Options: "i"},
 	}
 
-	// Construir el pipeline de agregación
-	pipeline := mongo.Pipeline{
-		// Filtrar por el título del clip
-		bson.D{{Key: "$match", Value: filter}},
-		// Agregar campos auxiliares
-		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "relevanceFactor", Value: bson.D{{Key: "$add", Value: bson.A{
-				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$cond", Value: bson.D{
-					{Key: "if", Value: bson.M{"$regexMatch": bson.M{"input": "$ClipTitle", "regex": primitive.Regex{Pattern: title, Options: "i"}}}},
-					{Key: "then", Value: 10}, // Mayor ponderación para coincidencias en el título
-					{Key: "else", Value: 0},
-				}}}, 3}}},
-				bson.D{{Key: "$divide", Value: bson.A{"$views", 100}}}, // Ponderar por la cantidad de vistas
-				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$timestamps.createdAt"}}}, 3600000}}}}}}, // Frescura del clip
-			}}}},
-		}}},
-		// Ordenar por factor de relevancia en orden descendente
-		bson.D{{Key: "$sort", Value: bson.D{
-			{Key: "relevanceFactor", Value: -1},
-		}}},
-		// Limitar el número de resultados
-		bson.D{{Key: "$limit", Value: limit}},
-		// Proyección de los campos necesarios
-		bson.D{{Key: "$project", Value: bson.D{
-			{Key: "id", Value: "$_id"},
-			{Key: "NameUserCreator", Value: 1},
-			{Key: "IDCreator", Value: 1},
-			{Key: "NameUser", Value: 1},
-			{Key: "StreamThumbnail", Value: 1},
-			{Key: "Category", Value: 1},
-			{Key: "UserID", Value: 1},
-			{Key: "Avatar", Value: 1},
-			{Key: "ClipTitle", Value: 1},
-			{Key: "url", Value: 1},
-			{Key: "likes", Value: 1},
-			{Key: "duration", Value: 1},
-			{Key: "views", Value: 1},
-			{Key: "cover", Value: 1},
-			{Key: "comments", Value: 1},
-			{Key: "timestamps", Value: 1},
-		}}},
-	}
+	findOptions := options.Find().SetLimit(int64(limit))
 
-	cursor, err := clipsDB.Aggregate(ctx, pipeline)
+	cursor, err := clipsDB.Find(ctx, filter, findOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +62,10 @@ func (c *ClipRepository) GetClipsByTitle(title string, limit int) ([]clipdomain.
 			return nil, err
 		}
 		clips = append(clips, clip)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
 	}
 
 	return clips, nil
