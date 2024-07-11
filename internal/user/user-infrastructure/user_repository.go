@@ -39,35 +39,34 @@ func (s *UserRepository) SubscribeToRoom(roomID string) *redis.PubSub {
 func (s *UserRepository) CloseSubscription(sub *redis.PubSub) error {
 	return sub.Close()
 }
-func (u *UserRepository) PanelAdminPinkkerInfoUser(PanelAdminPinkkerInfoUserReq domain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) (domain.User, streamdomain.Stream, error) {
+func (u *UserRepository) PanelAdminPinkkerInfoUser(PanelAdminPinkkerInfoUserReq domain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) (*domain.User, streamdomain.Stream, error) {
 	err := u.AutCode(id, PanelAdminPinkkerInfoUserReq.Code)
 	if err != nil {
-		return domain.User{}, streamdomain.Stream{}, err
+		return &domain.User{}, streamdomain.Stream{}, err
 	}
 	db := u.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBCollUsers := db.Collection("Users")
 	GoMongoDBCollStream := db.Collection("Streams")
 
 	ctx := context.TODO()
 
-	var userFilter bson.M
+	var userFilter bson.D
 	if PanelAdminPinkkerInfoUserReq.IdUser != primitive.NilObjectID {
-		userFilter = bson.M{"_id": PanelAdminPinkkerInfoUserReq.IdUser}
+		userFilter = bson.D{{Key: "_id", Value: PanelAdminPinkkerInfoUserReq.IdUser}}
 	} else if PanelAdminPinkkerInfoUserReq.NameUser != "" {
-		userFilter = bson.M{"NameUser": PanelAdminPinkkerInfoUserReq.NameUser}
+		userFilter = bson.D{{Key: "NameUser", Value: PanelAdminPinkkerInfoUserReq.NameUser}}
+
 	} else {
-		return domain.User{}, streamdomain.Stream{}, errors.New("IdUser and NameUser are empty")
+		return &domain.User{}, streamdomain.Stream{}, errors.New("IdUser and NameUser are empty")
 	}
-	var userResult domain.User
-	err = GoMongoDBCollUsers.FindOne(ctx, userFilter).Decode(&userResult)
+	userResult, err := u.getFullUser(userFilter)
 	if err != nil {
-		return domain.User{}, streamdomain.Stream{}, err
+		return &domain.User{}, streamdomain.Stream{}, err
 	}
 	streamFilter := bson.M{"StreamerID": userResult.ID}
 	var streamResult streamdomain.Stream
 	err = GoMongoDBCollStream.FindOne(ctx, streamFilter).Decode(&streamResult)
 	if err != nil {
-		return domain.User{}, streamdomain.Stream{}, err
+		return &domain.User{}, streamdomain.Stream{}, err
 	}
 
 	return userResult, streamResult, nil
@@ -278,7 +277,6 @@ func (u *UserRepository) SaveUserRedis(User *domain.User) (string, error) {
 	return code, nil
 }
 func (u *UserRepository) GetUserByCodeFromRedis(code string) (*domain.User, error) {
-	fmt.Println(code)
 
 	userJSON, errGet := u.redisClient.Get(context.Background(), code).Result()
 	if errGet != nil {
@@ -394,32 +392,20 @@ func (u *UserRepository) GetUserByNameUserIndex(NameUser string) ([]*domain.GetU
 }
 
 func (u *UserRepository) FindUserById(id primitive.ObjectID) (*domain.User, error) {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	FindUserInDb := bson.D{
-		{Key: "_id", Value: id},
-	}
-	var FindUserById *domain.User
-	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&FindUserById)
-	return FindUserById, errCollUsers
+	filter := bson.D{{Key: "_id", Value: id}}
+	return u.getFullUser(filter)
 }
+
 func (u *UserRepository) GetUserBykey(key string) (*domain.GetUser, error) {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	FindUserInDb := bson.D{
-		{Key: "KeyTransmission", Value: key},
-	}
-	var FindUserById *domain.GetUser
-	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&FindUserById)
-	return FindUserById, errCollUsers
+	filter := bson.D{{Key: "KeyTransmission", Value: key}}
+	return u.getUser(filter)
 }
+
 func (u *UserRepository) GetUserByCmt(Cmt string) (*domain.User, error) {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	FindUserInDb := bson.D{
-		{Key: "Cmt", Value: Cmt},
-	}
-	var FindUserById *domain.User
-	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&FindUserById)
-	return FindUserById, errCollUsers
+	filter := bson.D{{Key: "Cmt", Value: Cmt}}
+	return u.getFullUser(filter)
 }
+
 func (u *UserRepository) SendConfirmationEmail(Email string, Token string) error {
 
 	// confirmationLink := fmt.Sprintf("https://tudominio.com/confirm?token=%s", Token)
@@ -832,4 +818,57 @@ func (u *UserRepository) RedisSaveAccountRecoveryCode(code string, user domain.U
 	err := u.redisClient.Set(context.Background(), code, userJSON, 5*time.Minute).Err()
 
 	return err
+}
+
+func (u *UserRepository) getUser(filter bson.D) (*domain.GetUser, error) {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$addFields", Value: bson.D{{Key: "FollowersCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Followers", bson.A{}}}}}}}}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Followers", Value: 0},
+		}}},
+	}
+
+	cursor, err := GoMongoDBCollUsers.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var user domain.GetUser
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+	}
+
+	return &user, nil
+}
+func (u *UserRepository) getFullUser(filter bson.D) (*domain.User, error) {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$addFields", Value: bson.D{{Key: "FollowersCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Followers", bson.A{}}}}}}}}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Followers", Value: 0},
+		}}},
+	}
+
+	cursor, err := GoMongoDBCollUsers.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var user domain.User
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+	}
+
+	return &user, nil
 }
