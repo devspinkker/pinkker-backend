@@ -140,18 +140,23 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 		}
 	}()
 	FFmpegPath := config.FFmpegPath()
-	cmdSS := strconv.Itoa(clipRequest.Start)
-	cmdT := strconv.Itoa(clipRequest.End - clipRequest.Start)
-
+	// cmdSS := strconv.Itoa(clipRequest.Start)
+	// cmdT := strconv.Itoa(clipRequest.End - clipRequest.Start)
+	cmdSS := "0"
+	cmdT := "30"
 	cmd := exec.Command(
 		FFmpegPath,
-		"-i", videoPath,
-		"-ss", cmdSS,
-		"-t", cmdT,
-		"-c", "copy",
+		"-ss", cmdSS, // seek time
+		"-t", cmdT, // duration
+		"-i", videoPath, // input file
+		"-c:v", "libx264",
+		"-c:a", "aac",
+		"-strict", "experimental",
+		"-b:a", "192k",
+		"-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+		"-y", // overwrite output files without asking
 		outputFilePath,
 	)
-
 	_, err = cmd.CombinedOutput()
 	if err != nil {
 		return c.Status(fiber.StatusInsufficientStorage).JSON(fiber.Map{
