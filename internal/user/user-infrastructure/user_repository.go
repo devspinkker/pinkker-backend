@@ -825,9 +825,17 @@ func (u *UserRepository) getUser(filter bson.D) (*domain.GetUser, error) {
 
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: filter}},
-		bson.D{{Key: "$addFields", Value: bson.D{{Key: "FollowersCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Followers", bson.A{}}}}}}}}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "FollowersCount", Value: bson.D{
+				{Key: "$size", Value: bson.D{
+					{Key: "$objectToArray", Value: bson.D{
+						{Key: "$ifNull", Value: bson.A{"$Followers", bson.D{}}},
+					}},
+				}},
+			}},
+		}}},
 		bson.D{{Key: "$project", Value: bson.D{
-			{Key: "Followers", Value: 0},
+			{Key: "Followers", Value: 0}, // Excluir el campo Followers si es necesario
 		}}},
 	}
 
@@ -846,14 +854,23 @@ func (u *UserRepository) getUser(filter bson.D) (*domain.GetUser, error) {
 
 	return &user, nil
 }
+
 func (u *UserRepository) getFullUser(filter bson.D) (*domain.User, error) {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: filter}},
-		bson.D{{Key: "$addFields", Value: bson.D{{Key: "FollowersCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Followers", bson.A{}}}}}}}}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "FollowersCount", Value: bson.D{
+				{Key: "$size", Value: bson.D{
+					{Key: "$objectToArray", Value: bson.D{
+						{Key: "$ifNull", Value: bson.A{"$Followers", bson.D{}}},
+					}},
+				}},
+			}},
+		}}},
 		bson.D{{Key: "$project", Value: bson.D{
-			{Key: "Followers", Value: 0},
+			{Key: "Followers", Value: 0}, // Excluir el campo Followers si es necesario
 		}}},
 	}
 
