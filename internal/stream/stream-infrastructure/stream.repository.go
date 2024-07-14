@@ -30,16 +30,19 @@ func NewStreamRepository(redisClient *redis.Client, mongoClient *mongo.Client) *
 	}
 }
 
-func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
+func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.ObjectID, error) {
+
+	var LastStreamSummary primitive.ObjectID
+
 	session, err := r.mongoClient.StartSession()
 	if err != nil {
-		return err
+		return LastStreamSummary, err
 	}
 	defer session.EndSession(context.Background())
 
 	err = session.StartTransaction()
 	if err != nil {
-		return err
+		return LastStreamSummary, err
 	}
 
 	ctx := mongo.NewSessionContext(context.Background(), session)
@@ -48,7 +51,6 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
 	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
 	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
-
 	filterUsers := bson.D{
 		{Key: "KeyTransmission", Value: Key},
 	}
@@ -57,7 +59,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 	err = GoMongoDBCollUsers.FindOne(ctx, filterUsers).Decode(&userFind)
 	if err != nil {
 		session.AbortTransaction(ctx)
-		return err
+		return LastStreamSummary, err
 	}
 
 	filterStreams := bson.D{
@@ -75,7 +77,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 	err = GoMongoDBCollStreams.FindOneAndUpdate(ctx, filterStreams, updateStreams, options).Decode(&StreamFind)
 	if err != nil {
 		session.AbortTransaction(ctx)
-		return err
+		return LastStreamSummary, err
 	}
 
 	filterUsers = bson.D{
@@ -91,7 +93,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 	_, err = GoMongoDBCollUsers.UpdateOne(ctx, filterUsers, updateUsers)
 	if err != nil {
 		session.AbortTransaction(ctx)
-		return err
+		return LastStreamSummary, err
 	}
 	if state {
 		// notifyOnlineStreamer := []string{}
@@ -108,17 +110,17 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		// modo de chat cuandos se prende
 		exist, err := r.redisClient.Exists(context.Background(), StreamFind.ID.Hex()).Result()
 		if err != nil {
-			return err
+			return LastStreamSummary, err
 		}
 		if exist == 1 {
 			err := r.redisClient.Set(context.Background(), StreamFind.ID.Hex(), StreamFind.ModChat, 0).Err()
 			if err != nil {
-				return err
+				return LastStreamSummary, err
 			}
 		} else {
 			err := r.redisClient.Set(context.Background(), StreamFind.ID.Hex(), StreamFind.ModChat, 0).Err()
 			if err != nil {
-				return err
+				return LastStreamSummary, err
 			}
 		}
 		startFollowersCount := len(userFind.Followers)
@@ -141,7 +143,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 
 		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
 		if err != nil {
-			return err
+			return LastStreamSummary, err
 		}
 	} else {
 		_, err := r.redisClient.Del(context.Background(), StreamFind.ID.Hex()).Result()
@@ -152,7 +154,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		latestSummary, err := r.FindLatestStreamSummaryByStreamerID(userFind.ID)
 		if err != nil {
 			session.AbortTransaction(ctx)
-			return err
+			return LastStreamSummary, err
 		}
 		newFollowersCount := len(userFind.Followers) - latestSummary.StartFollowersCount
 		newSubsCount := len(userFind.Subscriptions) - latestSummary.StartSubsCount
@@ -185,8 +187,9 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 
 		_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, bson.M{"_id": latestSummary.ID}, updateSummary)
 		if err != nil {
-			return err
+			return LastStreamSummary, err
 		}
+		LastStreamSummary = latestSummary.ID
 		streamDuration := time.Since(latestSummary.StartOfStream).Hours()
 		totalTimeOnline := StreamFind.TotalTimeOnline
 		totalTimeOnline += streamDuration
@@ -200,16 +203,16 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) error {
 		// Actualizar el documento de Stream
 		_, err = GoMongoDBCollStreams.UpdateOne(ctx, bson.M{"_id": StreamFind.ID}, updateStream)
 		if err != nil {
-			return err
+			return LastStreamSummary, err
 		}
 	}
 
 	err = session.CommitTransaction(ctx)
 	if err != nil {
-		return err
+		return LastStreamSummary, err
 	}
 
-	return nil
+	return LastStreamSummary, nil
 }
 func (r *StreamRepository) publishNotification(Type, streamerName, id, Title, Avatar string) error {
 	message := map[string]interface{}{

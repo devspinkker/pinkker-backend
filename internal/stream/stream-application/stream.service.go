@@ -72,9 +72,9 @@ func (s *StreamService) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID) ([
 	return stream, err
 }
 
-func (s *StreamService) Update_online(Key string, state bool) error {
-	err := s.StreamRepository.UpdateOnline(Key, state)
-	return err
+func (s *StreamService) Update_online(Key string, state bool) (primitive.ObjectID, error) {
+	LastStreamSummary, err := s.StreamRepository.UpdateOnline(Key, state)
+	return LastStreamSummary, err
 }
 
 func (s *StreamService) CloseStream(key string) error {

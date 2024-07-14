@@ -325,13 +325,15 @@ func (s *StreamHandler) Update_online(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
-	if err := s.StreamServise.Update_online(req.Key, req.State); err != nil {
+	LastStreamSummary, err := s.StreamServise.Update_online(req.Key, req.State)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
+		"data":    LastStreamSummary,
 	})
 }
 
