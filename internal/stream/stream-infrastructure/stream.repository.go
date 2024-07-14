@@ -32,7 +32,7 @@ func NewStreamRepository(redisClient *redis.Client, mongoClient *mongo.Client) *
 
 func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.ObjectID, error) {
 
-	var LastStreamSummary primitive.ObjectID
+	LastStreamSummary := primitive.ObjectID{}
 
 	session, err := r.mongoClient.StartSession()
 	if err != nil {
@@ -182,7 +182,6 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 				{Key: "NewFollowers", Value: newFollowersCount},
 				{Key: "NewSubscriptions", Value: newSubsCount},
 				{Key: "AverageViewers", Value: AverageViewers},
-				{Key: "MaxViewers", Value: maxViewers},
 				{Key: "MaxViewers", Value: maxViewers},
 				{Key: "Title", Value: StreamFind.StreamTitle},
 			}},
@@ -522,7 +521,7 @@ func (r *StreamRepository) GetStreamsMostViewed(page int) ([]streamdomain.Stream
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 
 	findOptions := options.Find()
-	findOptions.SetSort(bson.D{{"ViewerCount", -1}})
+	findOptions.SetSort(bson.D{{Key: "ViewerCount", Value: -1}})
 	findOptions.SetSkip(int64((page - 1) * 15))
 	findOptions.SetLimit(int64(15))
 

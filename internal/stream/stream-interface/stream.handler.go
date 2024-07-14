@@ -329,6 +329,7 @@ func (s *StreamHandler) Update_online(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
+			"err":     err,
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
