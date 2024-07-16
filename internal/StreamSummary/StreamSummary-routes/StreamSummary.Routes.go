@@ -26,5 +26,5 @@ func StreamSummaryRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *
 	App.Get("StreamSummary/GeStreamSummaries", StreamSummary.GeStreamSummaries)
 	App.Get("StreamSummary/GetStreamSummaryByTitle", StreamSummary.GetStreamSummaryByTitle)
 	App.Get("StreamSummary/GetStreamSummariesByStreamerIDLast30Days", StreamSummary.GetStreamSummariesByStreamerIDLast30Days)
-
+	App.Get("StreamSummary/GetTopVodsLast48Hours", StreamSummary.GetTopVodsLast48Hours)
 }

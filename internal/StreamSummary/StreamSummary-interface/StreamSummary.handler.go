@@ -65,6 +65,19 @@ func (s *StreamSummaryHandler) GetStreamSummaryByTitle(c *fiber.Ctx) error {
 		"data":    StreamSummaries,
 	})
 }
+func (s *StreamSummaryHandler) GetTopVodsLast48Hours(c *fiber.Ctx) error {
+
+	StreamSummaries, errGetUserBykey := s.StreamSummaryServise.GetTopVodsLast48Hours()
+	if errGetUserBykey != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    StreamSummaries,
+	})
+}
 
 func (s *StreamSummaryHandler) GetStreamSummariesByStreamerIDLast30Days(c *fiber.Ctx) error {
 	type ReqGetUserByNameUser struct {
