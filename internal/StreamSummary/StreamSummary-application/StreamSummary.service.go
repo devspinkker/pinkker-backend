@@ -39,11 +39,11 @@ func (s *StreamSummaryService) GeStreamSummaries(Streamer primitive.ObjectID) (*
 	return GetStreamSummaryByID, err
 }
 
-func (s *StreamSummaryService) GetStreamSummaryByTitle(title string) ([]StreamSummarydomain.StreamSummary, error) {
+func (s *StreamSummaryService) GetStreamSummaryByTitle(title string) ([]StreamSummarydomain.StreamSummaryGet, error) {
 	GetStreamSummaryByID, err := s.StreamSummaryRepository.GetStreamSummaryByTitle(title)
 	return GetStreamSummaryByID, err
 }
-func (s *StreamSummaryService) GetStreamSummariesByStreamerIDLast30Days(Streamer primitive.ObjectID) ([]StreamSummarydomain.StreamSummary, error) {
+func (s *StreamSummaryService) GetStreamSummariesByStreamerIDLast30Days(Streamer primitive.ObjectID) ([]StreamSummarydomain.StreamSummaryGet, error) {
 	GetStreamSummaryByID, err := s.StreamSummaryRepository.GetStreamSummariesByStreamerIDLast30Days(Streamer)
 	return GetStreamSummaryByID, err
 }

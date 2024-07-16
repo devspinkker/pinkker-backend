@@ -66,9 +66,9 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
 			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
 		}}},
-		bson.D{{Key: "$limit", Value: 10}}, // Limitar a 10 documentos
+		bson.D{{Key: "$limit", Value: 10}},
 		bson.D{{Key: "$sort", Value: bson.D{
-			{Key: "MaxViewers", Value: -1}, // Ordenar por MaxViewers en orden descendente
+			{Key: "MaxViewers", Value: -1},
 		}}},
 	}
 
@@ -88,7 +88,7 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 	return summaries, nil
 }
 
-func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]StreamSummarydomain.StreamSummary, error) {
+func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]StreamSummarydomain.StreamSummaryGet, error) {
 	ctx := context.Background()
 
 	db := r.mongoClient.Database("PINKKER-BACKEND")
@@ -105,9 +105,6 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 			{Key: "as", Value: "UserInfo"},
 		}}},
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
-		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
-		}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
 			{Key: "Title", Value: 1},
@@ -116,9 +113,7 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 			{Key: "MaxViewers", Value: 1},
 			{Key: "StartOfStream", Value: 1},
 			{Key: "StreamerID", Value: 1},
-			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
-			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
-			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
+			{Key: "UserInfo", Value: "$UserInfo"}, // Incluir toda la estructura UserInfo
 		}}},
 		bson.D{{Key: "$limit", Value: 10}}, // Limitar a 10 documentos
 	}
@@ -131,7 +126,7 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 	}
 	defer cursor.Close(ctx)
 
-	var summaries []StreamSummarydomain.StreamSummary
+	var summaries []StreamSummarydomain.StreamSummaryGet
 	if err := cursor.All(ctx, &summaries); err != nil {
 		return nil, err
 	}
@@ -139,7 +134,7 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 	return summaries, nil
 }
 
-func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(streamerID primitive.ObjectID) ([]StreamSummarydomain.StreamSummary, error) {
+func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(streamerID primitive.ObjectID) ([]StreamSummarydomain.StreamSummaryGet, error) {
 	ctx := context.Background()
 
 	db := r.mongoClient.Database("PINKKER-BACKEND")
@@ -163,9 +158,6 @@ func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(strea
 			{Key: "as", Value: "UserInfo"},
 		}}},
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
-		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
-		}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
 			{Key: "Title", Value: 1},
@@ -174,9 +166,7 @@ func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(strea
 			{Key: "MaxViewers", Value: 1},
 			{Key: "StartOfStream", Value: 1},
 			{Key: "StreamerID", Value: 1},
-			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
-			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
-			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
+			{Key: "UserInfo", Value: "$UserInfo"}, // Incluir toda la estructura UserInfo
 		}}},
 	}
 
@@ -188,7 +178,7 @@ func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(strea
 	}
 	defer cursor.Close(ctx)
 
-	var summaries []StreamSummarydomain.StreamSummary
+	var summaries []StreamSummarydomain.StreamSummaryGet
 	if err := cursor.All(ctx, &summaries); err != nil {
 		return nil, err
 	}
