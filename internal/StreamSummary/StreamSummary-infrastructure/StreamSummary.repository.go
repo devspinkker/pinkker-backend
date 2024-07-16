@@ -57,6 +57,7 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
 			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
 		}}},
+		bson.D{{Key: "$limit", Value: 10}}, // Limitar a 10 documentos
 	}
 
 	opts := options.Aggregate()
