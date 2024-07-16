@@ -25,7 +25,25 @@ func NewStreamSummaryRepository(redisClient *redis.Client, mongoClient *mongo.Cl
 		mongoClient: mongoClient,
 	}
 }
+func (r *StreamSummaryRepository) GetStreamSummaryByID(id primitive.ObjectID) (*StreamSummarydomain.StreamSummary, error) {
+	ctx := context.Background()
 
+	// Obtener la base de datos y la colección
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	filter := bson.M{"_id": id}
+
+	opts := options.FindOne()
+
+	var streamSummary StreamSummarydomain.StreamSummary
+	err := collection.FindOne(ctx, filter, opts).Decode(&streamSummary)
+	if err != nil {
+		return nil, err
+	}
+
+	return &streamSummary, nil
+}
 func (r *StreamSummaryRepository) UpdateStreamSummary(StreamerID primitive.ObjectID, data StreamSummarydomain.UpdateStreamSummary) error {
 	ctx := context.Background()
 
