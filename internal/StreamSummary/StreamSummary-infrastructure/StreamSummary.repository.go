@@ -53,14 +53,13 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 			{Key: "MaxViewers", Value: 1},
 			{Key: "StartOfStream", Value: 1},
 			{Key: "StreamerID", Value: 1},
-
 			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
 			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
 			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
 		}}},
 	}
 
-	opts := options.Aggregate().SetMaxTime(2 * time.Second).SetMaxAwaitTime(2 * time.Second).SetBatchSize(1)
+	opts := options.Aggregate()
 
 	cursor, err := collection.Aggregate(ctx, pipeline, opts)
 	if err != nil {
@@ -79,11 +78,9 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(streamerID primitive.ObjectID) ([]StreamSummarydomain.StreamSummary, error) {
 	ctx := context.Background()
 
-	// Obtener la base de datos y la colección
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("StreamSummary")
 
-	// Calcular la fecha hace 30 días desde ahora
 	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
 
 	filter := bson.M{
@@ -113,17 +110,14 @@ func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(strea
 			{Key: "MaxViewers", Value: 1},
 			{Key: "StartOfStream", Value: 1},
 			{Key: "StreamerID", Value: 1},
-
 			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
 			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
 			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
 		}}},
 	}
 
-	// Opciones de la consulta de agregación
 	opts := options.Aggregate()
 
-	// Realizar la consulta de agregación
 	cursor, err := collection.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, err
