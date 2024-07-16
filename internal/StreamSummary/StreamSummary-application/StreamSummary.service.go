@@ -17,6 +17,7 @@ func NewStreaSummaryService(StreamSummaryRepository *StreamSummaryinfrastructure
 		StreamSummaryRepository: StreamSummaryRepository,
 	}
 }
+
 func (s *StreamSummaryService) UpdateStreamSummary(StreamerID primitive.ObjectID, data StreamSummarydomain.UpdateStreamSummary) error {
 	err := s.StreamSummaryRepository.UpdateStreamSummary(StreamerID, data)
 	return err
@@ -32,4 +33,8 @@ func (s *StreamSummaryService) AverageViewers(Streamer primitive.ObjectID) error
 func (s *StreamSummaryService) GetLastSixStreamSummaries(Streamer primitive.ObjectID, date time.Time) ([]StreamSummarydomain.StreamSummary, error) {
 	StreamSummarydomain, err := s.StreamSummaryRepository.GetLastSixStreamSummariesBeforeDate(Streamer, date)
 	return StreamSummarydomain, err
+}
+func (s *StreamSummaryService) GeStreamSummaries(Streamer primitive.ObjectID) (*StreamSummarydomain.StreamSummary, error) {
+	GetStreamSummaryByID, err := s.StreamSummaryRepository.GetStreamSummaryByID(Streamer)
+	return GetStreamSummaryByID, err
 }

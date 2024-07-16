@@ -18,6 +18,30 @@ func NewStreamSummaryService(StreamSummaryServise *StreamSummaryapplication.Stre
 		StreamSummaryServise: StreamSummaryServise,
 	}
 }
+
+func (s *StreamSummaryHandler) GetUserByNameUser(c *fiber.Ctx) error {
+	type ReqGetUserByNameUser struct {
+		ID primitive.ObjectID `json:"id" query:"id"`
+	}
+
+	var Req ReqGetUserByNameUser
+	if err := c.QueryParser(&Req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	StreamSummaries, errGetUserBykey := s.StreamSummaryServise.GeStreamSummaries(Req.ID)
+	if errGetUserBykey != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    StreamSummaries,
+	})
+}
 func (s *StreamSummaryHandler) UpdateStreamSummary(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
