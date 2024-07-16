@@ -50,17 +50,10 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 			{Key: "Title", Value: 1},
 			{Key: "StreamThumbnail", Value: 1},
 			{Key: "EndOfStream", Value: 1},
-			{Key: "AverageViewers", Value: 1},
 			{Key: "MaxViewers", Value: 1},
-			{Key: "NewFollowers", Value: 1},
-			{Key: "NewSubscriptions", Value: 1},
-			{Key: "Advertisements", Value: 1},
 			{Key: "StartOfStream", Value: 1},
 			{Key: "StreamerID", Value: 1},
-			{Key: "StartFollowersCount", Value: 1},
-			{Key: "AverageViewersByTime", Value: 0},
 
-			{Key: "StartSubsCount", Value: 1},
 			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
 			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
 			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
@@ -117,16 +110,10 @@ func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(strea
 			{Key: "Title", Value: 1},
 			{Key: "StreamThumbnail", Value: 1},
 			{Key: "EndOfStream", Value: 1},
-			{Key: "AverageViewers", Value: 1},
 			{Key: "MaxViewers", Value: 1},
-			{Key: "NewFollowers", Value: 1},
-			{Key: "AverageViewersByTime", Value: 0},
-			{Key: "NewSubscriptions", Value: 1},
-			{Key: "Advertisements", Value: 1},
 			{Key: "StartOfStream", Value: 1},
 			{Key: "StreamerID", Value: 1},
-			{Key: "StartFollowersCount", Value: 1},
-			{Key: "StartSubsCount", Value: 1},
+
 			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
 			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
 			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
@@ -160,18 +147,13 @@ func (r *StreamSummaryRepository) GetStreamSummaryByID(id primitive.ObjectID) (*
 	filter := bson.M{"_id": id}
 
 	projection := bson.D{
+		{Key: "_id", Value: 1},
 		{Key: "Title", Value: 1},
 		{Key: "StreamThumbnail", Value: 1},
 		{Key: "EndOfStream", Value: 1},
-		{Key: "AverageViewers", Value: 1},
 		{Key: "MaxViewers", Value: 1},
-		{Key: "NewFollowers", Value: 1},
-		{Key: "NewSubscriptions", Value: 1},
-		{Key: "Advertisements", Value: 1},
 		{Key: "StartOfStream", Value: 1},
 		{Key: "StreamerID", Value: 1},
-		{Key: "StartFollowersCount", Value: 1},
-		{Key: "StartSubsCount", Value: 1},
 	}
 
 	opts := options.FindOne().SetProjection(projection)
