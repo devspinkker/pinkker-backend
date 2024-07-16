@@ -25,6 +25,134 @@ func NewStreamSummaryRepository(redisClient *redis.Client, mongoClient *mongo.Cl
 		mongoClient: mongoClient,
 	}
 }
+func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]StreamSummarydomain.StreamSummary, error) {
+	ctx := context.Background()
+
+	// Obtener la base de datos y la colección
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	// Definir el filtro para la búsqueda por título
+	filter := bson.M{"Title": primitive.Regex{Pattern: title, Options: "i"}}
+
+	// Pipeline de agregación
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "StreamerID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "Title", Value: 1},
+			{Key: "StreamThumbnail", Value: 1},
+			{Key: "EndOfStream", Value: 1},
+			{Key: "AverageViewers", Value: 1},
+			{Key: "MaxViewers", Value: 1},
+			{Key: "NewFollowers", Value: 1},
+			{Key: "NewSubscriptions", Value: 1},
+			{Key: "Advertisements", Value: 1},
+			{Key: "StartOfStream", Value: 1},
+			{Key: "StreamerID", Value: 1},
+			{Key: "StartFollowersCount", Value: 1},
+			{Key: "StartSubsCount", Value: 1},
+			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
+			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
+			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
+		}}},
+	}
+
+	// Opciones de la consulta de agregación
+	opts := options.Aggregate()
+
+	// Realizar la consulta de agregación
+	cursor, err := collection.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var summaries []StreamSummarydomain.StreamSummary
+	if err := cursor.All(ctx, &summaries); err != nil {
+		return nil, err
+	}
+
+	return summaries, nil
+}
+
+func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(streamerID primitive.ObjectID) ([]StreamSummarydomain.StreamSummary, error) {
+	ctx := context.Background()
+
+	// Obtener la base de datos y la colección
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	// Calcular la fecha hace 30 días desde ahora
+	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
+
+	filter := bson.M{
+		"StreamerID": streamerID,
+		"StartOfStream": bson.M{
+			"$gte": thirtyDaysAgo,
+		},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "StreamerID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "Title", Value: 1},
+			{Key: "StreamThumbnail", Value: 1},
+			{Key: "EndOfStream", Value: 1},
+			{Key: "AverageViewers", Value: 1},
+			{Key: "MaxViewers", Value: 1},
+			{Key: "NewFollowers", Value: 1},
+			{Key: "NewSubscriptions", Value: 1},
+			{Key: "Advertisements", Value: 1},
+			{Key: "StartOfStream", Value: 1},
+			{Key: "StreamerID", Value: 1},
+			{Key: "StartFollowersCount", Value: 1},
+			{Key: "StartSubsCount", Value: 1},
+			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
+			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
+			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
+		}}},
+	}
+
+	// Opciones de la consulta de agregación
+	opts := options.Aggregate()
+
+	// Realizar la consulta de agregación
+	cursor, err := collection.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var summaries []StreamSummarydomain.StreamSummary
+	if err := cursor.All(ctx, &summaries); err != nil {
+		return nil, err
+	}
+
+	return summaries, nil
+}
+
 func (r *StreamSummaryRepository) GetStreamSummaryByID(id primitive.ObjectID) (*StreamSummarydomain.StreamSummary, error) {
 	ctx := context.Background()
 
@@ -44,6 +172,7 @@ func (r *StreamSummaryRepository) GetStreamSummaryByID(id primitive.ObjectID) (*
 
 	return &streamSummary, nil
 }
+
 func (r *StreamSummaryRepository) UpdateStreamSummary(StreamerID primitive.ObjectID, data StreamSummarydomain.UpdateStreamSummary) error {
 	ctx := context.Background()
 

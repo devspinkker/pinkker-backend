@@ -140,6 +140,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			StartFollowersCount:  startFollowersCount,
 			StartSubsCount:       startSubsCount,
 			Title:                StreamFind.StreamTitle,
+			StreamThumbnail:      StreamFind.StreamThumbnail,
 		}
 
 		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
@@ -184,6 +185,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 				{Key: "AverageViewers", Value: AverageViewers},
 				{Key: "MaxViewers", Value: maxViewers},
 				{Key: "Title", Value: StreamFind.StreamTitle},
+				{Key: "StreamThumbnail", Value: StreamFind.StreamThumbnail},
 			}},
 		}
 
