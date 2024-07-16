@@ -31,19 +31,16 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("StreamSummary")
 
-	// Calcular la fecha y hora de hace 48 horas
 	fortyEightHoursAgo := time.Now().Add(-48 * time.Hour)
 
-	// Filtro para seleccionar VODs de las últimas 48 horas
 	filter := bson.M{
 		"StartOfStream": bson.M{
 			"$gte": fortyEightHoursAgo,
 		},
 	}
 
-	// Construcción del pipeline de agregación
 	pipeline := bson.A{
-		bson.D{{Key: "$match", Value: filter}}, // Filtrar VODs de las últimas 48 horas
+		bson.D{{Key: "$match", Value: filter}},
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "StreamerID"},
@@ -62,6 +59,7 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 			{Key: "MaxViewers", Value: 1},
 			{Key: "StartOfStream", Value: 1},
 			{Key: "StreamerID", Value: 1},
+			{Key: "StreamCategory", Value: 1},
 			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
 			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
 			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
@@ -113,9 +111,10 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 			{Key: "MaxViewers", Value: 1},
 			{Key: "StartOfStream", Value: 1},
 			{Key: "StreamerID", Value: 1},
-			{Key: "UserInfo", Value: "$UserInfo"}, // Incluir toda la estructura UserInfo
+			{Key: "StreamCategory", Value: 1},
+			{Key: "UserInfo", Value: "$UserInfo"},
 		}}},
-		bson.D{{Key: "$limit", Value: 10}}, // Limitar a 10 documentos
+		bson.D{{Key: "$limit", Value: 10}},
 	}
 
 	opts := options.Aggregate()
@@ -166,7 +165,8 @@ func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(strea
 			{Key: "MaxViewers", Value: 1},
 			{Key: "StartOfStream", Value: 1},
 			{Key: "StreamerID", Value: 1},
-			{Key: "UserInfo", Value: "$UserInfo"}, // Incluir toda la estructura UserInfo
+			{Key: "StreamCategory", Value: 1},
+			{Key: "UserInfo", Value: "$UserInfo"},
 		}}},
 	}
 
@@ -186,7 +186,7 @@ func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(strea
 	return summaries, nil
 }
 
-func (r *StreamSummaryRepository) GetStreamSummaryByID(id primitive.ObjectID) (*StreamSummarydomain.StreamSummary, error) {
+func (r *StreamSummaryRepository) GetStreamSummaryByID(id primitive.ObjectID) (*StreamSummarydomain.StreamSummaryGet, error) {
 	ctx := context.Background()
 
 	db := r.mongoClient.Database("PINKKER-BACKEND")
@@ -206,7 +206,7 @@ func (r *StreamSummaryRepository) GetStreamSummaryByID(id primitive.ObjectID) (*
 
 	opts := options.FindOne().SetProjection(projection)
 
-	var streamSummary StreamSummarydomain.StreamSummary
+	var streamSummary StreamSummarydomain.StreamSummaryGet
 	err := collection.FindOne(ctx, filter, opts).Decode(&streamSummary)
 	if err != nil {
 		return nil, err
