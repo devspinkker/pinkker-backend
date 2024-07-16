@@ -8,6 +8,7 @@ import (
 
 type StreamSummary struct {
 	Title                string             `json:"Title" bson:"Title"`
+	StreamThumbnail      string             `json:"StreamThumbnail" bson:"StreamThumbnail"`
 	ID                   primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	EndOfStream          time.Time          `json:"EndOfStream" bson:"EndOfStream"`
 	AverageViewers       int                `json:"AverageViewers" bson:"AverageViewers"`
