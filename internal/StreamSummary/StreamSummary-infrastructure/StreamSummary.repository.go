@@ -28,14 +28,11 @@ func NewStreamSummaryRepository(redisClient *redis.Client, mongoClient *mongo.Cl
 func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]StreamSummarydomain.StreamSummary, error) {
 	ctx := context.Background()
 
-	// Obtener la base de datos y la colección
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("StreamSummary")
 
-	// Definir el filtro para la búsqueda por título
 	filter := bson.M{"Title": primitive.Regex{Pattern: title, Options: "i"}}
 
-	// Pipeline de agregación
 	pipeline := bson.A{
 		bson.D{{Key: "$match", Value: filter}},
 		bson.D{{Key: "$lookup", Value: bson.D{
@@ -61,6 +58,8 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 			{Key: "StartOfStream", Value: 1},
 			{Key: "StreamerID", Value: 1},
 			{Key: "StartFollowersCount", Value: 1},
+			{Key: "AverageViewersByTime", Value: 0},
+
 			{Key: "StartSubsCount", Value: 1},
 			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
 			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
@@ -68,10 +67,8 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 		}}},
 	}
 
-	// Opciones de la consulta de agregación
-	opts := options.Aggregate()
+	opts := options.Aggregate().SetMaxTime(2 * time.Second).SetMaxAwaitTime(2 * time.Second).SetBatchSize(1)
 
-	// Realizar la consulta de agregación
 	cursor, err := collection.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, err
@@ -123,6 +120,7 @@ func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(strea
 			{Key: "AverageViewers", Value: 1},
 			{Key: "MaxViewers", Value: 1},
 			{Key: "NewFollowers", Value: 1},
+			{Key: "AverageViewersByTime", Value: 0},
 			{Key: "NewSubscriptions", Value: 1},
 			{Key: "Advertisements", Value: 1},
 			{Key: "StartOfStream", Value: 1},
@@ -156,13 +154,27 @@ func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(strea
 func (r *StreamSummaryRepository) GetStreamSummaryByID(id primitive.ObjectID) (*StreamSummarydomain.StreamSummary, error) {
 	ctx := context.Background()
 
-	// Obtener la base de datos y la colección
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("StreamSummary")
 
 	filter := bson.M{"_id": id}
 
-	opts := options.FindOne()
+	projection := bson.D{
+		{Key: "Title", Value: 1},
+		{Key: "StreamThumbnail", Value: 1},
+		{Key: "EndOfStream", Value: 1},
+		{Key: "AverageViewers", Value: 1},
+		{Key: "MaxViewers", Value: 1},
+		{Key: "NewFollowers", Value: 1},
+		{Key: "NewSubscriptions", Value: 1},
+		{Key: "Advertisements", Value: 1},
+		{Key: "StartOfStream", Value: 1},
+		{Key: "StreamerID", Value: 1},
+		{Key: "StartFollowersCount", Value: 1},
+		{Key: "StartSubsCount", Value: 1},
+	}
+
+	opts := options.FindOne().SetProjection(projection)
 
 	var streamSummary StreamSummarydomain.StreamSummary
 	err := collection.FindOne(ctx, filter, opts).Decode(&streamSummary)
