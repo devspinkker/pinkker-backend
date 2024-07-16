@@ -25,6 +25,65 @@ func NewStreamSummaryRepository(redisClient *redis.Client, mongoClient *mongo.Cl
 		mongoClient: mongoClient,
 	}
 }
+func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain.StreamSummary, error) {
+	ctx := context.Background()
+
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	fortyEightHoursAgo := time.Now().Add(-48 * time.Hour)
+
+	filter := bson.M{
+		"StartOfStream": bson.M{
+			"$gte": fortyEightHoursAgo,
+		},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "StreamerID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "MaxViewers", Value: -1},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "Title", Value: 1},
+			{Key: "StreamThumbnail", Value: 1},
+			{Key: "EndOfStream", Value: 1},
+			{Key: "MaxViewers", Value: 1},
+			{Key: "StartOfStream", Value: 1},
+			{Key: "StreamerID", Value: 1},
+			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
+			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
+			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
+		}}},
+		bson.D{{Key: "$limit", Value: 15}},
+	}
+
+	opts := options.Aggregate()
+
+	cursor, err := collection.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var summaries []StreamSummarydomain.StreamSummary
+	if err := cursor.All(ctx, &summaries); err != nil {
+		return nil, err
+	}
+
+	return summaries, nil
+}
 func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]StreamSummarydomain.StreamSummary, error) {
 	ctx := context.Background()
 
