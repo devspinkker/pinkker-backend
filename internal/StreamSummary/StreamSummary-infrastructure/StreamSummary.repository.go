@@ -25,22 +25,25 @@ func NewStreamSummaryRepository(redisClient *redis.Client, mongoClient *mongo.Cl
 		mongoClient: mongoClient,
 	}
 }
-func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain.StreamSummary, error) {
+func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain.StreamSummaryGet, error) {
 	ctx := context.Background()
 
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("StreamSummary")
 
+	// Calcular la fecha y hora de hace 48 horas
 	fortyEightHoursAgo := time.Now().Add(-48 * time.Hour)
 
+	// Filtro para seleccionar VODs de las últimas 48 horas
 	filter := bson.M{
 		"StartOfStream": bson.M{
 			"$gte": fortyEightHoursAgo,
 		},
 	}
 
+	// Construcción del pipeline de agregación
 	pipeline := bson.A{
-		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$match", Value: filter}}, // Filtrar VODs de las últimas 48 horas
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "StreamerID"},
@@ -50,9 +53,6 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
-		}}},
-		bson.D{{Key: "$sort", Value: bson.D{
-			{Key: "MaxViewers", Value: -1},
 		}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
@@ -66,7 +66,10 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
 			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
 		}}},
-		bson.D{{Key: "$limit", Value: 15}},
+		bson.D{{Key: "$limit", Value: 10}}, // Limitar a 10 documentos
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "MaxViewers", Value: -1}, // Ordenar por MaxViewers en orden descendente
+		}}},
 	}
 
 	opts := options.Aggregate()
@@ -77,13 +80,14 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 	}
 	defer cursor.Close(ctx)
 
-	var summaries []StreamSummarydomain.StreamSummary
+	var summaries []StreamSummarydomain.StreamSummaryGet
 	if err := cursor.All(ctx, &summaries); err != nil {
 		return nil, err
 	}
 
 	return summaries, nil
 }
+
 func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]StreamSummarydomain.StreamSummary, error) {
 	ctx := context.Background()
 
