@@ -29,7 +29,17 @@ func NewClipRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Cl
 		mongoClient: mongoClient,
 	}
 }
+func (c *ClipRepository) TimeOutClipCreate(id primitive.ObjectID) error {
+	key := "ClipCreate" + id.Hex()
+	value := id.Hex()
 
+	err := c.redisClient.Set(context.TODO(), key, value, 3*time.Minute).Err()
+	if err != nil {
+		return fmt.Errorf("failed to set key in redis: %w", err)
+	}
+
+	return nil
+}
 func (c *ClipRepository) GetClipsByTitle(title string, limit int) ([]clipdomain.Clip, error) {
 	ctx := context.Background()
 	clipsDB := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")

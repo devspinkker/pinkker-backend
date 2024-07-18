@@ -18,7 +18,10 @@ func NewClipService(ClipRepository *clipinfrastructure.ClipRepository) *ClipServ
 		ClipRepository: ClipRepository,
 	}
 }
-
+func (u *ClipService) TimeOutClipCreate(idClip primitive.ObjectID) error {
+	err := u.ClipRepository.TimeOutClipCreate(idClip)
+	return err
+}
 func (u *ClipService) FindUser(NameUser string) (*userdomain.User, error) {
 	findUserInDbExist, errCollUsers := u.ClipRepository.FindUser(NameUser)
 	return findUserInDbExist, errCollUsers

@@ -35,4 +35,6 @@ func ClipRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 
 	App.Get("/clips/GetClipComments", clipHandler.GetClipComments)
 
+	App.Post("/clips/TimeOutClipCreate", middleware.UseExtractor(), clipHandler.TimeOutClipCreate)
+
 }
