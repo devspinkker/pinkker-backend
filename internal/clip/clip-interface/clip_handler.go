@@ -27,6 +27,27 @@ func NewClipHandler(ClipService *clipapplication.ClipService) *ClipHandler {
 		ClipService: ClipService,
 	}
 }
+func (clip *ClipHandler) TimeOutClipCreate(c *fiber.Ctx) error {
+
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusNetworkAuthenticationRequired).JSON(fiber.Map{
+			"message": "StatusNetworkAuthenticationRequired",
+			"data":    errorID,
+		})
+	}
+	err := clip.ClipService.TimeOutClipCreate(idValueObj)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "err",
+			"data":    err,
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+	})
+}
 func (clip *ClipHandler) GetClipsByTitle(c *fiber.Ctx) error {
 	title := c.Query("title", "")
 
