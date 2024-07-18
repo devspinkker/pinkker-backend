@@ -33,9 +33,13 @@ func (c *ClipRepository) TimeOutClipCreate(id primitive.ObjectID) error {
 	key := "ClipCreate" + id.Hex()
 	value := id.Hex()
 
-	err := c.redisClient.Set(context.TODO(), key, value, 3*time.Minute).Err()
+	set, err := c.redisClient.SetNX(context.TODO(), key, value, 3*time.Minute).Result()
 	if err != nil {
 		return fmt.Errorf("failed to set key in redis: %w", err)
+	}
+
+	if !set {
+		return fmt.Errorf("key already exists in redis: %s", key)
 	}
 
 	return nil
