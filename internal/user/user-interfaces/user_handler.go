@@ -112,6 +112,33 @@ func (h *UserHandler) PanelAdminPinkkerPartnerUser(c *fiber.Ctx) error {
 	})
 
 }
+func (h *UserHandler) ChangeNameUser(c *fiber.Ctx) error {
+	var CreateAdmin domain.ChangeNameUser
+	if err := c.BodyParser(&CreateAdmin); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errinObjectID.Error(),
+		})
+	}
+	errUpdateUserFollow := h.userService.ChangeNameUser(CreateAdmin, IdUserTokenP)
+	if errUpdateUserFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errUpdateUserFollow.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+	})
+
+}
 func (h *UserHandler) CreateAdmin(c *fiber.Ctx) error {
 	var CreateAdmin domain.CreateAdmin
 	if err := c.BodyParser(&CreateAdmin); err != nil {

@@ -208,3 +208,7 @@ func (u *UserService) CreateAdmin(CreateAdmin domain.CreateAdmin, id primitive.O
 	err := u.roomRepository.CreateAdmin(CreateAdmin, id)
 	return err
 }
+func (u *UserService) ChangeNameUser(CreateAdmin domain.ChangeNameUser, id primitive.ObjectID) error {
+	err := u.roomRepository.ChangeNameUser(CreateAdmin, id)
+	return err
+}

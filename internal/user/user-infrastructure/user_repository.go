@@ -31,6 +31,68 @@ func NewUserRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Us
 		mongoClient: mongoClient,
 	}
 }
+func (u *UserRepository) ChangeNameUser(changeNameUser domain.ChangeNameUser, id primitive.ObjectID) error {
+	err := u.AutCode(id, changeNameUser.Code)
+	if err != nil {
+		return err
+	}
+	ctx := context.TODO()
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	if !u.doesUserExist(ctx, db, changeNameUser.NameUserRemove) {
+		return fmt.Errorf("NameUserRemove does not exist")
+	}
+	if u.doesUserExist(ctx, db, changeNameUser.NameUserNew) {
+		return fmt.Errorf("NameUserNew already exists")
+	}
+
+	err = u.updateUserNames(ctx, db, changeNameUser)
+	if err != nil {
+		return err
+	}
+
+	err = u.updateStreamerNames(ctx, db, changeNameUser)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *UserRepository) doesUserExist(ctx context.Context, db *mongo.Database, nameUser string) bool {
+	GoMongoDBCollUsers := db.Collection("Users")
+	filter := bson.M{"NameUser": nameUser}
+	count, err := GoMongoDBCollUsers.CountDocuments(ctx, filter)
+	if err != nil {
+		return false
+	}
+	return count > 0
+}
+func (u *UserRepository) updateUserNames(ctx context.Context, db *mongo.Database, changeNameUser domain.ChangeNameUser) error {
+	GoMongoDBCollUsers := db.Collection("Users")
+
+	userFilterTemp := bson.M{"NameUser": changeNameUser.NameUserRemove}
+	updateTemp := bson.M{"$set": bson.M{"NameUser": changeNameUser.NameUserNew}}
+	_, err := GoMongoDBCollUsers.UpdateOne(ctx, userFilterTemp, updateTemp)
+	if err != nil {
+		return fmt.Errorf("error updating user collection to NameUserNew: %v", err)
+	}
+
+	return nil
+}
+
+func (u *UserRepository) updateStreamerNames(ctx context.Context, db *mongo.Database, changeNameUser domain.ChangeNameUser) error {
+	GoMongoDBCollStreams := db.Collection("Streams")
+
+	streamFilterTemp := bson.M{"Streamer": changeNameUser.NameUserRemove}
+	updateStreamTemp := bson.M{"$set": bson.M{"Streamer": changeNameUser.NameUserNew}}
+	_, err := GoMongoDBCollStreams.UpdateOne(ctx, streamFilterTemp, updateStreamTemp)
+	if err != nil {
+		return fmt.Errorf("error updating stream collection to NameUserNew: %v", err)
+	}
+
+	return nil
+}
+
 func (s *UserRepository) SubscribeToRoom(roomID string) *redis.PubSub {
 	sub := s.redisClient.Subscribe(context.Background(), roomID)
 	return sub
