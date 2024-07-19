@@ -55,6 +55,14 @@ func (u *UserRepository) ChangeNameUser(changeNameUser domain.ChangeNameUser, id
 		return err
 	}
 
+	err = u.updateClips(ctx, db, changeNameUser)
+	if err != nil {
+		return err
+	}
+	err = u.updateUserInformationInAllRooms(ctx, db, changeNameUser)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -67,8 +75,31 @@ func (u *UserRepository) doesUserExist(ctx context.Context, db *mongo.Database, 
 	}
 	return count > 0
 }
+func (u *UserRepository) updateUserInformationInAllRooms(ctx context.Context, db *mongo.Database, changeNameUser domain.ChangeNameUser) error {
+	GoMongoDBCollUsers := db.Collection("UserInformationInAllRooms")
+	userFilterTemp := bson.M{"NameUser": changeNameUser.NameUserRemove}
+	updateTemp := bson.M{"$set": bson.M{"NameUser": changeNameUser.NameUserNew}}
+	_, err := GoMongoDBCollUsers.UpdateOne(ctx, userFilterTemp, updateTemp)
+	if err != nil {
+		return fmt.Errorf("error updating user collection to NameUserNew: %v", err)
+	}
+
+	return nil
+}
 func (u *UserRepository) updateUserNames(ctx context.Context, db *mongo.Database, changeNameUser domain.ChangeNameUser) error {
 	GoMongoDBCollUsers := db.Collection("Users")
+
+	userFilterTemp := bson.M{"NameUser": changeNameUser.NameUserRemove}
+	updateTemp := bson.M{"$set": bson.M{"NameUser": changeNameUser.NameUserNew}}
+	_, err := GoMongoDBCollUsers.UpdateOne(ctx, userFilterTemp, updateTemp)
+	if err != nil {
+		return fmt.Errorf("error updating user collection to NameUserNew: %v", err)
+	}
+
+	return nil
+}
+func (u *UserRepository) updateClips(ctx context.Context, db *mongo.Database, changeNameUser domain.ChangeNameUser) error {
+	GoMongoDBCollUsers := db.Collection("Clips")
 
 	userFilterTemp := bson.M{"NameUser": changeNameUser.NameUserRemove}
 	updateTemp := bson.M{"$set": bson.M{"NameUser": changeNameUser.NameUserNew}}
