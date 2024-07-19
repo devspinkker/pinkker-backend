@@ -112,7 +112,7 @@ func (h *UserHandler) PanelAdminPinkkerPartnerUser(c *fiber.Ctx) error {
 	})
 
 }
-func (h *UserHandler) ChangeNameUser(c *fiber.Ctx) error {
+func (h *UserHandler) ChangeNameUserCodeAdmin(c *fiber.Ctx) error {
 	var CreateAdmin domain.ChangeNameUser
 	if err := c.BodyParser(&CreateAdmin); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -127,7 +127,28 @@ func (h *UserHandler) ChangeNameUser(c *fiber.Ctx) error {
 			"data":    errinObjectID.Error(),
 		})
 	}
-	errUpdateUserFollow := h.userService.ChangeNameUser(CreateAdmin, IdUserTokenP)
+	errUpdateUserFollow := h.userService.ChangeNameUserCodeAdmin(CreateAdmin, IdUserTokenP)
+	if errUpdateUserFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errUpdateUserFollow.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+	})
+
+}
+func (h *UserHandler) ChangeNameUser(c *fiber.Ctx) error {
+	var CreateAdmin domain.ChangeNameUser
+	if err := c.BodyParser(&CreateAdmin); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	nameuser := c.Context().UserValue("nameuser").(string)
+	CreateAdmin.NameUserRemove = nameuser
+	errUpdateUserFollow := h.userService.ChangeNameUser(CreateAdmin)
 	if errUpdateUserFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",

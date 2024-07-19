@@ -31,7 +31,39 @@ func NewUserRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Us
 		mongoClient: mongoClient,
 	}
 }
-func (u *UserRepository) ChangeNameUser(changeNameUser domain.ChangeNameUser, id primitive.ObjectID) error {
+func (u *UserRepository) ChangeNameUser(changeNameUser domain.ChangeNameUser) error {
+
+	ctx := context.TODO()
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	if !u.doesUserExist(ctx, db, changeNameUser.NameUserRemove) {
+		return fmt.Errorf("NameUserRemove does not exist")
+	}
+	if u.doesUserExist(ctx, db, changeNameUser.NameUserNew) {
+		return fmt.Errorf("NameUserNew already exists")
+	}
+
+	err := u.updateUserNames(ctx, db, changeNameUser)
+	if err != nil {
+		return err
+	}
+
+	err = u.updateStreamerNames(ctx, db, changeNameUser)
+	if err != nil {
+		return err
+	}
+
+	err = u.updateClips(ctx, db, changeNameUser)
+	if err != nil {
+		return err
+	}
+	err = u.updateUserInformationInAllRooms(ctx, db, changeNameUser)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *UserRepository) ChangeNameUserCodeAdmin(changeNameUser domain.ChangeNameUser, id primitive.ObjectID) error {
 	err := u.AutCode(id, changeNameUser.Code)
 	if err != nil {
 		return err
