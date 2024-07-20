@@ -40,6 +40,12 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 			"data":    "text < 100",
 		})
 	}
+	if FromUser == idReq.ToUser {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    "toUser !== ",
+		})
+	}
 	user, errdonatePixels := h.subscriptionService.Subscription(FromUser, idReq.ToUser, idReq.Text)
 	if errdonatePixels != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

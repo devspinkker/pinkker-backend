@@ -534,6 +534,13 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 			"message": "StatusInternalServerError",
 		})
 	}
+
+	if IdUserTokenP == IdUser {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    "toUser !== ",
+		})
+	}
 	errUpdateUserFollow := h.userService.FollowUser(IdUserTokenP, IdUser)
 	if errUpdateUserFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

@@ -37,11 +37,16 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 
 	FromUser, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
 	if errinObjectID != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "StatusInternalServerError",
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
 		})
 	}
-
+	if FromUser == idReq.ToUser {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    "toUser !== ",
+		})
+	}
 	err := d.VodServise.UserHasNumberPikels(FromUser, idReq.Pixeles)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
