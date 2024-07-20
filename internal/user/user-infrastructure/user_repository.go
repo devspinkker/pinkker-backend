@@ -31,6 +31,26 @@ func NewUserRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Us
 		mongoClient: mongoClient,
 	}
 }
+
+func (u *UserRepository) FindNameUserNoSensitiveInformation(NameUser string, Email string) (*domain.GetUser, error) {
+	var filter primitive.D
+	if Email == "" {
+		filter = bson.D{
+			{Key: "$or", Value: bson.A{
+				bson.D{{Key: "NameUser", Value: NameUser}},
+				bson.D{{Key: "NameUser", Value: primitive.Regex{Pattern: NameUser, Options: "i"}}},
+			}},
+		}
+	} else {
+		filter = bson.D{
+			{Key: "$or", Value: bson.A{
+				bson.D{{Key: "NameUser", Value: NameUser}},
+				bson.D{{Key: "Email", Value: Email}},
+			}},
+		}
+	}
+	return u.getUser(filter)
+}
 func (u *UserRepository) ChangeNameUser(changeNameUser domain.ChangeNameUser) error {
 
 	ctx := context.TODO()
@@ -457,32 +477,7 @@ func (u *UserRepository) FindNameUser(NameUser string, Email string) (*domain.Us
 	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&findUserInDbExist)
 	return findUserInDbExist, errCollUsers
 }
-func (u *UserRepository) FindNameUserNoSensitiveInformation(NameUser string, Email string) (*domain.GetUser, error) {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	var FindUserInDb primitive.D
-	if Email == "" {
-		FindUserInDb = bson.D{
-			{Key: "$or", Value: bson.A{
-				bson.D{{Key: "NameUser", Value: NameUser}},
-				bson.D{{Key: "NameUser", Value: primitive.Regex{Pattern: NameUser, Options: "i"}}},
-			}},
-		}
-	} else {
-		FindUserInDb = bson.D{
-			{
-				Key: "$or",
-				Value: bson.A{
-					bson.D{{Key: "NameUser", Value: NameUser}},
-					bson.D{{Key: "Email", Value: Email}},
-				},
-			},
-		}
-	}
-	var findUserInDbExist *domain.GetUser
-	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&findUserInDbExist)
 
-	return findUserInDbExist, errCollUsers
-}
 func (u *UserRepository) GetUserByNameUserIndex(NameUser string) ([]*domain.GetUser, error) {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
