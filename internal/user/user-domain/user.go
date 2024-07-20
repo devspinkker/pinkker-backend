@@ -204,6 +204,7 @@ type GetUser struct {
 	UserFriendsNotifications int                               `json:"userFriendsNotifications,omitempty" bson:"UserFriendsNotifications"`
 	Following                map[primitive.ObjectID]FollowInfo `json:"Following" bson:"Following"`
 	Followers                map[primitive.ObjectID]FollowInfo `json:"Followers" bson:"Followers"`
+	FollowersCount           int                               `json:"FollowersCount" bson:"FollowersCount"`
 	Timestamp                time.Time                         `json:"Timestamp" bson:"Timestamp"`
 	Likes                    []primitive.ObjectID              `json:"Likes" bson:"Likes"`
 	Wallet                   string                            `json:"Wallet" bson:"Wallet"`
