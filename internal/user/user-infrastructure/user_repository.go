@@ -3,6 +3,7 @@ package userinfrastructure
 import (
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	domain "PINKKER-BACKEND/internal/user/user-domain"
+	"PINKKER-BACKEND/pkg/authGoogleAuthenticator"
 	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/utils"
 	"context"
@@ -30,6 +31,32 @@ func NewUserRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Us
 		redisClient: redisClient,
 		mongoClient: mongoClient,
 	}
+}
+func (u *UserRepository) SetTOTPSecret(ctx context.Context, userID primitive.ObjectID, secret string) error {
+	usersCollection := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	filter := bson.M{"_id": userID}
+	update := bson.M{"$set": bson.M{"TOTPSecret": secret}}
+	_, err := usersCollection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+func (u *UserRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {
+	usersCollection := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	filter := bson.M{"_id": userID}
+	var user domain.User
+	err := usersCollection.FindOne(ctx, filter).Decode(&user)
+	if err != nil {
+		return "", err
+	}
+	return user.TOTPSecret, nil
+}
+
+func (u *UserRepository) ValidateTOTPCode(ctx context.Context, userID primitive.ObjectID, code string) (bool, error) {
+	secret, err := u.GetTOTPSecret(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+	return authGoogleAuthenticator.ValidateCode(secret, code), nil
 }
 
 func (u *UserRepository) FindNameUserNoSensitiveInformation(NameUser string, Email string) (*domain.GetUser, error) {
