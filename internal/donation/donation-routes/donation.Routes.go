@@ -17,7 +17,7 @@ func DonatioRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	donationService := application.NewDonationService(donationRepository)
 	donationHandler := interfaces.NewDonationService(donationService)
 
-	App.Post("/pixel/DonatePixel", middleware.UseExtractor(), donationHandler.Donate)
+	App.Post("/pixel/DonatePixel", middleware.UseExtractor(), middleware.TOTPAuthMiddleware(donationRepository), donationHandler.Donate)
 	App.Get("/pixel/Mydonors", middleware.UseExtractor(), donationHandler.Mydonors)
 	App.Get("/pixel/AllMyPixelesDonors", middleware.UseExtractor(), donationHandler.AllMyPixelesDonors)
 	App.Get("/pixel/GetPixelesDonationsChat", donationHandler.GetPixelesDonationsChat)
