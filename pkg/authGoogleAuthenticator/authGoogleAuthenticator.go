@@ -7,7 +7,7 @@ import (
 // GenerateKey generates a new TOTP key
 func GenerateKey(accountName, nameUser string) (string, string, error) {
 	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      "Pinkker.tv: " + nameUser,
+		Issuer:      "Pinkker.tv:" + nameUser,
 		AccountName: accountName,
 	})
 	if err != nil {
