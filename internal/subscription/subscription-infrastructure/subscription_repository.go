@@ -29,6 +29,16 @@ func NewSubscriptionRepository(redisClient *redis.Client, mongoClient *mongo.Cli
 		mongoClient: mongoClient,
 	}
 }
+func (r *SubscriptionRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {
+	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	filter := bson.M{"_id": userID}
+	var user userdomain.User
+	err := usersCollection.FindOne(ctx, filter).Decode(&user)
+	if err != nil {
+		return "", err
+	}
+	return user.TOTPSecret, nil
+}
 func (r *SubscriptionRepository) GetWebSocketClientsInRoom(roomID string) ([]*websocket.Conn, error) {
 	clients, err := utils.NewChatService().GetWebSocketClientsInRoom(roomID)
 

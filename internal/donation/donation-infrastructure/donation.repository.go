@@ -3,6 +3,7 @@ package donationtinfrastructure
 import (
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
+	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"PINKKER-BACKEND/pkg/utils"
 	"context"
 	"encoding/json"
@@ -28,6 +29,17 @@ func NewDonationRepository(redisClient *redis.Client, mongoClient *mongo.Client)
 		mongoClient: mongoClient,
 	}
 }
+func (u *DonationRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {
+	usersCollection := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	filter := bson.M{"_id": userID}
+	var user userdomain.User
+	err := usersCollection.FindOne(ctx, filter).Decode(&user)
+	if err != nil {
+		return "", err
+	}
+	return user.TOTPSecret, nil
+}
+
 func (d *DonationRepository) UserHasNumberPikels(FromUser primitive.ObjectID, Pixeles float64) error {
 	GoMongoDBCollUsers := d.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	filter := bson.M{"_id": FromUser, "Pixeles": bson.M{"$gte": Pixeles}}
