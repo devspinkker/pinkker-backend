@@ -26,8 +26,8 @@ func NewChatService(roomRepository *infrastructure.UserRepository) *UserService 
 	}
 }
 
-func (u *UserService) GenerateTOTPKey(ctx context.Context, userID primitive.ObjectID) (string, string, error) {
-	secret, url, err := authGoogleAuthenticator.GenerateKey(userID.Hex())
+func (u *UserService) GenerateTOTPKey(ctx context.Context, userID primitive.ObjectID, nameUser string) (string, string, error) {
+	secret, url, err := authGoogleAuthenticator.GenerateKey(userID.Hex(), nameUser)
 	if err != nil {
 		return "", "", err
 	}

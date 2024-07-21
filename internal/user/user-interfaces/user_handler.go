@@ -29,6 +29,8 @@ func NewUserHandler(chatService *application.UserService) *UserHandler {
 }
 func (h *UserHandler) GenerateTOTPKey(c *fiber.Ctx) error {
 	IdUserToken := c.Context().UserValue("_id").(string)
+	nameUser := c.Context().UserValue("nameUser").(string)
+
 	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
 	if errinObjectID != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -36,7 +38,7 @@ func (h *UserHandler) GenerateTOTPKey(c *fiber.Ctx) error {
 			"data":    errinObjectID.Error(),
 		})
 	}
-	secret, url, err := h.userService.GenerateTOTPKey(context.Background(), IdUserTokenP)
+	secret, url, err := h.userService.GenerateTOTPKey(context.Background(), IdUserTokenP, nameUser)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
