@@ -141,6 +141,7 @@ func (r *SubscriptionRepository) addSubscription(sourceUser *userdomain.User, de
 	if existingSubscription.ID != primitive.NilObjectID && existingSubscription.SubscriptionEnd.After(time.Now()) {
 		existingSubscription.MonthsSubscribed += 1
 		existingSubscription.SubscriptionStart = subscriptionStart
+
 		existingSubscription.SubscriptionEnd = subscriptionEnd
 		existingSubscription.Text = text
 		existingSubscription.Notified = false
