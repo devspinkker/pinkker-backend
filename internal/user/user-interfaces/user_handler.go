@@ -27,34 +27,61 @@ func NewUserHandler(chatService *application.UserService) *UserHandler {
 		userService: chatService,
 	}
 }
-func (h *UserHandler) Pinker_notifications(c *websocket.Conn) error {
-
-	sub := h.userService.SubscribeToRoom("pinker_notifications")
-
-	for {
-		go func() {
-			for {
-				_, _, err := c.ReadMessage()
-				if err != nil {
-					h.userService.CloseSubscription(sub)
-					c.Close()
-					return
-				}
-			}
-		}()
-
-		message, err := sub.ReceiveMessage(context.Background())
-		if err != nil {
-			h.userService.CloseSubscription(sub)
-			return err
-		}
-
-		err = c.WriteMessage(websocket.TextMessage, []byte(message.Payload))
-		if err != nil {
-			h.userService.CloseSubscription(sub)
-			return err
-		}
+func (h *UserHandler) GenerateTOTPKey(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errinObjectID.Error(),
+		})
 	}
+	secret, url, err := h.userService.GenerateTOTPKey(context.Background(), IdUserTokenP)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+		"secret":  secret,
+		"url":     url,
+	})
+}
+
+func (h *UserHandler) ValidateTOTPCode(c *fiber.Ctx) error {
+	var req struct {
+		Code string `json:"code"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errinObjectID.Error(),
+		})
+	}
+	valid, err := h.userService.ValidateTOTPCode(context.Background(), IdUserTokenP, req.Code)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	if !valid {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Unauthorized",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+	})
 }
 func (h *UserHandler) PanelAdminPinkkerInfoUser(c *fiber.Ctx) error {
 	var PanelAdminPinkkerInfoUserReq domain.PanelAdminPinkkerInfoUserReq
@@ -84,6 +111,36 @@ func (h *UserHandler) PanelAdminPinkkerInfoUser(c *fiber.Ctx) error {
 		"stream":  stream,
 	})
 
+}
+
+func (h *UserHandler) Pinker_notifications(c *websocket.Conn) error {
+
+	sub := h.userService.SubscribeToRoom("pinker_notifications")
+
+	for {
+		go func() {
+			for {
+				_, _, err := c.ReadMessage()
+				if err != nil {
+					h.userService.CloseSubscription(sub)
+					c.Close()
+					return
+				}
+			}
+		}()
+
+		message, err := sub.ReceiveMessage(context.Background())
+		if err != nil {
+			h.userService.CloseSubscription(sub)
+			return err
+		}
+
+		err = c.WriteMessage(websocket.TextMessage, []byte(message.Payload))
+		if err != nil {
+			h.userService.CloseSubscription(sub)
+			return err
+		}
+	}
 }
 func (h *UserHandler) PanelAdminPinkkerPartnerUser(c *fiber.Ctx) error {
 	var PanelAdminPinkkerPartnerUser domain.PanelAdminPinkkerInfoUserReq

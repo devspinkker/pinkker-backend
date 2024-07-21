@@ -65,7 +65,8 @@ type User struct {
 		Code  string    `json:"Code,omitempty" bson:"Code"`
 		Date  time.Time `json:"date,omitempty" bson:"Date,omitempty"`
 	} `json:"PanelAdminPinkker,omitempty" bson:"PanelAdminPinkker"`
-	Banned bool `json:"Banned" bson:"Banned"`
+	Banned     bool   `json:"Banned" bson:"Banned"`
+	TOTPSecret string `json:"TOTPSecret" bson:"TOTPSecret"`
 }
 type FollowInfo struct {
 	Since         time.Time `json:"since" bson:"since"`

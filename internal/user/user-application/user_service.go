@@ -5,7 +5,9 @@ import (
 	domain "PINKKER-BACKEND/internal/user/user-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	infrastructure "PINKKER-BACKEND/internal/user/user-infrastructure"
+	"PINKKER-BACKEND/pkg/authGoogleAuthenticator"
 	"PINKKER-BACKEND/pkg/helpers"
+	"context"
 	"strings"
 	"time"
 
@@ -24,6 +26,21 @@ func NewChatService(roomRepository *infrastructure.UserRepository) *UserService 
 	}
 }
 
+func (u *UserService) GenerateTOTPKey(ctx context.Context, userID primitive.ObjectID) (string, string, error) {
+	secret, url, err := authGoogleAuthenticator.GenerateKey(userID.Hex())
+	if err != nil {
+		return "", "", err
+	}
+	err = u.roomRepository.SetTOTPSecret(ctx, userID, secret)
+	if err != nil {
+		return "", "", err
+	}
+	return secret, url, nil
+}
+
+func (u *UserService) ValidateTOTPCode(ctx context.Context, userID primitive.ObjectID, code string) (bool, error) {
+	return u.roomRepository.ValidateTOTPCode(ctx, userID, code)
+}
 func (u *UserService) SubscribeToRoom(roomID string) *redis.PubSub {
 	sub := u.roomRepository.SubscribeToRoom(roomID)
 	return sub

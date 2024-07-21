@@ -27,6 +27,17 @@ func NewwithdrawalsRepository(redisClient *redis.Client, mongoClient *mongo.Clie
 		mongoClient: mongoClient,
 	}
 }
+func (u *WithdrawalsRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {
+	usersCollection := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	filter := bson.M{"_id": userID}
+	var user userdomain.User
+	err := usersCollection.FindOne(ctx, filter).Decode(&user)
+	if err != nil {
+		return "", err
+	}
+	return user.TOTPSecret, nil
+}
+
 func (r *WithdrawalsRepository) WithdrawalRequest(id primitive.ObjectID, nameUser string, data withdrawalsdomain.WithdrawalRequestReq) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollUsers := db.Collection("Users")
