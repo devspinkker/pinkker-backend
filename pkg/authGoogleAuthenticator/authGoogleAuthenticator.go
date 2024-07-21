@@ -7,13 +7,15 @@ import (
 // GenerateKey generates a new TOTP key
 func GenerateKey(accountName, nameUser string) (string, string, error) {
 	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      "Pinkker.tv:" + nameUser,
+		Issuer:      "Pinkker.tv",
 		AccountName: accountName,
 	})
 	if err != nil {
 		return "", "", err
 	}
-	return key.Secret(), key.URL(), nil
+
+	url := key.URL() + "&issuer=Pinkker.tv:" + nameUser
+	return key.Secret(), url, nil
 }
 
 // ValidateCode validates the TOTP code
