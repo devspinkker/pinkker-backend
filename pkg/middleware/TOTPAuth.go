@@ -20,9 +20,16 @@ func TOTPAuthMiddleware(repo auth.TOTPRepository) fiber.Handler {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user ID"})
 		}
 
-		// Get TOTP code from query parameters or body
-		totpCode := c.Query("totp_code")
-		if totpCode == "" {
+		// Parse JSON body
+		var body struct {
+			TOTPCode string `json:"totp_code"`
+		}
+		if err := c.BodyParser(&body); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+		}
+
+		// Validate TOTP code
+		if body.TOTPCode == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "TOTP code is required"})
 		}
 
@@ -33,7 +40,7 @@ func TOTPAuthMiddleware(repo auth.TOTPRepository) fiber.Handler {
 		}
 
 		// Validate the TOTP code
-		if !totp.Validate(totpCode, secret) {
+		if !totp.Validate(body.TOTPCode, secret) {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid TOTP code"})
 		}
 
