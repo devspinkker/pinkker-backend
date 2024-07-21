@@ -13,8 +13,9 @@ import (
 func TOTPAuthMiddleware(repo auth.TOTPRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Get user ID from context (assumed to be set earlier in the request lifecycle)
-		userIDStr := c.Locals("userID").(string)
-		userID, err := primitive.ObjectIDFromHex(userIDStr)
+		IdUserToken := c.Context().UserValue("_id").(string)
+
+		userID, err := primitive.ObjectIDFromHex(IdUserToken)
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user ID"})
 		}
