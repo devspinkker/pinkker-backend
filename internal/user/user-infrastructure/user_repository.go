@@ -33,10 +33,18 @@ func NewUserRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Us
 	}
 }
 func (u *UserRepository) SetTOTPSecret(ctx context.Context, userID primitive.ObjectID, secret string) error {
+	existingSecret, err := u.GetTOTPSecret(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if existingSecret != "" {
+		return nil
+	}
+
 	usersCollection := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	filter := bson.M{"_id": userID}
 	update := bson.M{"$set": bson.M{"TOTPSecret": secret}}
-	_, err := usersCollection.UpdateOne(ctx, filter, update)
+	_, err = usersCollection.UpdateOne(ctx, filter, update)
 	return err
 }
 
