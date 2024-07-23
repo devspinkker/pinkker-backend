@@ -157,6 +157,9 @@ type ReqRestorePassword struct {
 	Code     string `json:"code"`
 	Password string `json:"password" validate:"required,min=8"`
 }
+type DeleteGoogleAuthenticator struct {
+	Code string `json:"code"`
+}
 
 func (L *LoginValidatorStruct) LoginValidator() error {
 	validate := validator.New()
