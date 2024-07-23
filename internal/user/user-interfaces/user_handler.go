@@ -541,7 +541,6 @@ func (h *UserHandler) RestorePassword(c *fiber.Ctx) error {
 }
 func (h *UserHandler) ChangeGoogleAuthenticator(c *fiber.Ctx) error {
 	nameuser := c.Context().UserValue("nameuser").(string)
-
 	user, errGoMongoDBCollUsers := h.userService.FindNameUser(nameuser, "")
 
 	if errGoMongoDBCollUsers != nil {
