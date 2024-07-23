@@ -67,6 +67,17 @@ func (u *UserRepository) ValidateTOTPCode(ctx context.Context, userID primitive.
 	return authGoogleAuthenticator.ValidateCode(secret, code), nil
 }
 
+func (u *UserRepository) DeleteGoogleAuthenticator(id primitive.ObjectID) error {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	filter := bson.M{"_id": id}
+	update := bson.M{
+		"$set": bson.M{
+			"TOTPSecret": "",
+		},
+	}
+	_, err := GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
+	return err
+}
 func (u *UserRepository) FindNameUserNoSensitiveInformation(NameUser string, Email string) (*domain.GetUser, error) {
 	var filter primitive.D
 	if Email == "" {
@@ -973,6 +984,37 @@ func (u *UserRepository) RedisSaveAccountRecoveryCode(code string, user domain.U
 	err := u.redisClient.Set(context.Background(), code, userJSON, 5*time.Minute).Err()
 
 	return err
+}
+
+func (u *UserRepository) RedisSaveChangeGoogleAuthenticatorCode(code string, user domain.User) error {
+	userJSON, errMarshal := json.Marshal(user)
+	if errMarshal != nil {
+		return errMarshal
+	}
+
+	err := u.redisClient.Set(context.Background(), code, userJSON, 5*time.Minute).Err()
+
+	return err
+}
+
+func (u *UserRepository) RedisGetChangeGoogleAuthenticatorCode(code string) (*domain.User, error) {
+
+	userJSON, errGet := u.redisClient.Get(context.Background(), code).Result()
+	if errGet != nil {
+		return nil, errGet
+	}
+
+	var user domain.User
+	errUnmarshal := json.Unmarshal([]byte(userJSON), &user)
+	if errUnmarshal != nil {
+		return nil, errUnmarshal
+	}
+
+	_, errDel := u.redisClient.Del(context.Background(), code).Result()
+	if errDel != nil {
+		return &user, nil
+	}
+	return &user, nil
 }
 
 func (u *UserRepository) getUser(filter bson.D) (*domain.GetUser, error) {

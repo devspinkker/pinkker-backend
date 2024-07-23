@@ -539,6 +539,81 @@ func (h *UserHandler) RestorePassword(c *fiber.Ctx) error {
 		"message": "StatusOK",
 	})
 }
+func (h *UserHandler) ChangeGoogleAuthenticator(c *fiber.Ctx) error {
+	nameuser := c.Context().UserValue("nameuser").(string)
+
+	user, errGoMongoDBCollUsers := h.userService.FindNameUser(nameuser, "")
+
+	if errGoMongoDBCollUsers != nil {
+		if errGoMongoDBCollUsers == mongo.ErrNoDocuments {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": "User not found",
+			})
+		} else {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Internal Server Error",
+			})
+		}
+	}
+	passerdGenerateCodecharset := helpers.GenerateCodecharset(5)
+	err := helpers.ChangeGoogleAuthenticator(passerdGenerateCodecharset, user.Email)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"data":    err,
+		})
+	}
+	err = h.userService.RedisSaveChangeGoogleAuthenticatorCode(passerdGenerateCodecharset, *user)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"data":    err,
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+	})
+}
+func (h *UserHandler) DeleteGoogleAuthenticator(c *fiber.Ctx) error {
+	var Get_new_password domain.ReqRestorePassword
+
+	if err := c.BodyParser(&Get_new_password); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request",
+		})
+	}
+	user, errGetUserinRedis := h.userService.RedisGetChangeGoogleAuthenticatorCode(Get_new_password.Code)
+	if errGetUserinRedis != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "User not found",
+		})
+	}
+	user, errGoMongoDBCollUsers := h.userService.FindNameUser("", user.Email)
+
+	if errGoMongoDBCollUsers != nil {
+		if errGoMongoDBCollUsers == mongo.ErrNoDocuments {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": "User not found",
+			})
+		} else {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Internal Server Error",
+			})
+		}
+	}
+
+	err := h.userService.DeleteGoogleAuthenticator(user.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"data":    err,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+	})
+}
 
 // get User By Id
 func (h *UserHandler) GetUserByIdTheToken(c *fiber.Ctx) error {

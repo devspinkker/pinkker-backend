@@ -97,6 +97,10 @@ func (u *UserService) GetUserinRedis(code string) (*domain.User, error) {
 	user, err := u.roomRepository.GetUserByCodeFromRedis(code)
 	return user, err
 }
+func (u *UserService) RedisGetChangeGoogleAuthenticatorCode(code string) (*domain.User, error) {
+	user, err := u.roomRepository.RedisGetChangeGoogleAuthenticatorCode(code)
+	return user, err
+}
 func (u *UserService) SaveUser(newUser *domain.User) (primitive.ObjectID, error) {
 	id, err := u.roomRepository.SaveUser(newUser)
 	return id, err
@@ -193,11 +197,21 @@ func (u *UserService) EditPasswordHast(passwordHash string, id primitive.ObjectI
 	err := u.roomRepository.EditPasswordHast(passwordHash, id)
 	return err
 }
+func (u *UserService) DeleteGoogleAuthenticator(id primitive.ObjectID) error {
+	err := u.roomRepository.DeleteGoogleAuthenticator(id)
+	return err
+}
 
 func (u *UserService) RedisSaveAccountRecoveryCode(code string, user domain.User) error {
 	err := u.roomRepository.RedisSaveAccountRecoveryCode(code, user)
 	return err
 }
+
+func (u *UserService) RedisSaveChangeGoogleAuthenticatorCode(code string, user domain.User) error {
+	err := u.roomRepository.RedisSaveChangeGoogleAuthenticatorCode(code, user)
+	return err
+}
+
 func (u *UserService) EditSocialNetworks(SocialNetwork userdomain.SocialNetwork, id primitive.ObjectID) error {
 	err := u.roomRepository.EditSocialNetworks(SocialNetwork, id)
 	return err
