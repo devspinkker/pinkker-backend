@@ -27,8 +27,8 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/user/Get_Recover_lost_password", UserHandler.Get_Recover_lost_password)
 	App.Post("/user/account-recovery", UserHandler.RestorePassword)
 
-	App.Post("/user/ChangeGoogleAuthenticator", UserHandler.ChangeGoogleAuthenticator)
-	App.Post("/user/DeleteGoogleAuthenticator", UserHandler.DeleteGoogleAuthenticator)
+	App.Post("/user/ChangeGoogleAuthenticator", middleware.UseExtractor(), UserHandler.ChangeGoogleAuthenticator)
+	App.Post("/user/DeleteGoogleAuthenticator", middleware.UseExtractor(), UserHandler.DeleteGoogleAuthenticator)
 
 	// oauth2
 	App.Get("/user/google_login", UserHandler.GoogleLogin)
