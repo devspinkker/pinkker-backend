@@ -149,6 +149,10 @@ func (u *UserService) GetUserBykey(key string) (*domain.GetUser, error) {
 	user, err := u.roomRepository.GetUserBykey(key)
 	return user, err
 }
+func (u *UserService) GetUserBanInstream(key string) (bool, error) {
+	user, err := u.roomRepository.GetUserBanInstream(key)
+	return user, err
+}
 func (u *UserService) GetUserByCmt(key string) (*domain.User, error) {
 	user, err := u.roomRepository.GetUserByCmt(key)
 	return user, err

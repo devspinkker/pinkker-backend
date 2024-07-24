@@ -786,6 +786,26 @@ func (h *UserHandler) GetUserBykey(c *fiber.Ctx) error {
 		"data":    user,
 	})
 }
+func (h *UserHandler) GetUserBanInstream(c *fiber.Ctx) error {
+
+	var Req ReqGetUserBykey
+	if err := c.QueryParser(&Req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	user, errGetUserBykey := h.userService.GetUserBanInstream(Req.Key)
+	if errGetUserBykey != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    user,
+	})
+}
 func (h *UserHandler) GetUserByCmt(c *fiber.Ctx) error {
 	type ReqGetUserByCmt struct {
 		Cmt string `json:"Cmt" query:"Cmt"`

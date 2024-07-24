@@ -571,6 +571,26 @@ func (u *UserRepository) GetUserByCmt(Cmt string) (*domain.User, error) {
 	filter := bson.D{{Key: "Cmt", Value: Cmt}}
 	return u.getFullUser(filter)
 }
+func (u *UserRepository) GetUserBanInstream(key string) (bool, error) {
+	filter := bson.D{{Key: "KeyTransmission", Value: key}}
+
+	projection := bson.D{{Key: "Banned", Value: 1}, {Key: "_id", Value: 0}}
+
+	var result struct {
+		Banned bool `bson:"Banned"`
+	}
+
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	err := GoMongoDBCollUsers.FindOne(context.TODO(), filter, options.FindOne().SetProjection(projection)).Decode(&result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return result.Banned, nil
+}
 
 func (u *UserRepository) SendConfirmationEmail(Email string, Token string) error {
 
