@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/websocket/v2"
@@ -68,6 +69,48 @@ func (D *DonationRepository) GetStreamByStreamerID(user primitive.ObjectID) (str
 	err := GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&stream)
 	return stream, err
 }
+func (u *DonationRepository) GetUserID(ctx context.Context, db *mongo.Database, userID primitive.ObjectID) (string, error) {
+	usersCollection := db.Collection("Users")
+	filter := bson.M{"_id": userID}
+	var user userdomain.User
+	err := usersCollection.FindOne(ctx, filter).Decode(&user)
+	if err != nil {
+		return "", err
+	}
+	return user.NameUser, nil
+}
+func (D *DonationRepository) StateTheUserInChat(Donado primitive.ObjectID, Donante primitive.ObjectID) (bool, error) {
+	ctx := context.Background()
+	db := D.mongoClient.Database("PINKKER-BACKEND")
+
+	stream, err := D.GetStreamByStreamerID(Donado)
+	if err != nil {
+		return true, err
+	}
+	userDonante, err := D.GetUserID(ctx, db, Donante)
+	if err != nil {
+		return true, err
+	}
+	collection := db.Collection("UserInformationInAllRooms")
+	userFilter := bson.M{"NameUser": userDonante}
+
+	var infoUser userdomain.InfoUser
+	err = collection.FindOne(ctx, userFilter).Decode(&infoUser)
+	if err != nil {
+		return true, fmt.Errorf("error finding user by NameUser: %v", err)
+	}
+
+	for _, room := range infoUser.Rooms {
+		if roomID, ok := room["Room"].(primitive.ObjectID); ok && roomID == stream.ID {
+			if banned, ok := room["Baneado"].(bool); ok {
+				return banned, nil
+			}
+		}
+	}
+
+	return true, fmt.Errorf("room with ID %s not found for user %s", stream.ID, userDonante)
+}
+
 func (D *DonationRepository) PublishNotification(roomID string, noty map[string]interface{}) error {
 
 	chatMessageJSON, err := json.Marshal(noty)

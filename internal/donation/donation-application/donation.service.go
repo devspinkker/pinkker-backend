@@ -32,6 +32,10 @@ func (D *DonationService) UserHasNumberPikels(FromUser primitive.ObjectID, Pixel
 	return err
 }
 
+func (D *DonationService) StateTheUserInChat(Donado primitive.ObjectID, Donante primitive.ObjectID) (bool, error) {
+	return D.DonationRepository.StateTheUserInChat(Donado, Donante)
+}
+
 // donar pixeles de fromUser a ToUser
 func (D *DonationService) DonatePixels(FromUser primitive.ObjectID, ToUser primitive.ObjectID, Pixeles float64, text string) error {
 	err := D.DonationRepository.DonatePixels(FromUser, ToUser, Pixeles, text)
