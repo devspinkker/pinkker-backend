@@ -47,7 +47,15 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 			"data":    "toUser !== ",
 		})
 	}
-	err := d.VodServise.UserHasNumberPikels(FromUser, idReq.Pixeles)
+	banned, err := d.VodServise.StateTheUserInChat(FromUser, idReq.ToUser)
+	if err != nil || banned {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"message": "StatusConflict",
+			"data":    "baneado",
+		})
+	}
+
+	err = d.VodServise.UserHasNumberPikels(FromUser, idReq.Pixeles)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -65,6 +73,7 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 		"message": "ok",
 	})
 }
+
 func (d *DonationHandler) NotifyActivityFeed(room, user string, Pixeles float64, text string) error {
 	clients, err := d.VodServise.GetWebSocketActivityFeed(room)
 	if err != nil {
