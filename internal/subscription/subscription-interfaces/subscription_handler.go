@@ -46,6 +46,15 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 			"data":    "toUser !== ",
 		})
 	}
+
+	banned, err := h.subscriptionService.StateTheUserInChat(idReq.ToUser, FromUser)
+	if err != nil || banned {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"message": "StatusConflict",
+			"data":    "baneado",
+		})
+	}
+
 	user, errdonatePixels := h.subscriptionService.Subscription(FromUser, idReq.ToUser, idReq.Text)
 	if errdonatePixels != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
