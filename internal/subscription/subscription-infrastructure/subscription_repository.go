@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/websocket/v2"
@@ -510,4 +511,48 @@ func (u *SubscriptionRepository) PublishNotification(roomID string, noty map[str
 	}
 
 	return err
+}
+func (u *SubscriptionRepository) StateTheUserInChat(Donado primitive.ObjectID, Donante primitive.ObjectID) (bool, error) {
+	ctx := context.Background()
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+
+	stream, err := u.GetStreamByStreamerID(Donado)
+	if err != nil {
+		return true, err
+	}
+	userDonante, err := u.GetUserID(ctx, db, Donante)
+	if err != nil {
+		return true, err
+	}
+	collection := db.Collection("UserInformationInAllRooms")
+	userFilter := bson.M{"NameUser": userDonante}
+
+	var infoUser userdomain.InfoUser
+	err = collection.FindOne(ctx, userFilter).Decode(&infoUser)
+	if err != nil {
+		return true, fmt.Errorf("error finding user by NameUser: %v", err)
+	}
+
+	for _, room := range infoUser.Rooms {
+		if roomID, ok := room["Room"].(primitive.ObjectID); ok && roomID == stream.ID {
+
+			fmt.Println(room["Baneado"])
+			if banned, ok := room["Baneado"].(bool); ok {
+				return banned, nil
+			}
+		}
+	}
+
+	return true, fmt.Errorf("room with ID %s not found for user %s", stream.ID, userDonante)
+}
+
+func (u *SubscriptionRepository) GetUserID(ctx context.Context, db *mongo.Database, userID primitive.ObjectID) (string, error) {
+	usersCollection := db.Collection("Users")
+	filter := bson.M{"_id": userID}
+	var user userdomain.User
+	err := usersCollection.FindOne(ctx, filter).Decode(&user)
+	if err != nil {
+		return "", err
+	}
+	return user.NameUser, nil
 }

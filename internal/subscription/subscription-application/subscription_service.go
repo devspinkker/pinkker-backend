@@ -55,3 +55,8 @@ func (u *SubscriptionService) DeleteRedisUserChatInOneRoom(userToDelete primitiv
 
 	return err
 }
+
+func (u *SubscriptionService) StateTheUserInChat(Donado primitive.ObjectID, Donante primitive.ObjectID) (bool, error) {
+	return u.roomRepository.StateTheUserInChat(Donado, Donante)
+
+}

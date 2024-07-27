@@ -47,7 +47,7 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 			"data":    "toUser !== ",
 		})
 	}
-	banned, err := d.VodServise.StateTheUserInChat(FromUser, idReq.ToUser)
+	banned, err := d.VodServise.StateTheUserInChat(idReq.ToUser, FromUser)
 	if err != nil || banned {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 			"message": "StatusConflict",

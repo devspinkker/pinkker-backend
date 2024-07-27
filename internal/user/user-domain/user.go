@@ -278,6 +278,7 @@ type InfoUserInRoom struct {
 	Rooms    []map[string]interface{} `json:"rooms" bson:"Rooms"`
 }
 
+// este documento tiene todas los Rooms o chats en los que interactuo  Nameuser
 type InfoUser struct {
 	ID       primitive.ObjectID       `bson:"_id,omitempty"`
 	Nameuser string                   `bson:"NameUser"`
@@ -285,6 +286,22 @@ type InfoUser struct {
 	Rooms    []map[string]interface{} `bson:"Rooms"`
 }
 
+// Rooms tiene esto como interface
+//
+//	newRoom := map[string]interface{}{
+//		"Room":                 roomID,// primitive.ObjectID
+//		"Vip":                  false,
+//		"Color":                randomColor, //string
+//		"Moderator":            false,
+//		"Verified":             verified,// bool
+//		"Subscription":         primitive.ObjectID{},
+//		"Baneado":              false,
+//		"TimeOut":              time.Now(),
+//		"EmblemasChat":         userInfo.EmblemasChat,
+//		"Following":            domain.FollowInfo{},
+//		"StreamerChannelOwner": userInfo.StreamerChannelOwner,  //bool
+//		"LastMessage":          time.Now(),
+//	}
 type SubscriptionInfo struct {
 	ID                   primitive.ObjectID `bson:"_id,omitempty"`
 	SubscriptionNameUser string             `bson:"SubscriptionNameUser"`
