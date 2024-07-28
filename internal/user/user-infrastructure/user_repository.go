@@ -630,7 +630,7 @@ func (u *UserRepository) CreateStreamUser(user *domain.User, id primitive.Object
 		Streamer:           user.NameUser,
 		StreamTitle:        "Your Title",
 		StreamCategory:     "Just Chatting",
-		ImageCategorie:     "https://res.cloudinary.com/dcj8krp42/image/upload/v1708649172/categorias/IRL_aiusyf.jpg",
+		ImageCategorie:     "https://res-console.cloudinary.com/dcj8krp42/thumbnails/v1/image/upload/v1712604659/Y2F0ZWdvcmlhcy9qdXN0X2NoYXR0aW5nX3piNHNiNA==/drilldown",
 		StreamNotification: user.NameUser + " is live!",
 		StreamerAvatar:     user.Avatar,
 		StreamTag:          []string{"Español"},
