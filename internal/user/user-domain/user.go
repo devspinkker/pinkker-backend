@@ -26,6 +26,7 @@ type User struct {
 	Biography         string                 `json:"biography" default:"Bienvenido a pinkker! actualiza tu biografía en ajustes de cuenta." bson:"Biography"`
 	Look              string                 `json:"look" default:"h_std_cc_3032_7_0-undefined-undefined.ch-215-62-78.hd-180-10.lg-270-110" bson:"Look"`
 	LookImage         string                 `json:"lookImage" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"LookImage"`
+	Banner            string                 `json:"Banner"  bson:"Banner"`
 	HeadImage         string                 `json:"headImage" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"headImage"`
 	Color             string                 `json:"color" bson:"Color"`
 	BirthDate         time.Time              `json:"birthDate" bson:"BirthDate"`
@@ -183,6 +184,7 @@ type GetUser struct {
 	Biography       string                 `json:"biography" default:"Bienvenido a pinkker! actualiza tu biografía en ajustes de cuenta." bson:"Biography"`
 	Look            string                 `json:"look" default:"h_std_cc_3032_7_0-undefined-undefined.ch-215-62-78.hd-180-10.lg-270-110" bson:"Look"`
 	LookImage       string                 `json:"lookImage" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"LookImage"`
+	Banner          string                 `json:"Banner" default:"https://res.cloudinary.com/dcj8krp42/image/upload/v1712283573/categorias/logo_trazado_pndioh.png" bson:"Banner"`
 	HeadImage       string                 `json:"headImage" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"headImage"`
 	Color           string                 `json:"color" bson:"Color"`
 	BirthDate       time.Time              `json:"birthDate" bson:"BirthDate"`

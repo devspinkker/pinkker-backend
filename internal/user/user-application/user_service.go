@@ -62,6 +62,7 @@ func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avat
 	modelNewUser.FullName = newUser.FullName
 	modelNewUser.NameUser = newUser.NameUser
 	modelNewUser.PasswordHash = passwordHash
+	modelNewUser.Banner = "https://res.cloudinary.com/dcj8krp42/image/upload/v1712283573/categorias/logo_trazado_pndioh.png"
 	modelNewUser.Pais = newUser.Pais
 	modelNewUser.Ciudad = newUser.Ciudad
 	modelNewUser.Email = newUser.Email
