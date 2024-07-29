@@ -1,6 +1,7 @@
 package userdomain
 
 import (
+	"regexp"
 	"time"
 
 	"github.com/go-playground/validator"
@@ -76,7 +77,7 @@ type FollowInfo struct {
 }
 type UserModelValidator struct {
 	FullName      string    `json:"fullName" validate:"required,min=8,max=70"`
-	NameUser      string    `json:"NameUser" validate:"min=5,max=20"`
+	NameUser      string    `json:"NameUser" validate:"nameuser" `
 	Password      string    `json:"password" validate:"required,min=8"`
 	Pais          string    `json:"Pais" `
 	Ciudad        string    `json:"Ciudad"`
@@ -89,16 +90,11 @@ type UserModelValidator struct {
 	BirthDateTime time.Time `json:"-" bson:"BirthDate"`
 }
 
-type SocialNetwork struct {
-	Facebook  string `json:"facebook,omitempty" bson:"facebook"`
-	Twitter   string `json:"twitter,omitempty" bson:"twitter"`
-	Instagram string `json:"instagram,omitempty" bson:"instagram"`
-	Youtube   string `json:"youtube,omitempty" bson:"youtube"`
-	Tiktok    string `json:"tiktok,omitempty" bson:"tiktok"`
-}
-
 func (u *UserModelValidator) ValidateUser() error {
 	validate := validator.New()
+
+	validate.RegisterValidation("nameuser", nameUserValidator)
+
 	if u.BirthDate != "" {
 		_, err := time.Parse("2006-01-02", u.BirthDate)
 		if err != nil {
@@ -108,7 +104,31 @@ func (u *UserModelValidator) ValidateUser() error {
 		birthDate, _ := time.Parse("2006-01-02", u.BirthDate)
 		u.BirthDateTime = birthDate
 	}
+
 	return validate.Struct(u)
+}
+
+func nameUserValidator(fl validator.FieldLevel) bool {
+	nameUser := fl.Field().String()
+
+	if len(nameUser) < 5 || len(nameUser) > 20 {
+		return false
+	}
+
+	// Verifica que no contenga espacios
+	if regexp.MustCompile(`\s`).MatchString(nameUser) {
+		return false
+	}
+
+	return true
+}
+
+type SocialNetwork struct {
+	Facebook  string `json:"facebook,omitempty" bson:"facebook"`
+	Twitter   string `json:"twitter,omitempty" bson:"twitter"`
+	Instagram string `json:"instagram,omitempty" bson:"instagram"`
+	Youtube   string `json:"youtube,omitempty" bson:"youtube"`
+	Tiktok    string `json:"tiktok,omitempty" bson:"tiktok"`
 }
 
 type PanelAdminPinkkerInfoUserReq struct {
@@ -124,14 +144,37 @@ type CreateAdmin struct {
 	NewCode  string             `json:"NewCode,omitempty" bson:"NewCode" validate:"required,min=5,max=20" `
 }
 type ChangeNameUser struct {
-	Code           string             `json:"Code,omitempty" bson:"Code"`
+	Code           string             `json:"Code,omitempty" bson:"Code" `
 	IdUser         primitive.ObjectID `json:"IdUser,omitempty" bson:"IdUser"`
-	NameUserNew    string             `json:"NameUserNew,omitempty" bson:"NameUserNew"`
+	NameUserNew    string             `json:"NameUserNew,omitempty" bson:"NameUserNew" validate:"NameUserNew"`
 	NameUserRemove string             `json:"NameUserRemove,omitempty" bson:"NameUserRemove"`
 }
 
-func (u *PanelAdminPinkkerInfoUserReq) ValidateUser() error {
+// Valida que NameUserNew tenga al menos 5 caracteres y no tenga espacios
+func nameUserNewValidator(fl validator.FieldLevel) bool {
+	nameUserNew := fl.Field().String()
+
+	// Verifica longitud
+	if len(nameUserNew) < 5 {
+		return false
+	}
+
+	// Verifica que no contenga espacios
+	if regexp.MustCompile(`\s`).MatchString(nameUserNew) {
+		return false
+	}
+
+	return true
+}
+
+// Valida la estructura
+func (u *ChangeNameUser) ValidateUser() error {
 	validate := validator.New()
+
+	// Registro de validación personalizada
+	validate.RegisterValidation("NameUserNew", nameUserNewValidator)
+
+	// Validar estructura con la etiqueta personalizada
 	return validate.Struct(u)
 }
 
