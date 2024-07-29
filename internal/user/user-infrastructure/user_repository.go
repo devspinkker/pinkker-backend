@@ -997,8 +997,8 @@ func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error 
 }
 func (u *UserRepository) EditBanner(Banner string, id primitive.ObjectID) error {
 	GoMongoDB := u.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
-	filterStream := bson.M{"StreamerID": id}
+	GoMongoDBCollStreams := GoMongoDB.Collection("Users")
+	filterStream := bson.M{"_id": id}
 	updateStream := bson.M{
 		"$set": bson.M{
 			"Banner": Banner,
