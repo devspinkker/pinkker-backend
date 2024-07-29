@@ -995,6 +995,20 @@ func (u *UserRepository) EditAvatar(avatar string, id primitive.ObjectID) error 
 
 	return err
 }
+func (u *UserRepository) EditBanner(Banner string, id primitive.ObjectID) error {
+	GoMongoDB := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
+	filterStream := bson.M{"StreamerID": id}
+	updateStream := bson.M{
+		"$set": bson.M{
+			"Banner": Banner,
+		},
+	}
+
+	_, err := GoMongoDBCollStreams.UpdateOne(context.TODO(), filterStream, updateStream)
+
+	return err
+}
 func (u *UserRepository) RedisSaveAccountRecoveryCode(code string, user domain.User) error {
 	userJSON, errMarshal := json.Marshal(user)
 	if errMarshal != nil {

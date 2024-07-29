@@ -1073,7 +1073,42 @@ func (h *UserHandler) EditAvatar(c *fiber.Ctx) error {
 	}
 
 }
+func (h *UserHandler) EditBanner(c *fiber.Ctx) error {
+	fileHeader, _ := c.FormFile("Banner")
+	PostImageChanel := make(chan string)
+	errChanel := make(chan error)
 
+	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	for {
+		select {
+		case Banner := <-PostImageChanel:
+			errUpdateUserFollow := h.userService.EditBanner(Banner, IdUserTokenP)
+			if errUpdateUserFollow != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"message": "StatusInternalServerError",
+				})
+			}
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{
+				"message": "StatusOK",
+				"Banner":  Banner,
+			})
+		case <-errChanel:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Banner error",
+			})
+		}
+
+	}
+
+}
 func (h *UserHandler) EditSocialNetworks(c *fiber.Ctx) error {
 	var SocialNetwork domain.SocialNetwork
 	if err := c.BodyParser(&SocialNetwork); err != nil {

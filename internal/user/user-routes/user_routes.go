@@ -53,13 +53,15 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 
 	// edit user information
 	App.Post("/user/EditProfile", middleware.UseExtractor(), UserHandler.EditProfile)
+	App.Post("/user/ChangeNameUser", middleware.UseExtractor(), middleware.TOTPAuthMiddleware(userRepository), UserHandler.ChangeNameUser)
 	App.Post("/user/EditAvatar", middleware.UseExtractor(), UserHandler.EditAvatar)
+	App.Post("/user/EditBanner", middleware.UseExtractor(), UserHandler.EditBanner)
+
 	App.Post("/user/EditSocialNetworks", middleware.UseExtractor(), UserHandler.EditSocialNetworks)
 
 	App.Post("/user/PanelAdminPinkker/InfoUser", middleware.UseExtractor(), UserHandler.PanelAdminPinkkerInfoUser)
 	App.Post("/user/PanelAdminPinkker/CreateAdmin", middleware.UseExtractor(), UserHandler.CreateAdmin)
 	App.Post("/user/PanelAdminPinkker/ChangeNameUserCodeAdmin", middleware.UseExtractor(), UserHandler.ChangeNameUserCodeAdmin)
-	App.Post("/user/ChangeNameUser", middleware.UseExtractor(), UserHandler.ChangeNameUser)
 
 	App.Post("/user/PanelAdminPinkker/banStreamer", middleware.UseExtractor(), UserHandler.PanelAdminPinkkerbanStreamer)
 	App.Post("/user/PanelAdminPinkker/RemoveBanStreamer", middleware.UseExtractor(), UserHandler.PanelAdminRemoveBanStreamer)
