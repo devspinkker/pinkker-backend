@@ -186,6 +186,12 @@ func (h *UserHandler) ChangeNameUserCodeAdmin(c *fiber.Ctx) error {
 			"data":    errinObjectID.Error(),
 		})
 	}
+	if err := CreateAdmin.ValidateUser(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err,
+		})
+	}
 	errUpdateUserFollow := h.userService.ChangeNameUserCodeAdmin(CreateAdmin, IdUserTokenP)
 	if errUpdateUserFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -205,8 +211,15 @@ func (h *UserHandler) ChangeNameUser(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
-	nameuser := c.Context().UserValue("nameuser").(string)
+	nameuser := c.Context().UserValue("nameUser").(string)
 	CreateAdmin.NameUserRemove = nameuser
+
+	if err := CreateAdmin.ValidateUser(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err,
+		})
+	}
 	errUpdateUserFollow := h.userService.ChangeNameUser(CreateAdmin)
 	if errUpdateUserFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

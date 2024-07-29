@@ -165,14 +165,18 @@ func (u *UserRepository) ChangeNameUserCodeAdmin(changeNameUser domain.ChangeNam
 }
 
 func (u *UserRepository) doesUserExist(ctx context.Context, db *mongo.Database, nameUser string) bool {
-	GoMongoDBCollUsers := db.Collection("Users")
-	filter := bson.M{"NameUser": nameUser}
-	count, err := GoMongoDBCollUsers.CountDocuments(ctx, filter)
-	if err != nil {
-		return false
-	}
-	return count > 0
+    GoMongoDBCollUsers := db.Collection("Users")
+
+    filter := bson.M{"NameUser": bson.M{"$regex": "^" + nameUser + "$", "$options": "i"}}
+
+    count, err := GoMongoDBCollUsers.CountDocuments(ctx, filter)
+    if err != nil {
+        return false
+    }
+    return count > 0
 }
+
+
 func (u *UserRepository) updateUserInformationInAllRooms(ctx context.Context, db *mongo.Database, changeNameUser domain.ChangeNameUser) error {
 	GoMongoDBCollUsers := db.Collection("UserInformationInAllRooms")
 	userFilterTemp := bson.M{"NameUser": changeNameUser.NameUserRemove}
