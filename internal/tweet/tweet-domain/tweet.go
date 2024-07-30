@@ -98,7 +98,6 @@ type TweetGetFollowReq struct {
 	PostImage    string               `json:"PostImage" bson:"PostImage"`
 	TimeStamp    time.Time            `json:"TimeStamp"  bson:"TimeStamp"`
 	UserID       primitive.ObjectID   `json:"UserID" bson:"UserID"`
-	Likes        []primitive.ObjectID `json:"Likes"`
 	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 	OriginalPost primitive.ObjectID   `json:"OriginalPost"`
@@ -111,6 +110,8 @@ type TweetGetFollowReq struct {
 	} `json:"UserInfo"`
 	OriginalPostData *TweetGetFollowReq `json:"OriginalPostData"`
 	Views            int                `json:"Views" bson:"Views"`
+	IsLikedByID      bool               `json:"isLikedByID" bson:"isLikedByID"`
+	LikeCount        int                `json:"likeCount" bson:"likeCount"`
 }
 type TweetCommentsGetReq struct {
 	ID           primitive.ObjectID   `json:"_id" bson:"_id"`
