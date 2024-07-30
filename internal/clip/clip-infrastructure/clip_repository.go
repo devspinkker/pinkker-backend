@@ -351,33 +351,97 @@ func (c *ClipRepository) UpdateClipPreviouImage(clipID primitive.ObjectID, newUR
 	clipCollection.UpdateOne(context.Background(), filter, update, opts)
 
 }
-func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Clip, error) {
+func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.GetClip, error) {
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
-	FindClipInDb := bson.D{
-		{Key: "_id", Value: IdClip},
+
+	pipeline := []bson.D{
+		{{
+			Key:   "$match",
+			Value: bson.D{{Key: "_id", Value: IdClip}},
+		}},
+		{{
+			Key: "$lookup",
+			Value: bson.D{
+				{Key: "from", Value: "Likes"},
+				{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
+				{Key: "pipeline", Value: bson.A{
+					bson.D{{Key: "$match", Value: bson.D{
+						{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}},
+					}}},
+					bson.D{{Key: "$count", Value: "likesCount"}},
+				}},
+				{Key: "as", Value: "LikesInfo"},
+			},
+		}},
+		// Lookup to count comments
+		{{
+			Key: "$lookup",
+			Value: bson.D{
+				{Key: "from", Value: "Comments"},
+				{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
+				{Key: "pipeline", Value: bson.A{
+					bson.D{{Key: "$match", Value: bson.D{
+						{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}},
+					}}},
+					bson.D{{Key: "$count", Value: "commentsCount"}},
+				}},
+				{Key: "as", Value: "CommentsInfo"},
+			},
+		}},
+		// Add fields for like and comment counts
+		{{
+			Key: "$addFields",
+			Value: bson.D{
+				{Key: "LikeCount", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$LikesInfo.likesCount", 0}}}},
+				{Key: "CommentCount", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$CommentsInfo.commentsCount", 0}}}},
+				{Key: "IsLikedByID", Value: false}, // Default value
+			},
+		}},
+		// Project the required fields
+		{{
+			Key: "$project",
+			Value: bson.D{
+				{Key: "ID", Value: "$_id"},
+				{Key: "NameUserCreator", Value: "$NameUserCreator"},
+				{Key: "IDCreator", Value: "$IDCreator"},
+				{Key: "NameUser", Value: "$NameUser"},
+				{Key: "StreamThumbnail", Value: "$StreamThumbnail"},
+				{Key: "Category", Value: "$Category"},
+				{Key: "UserID", Value: "$UserID"},
+				{Key: "Avatar", Value: "$Avatar"},
+				{Key: "ClipTitle", Value: "$ClipTitle"},
+				{Key: "URL", Value: "$URL"},
+				{Key: "Duration", Value: "$Duration"},
+				{Key: "Views", Value: "$Views"},
+				{Key: "Cover", Value: "$Cover"},
+				{Key: "Timestamps", Value: "$Timestamps"},
+				{Key: "IsLikedByID", Value: "$IsLikedByID"},
+				{Key: "LikeCount", Value: "$LikeCount"},
+				{Key: "CommentCount", Value: "$CommentCount"},
+			},
+		}},
 	}
 
-	var findClipInDbExist *clipdomain.Clip
-	err := GoMongoDBColl.FindOne(context.Background(), FindClipInDb).Decode(&findClipInDbExist)
+	// Execute the aggregation pipeline
+	cursor, err := GoMongoDBColl.Aggregate(context.Background(), pipeline)
 	if err != nil {
 		return nil, err
 	}
+	defer cursor.Close(context.Background())
 
-	update := bson.D{
-		{Key: "$inc", Value: bson.D{{Key: "views", Value: 1}}},
+	var clips []clipdomain.GetClip
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&clips); err != nil {
+			return nil, err
+		}
 	}
 
-	_, err = GoMongoDBColl.UpdateOne(context.Background(), FindClipInDb, update)
-	if err != nil {
-		return nil, err
+	if len(clips) == 0 {
+		return nil, fmt.Errorf("clip not found")
 	}
 
-	err = GoMongoDBColl.FindOne(context.Background(), FindClipInDb).Decode(&findClipInDbExist)
-	if err != nil {
-		return nil, err
-	}
-
-	return findClipInDbExist, nil
+	// Return the found clip
+	return &clips[0], nil
 }
 
 func (c *ClipRepository) FindUser(totalKey string) (*userdomain.User, error) {
@@ -463,7 +527,7 @@ func (c *ClipRepository) GetClipsMostViewed(page int) ([]clipdomain.Clip, error)
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
 	options := options.Find()
-	options.SetSort(bson.D{{"Views", -1}})
+	options.SetSort(bson.D{{Key: "Views", Value: -1}})
 	options.SetSkip(int64((page - 1) * 10))
 	options.SetLimit(10)
 
