@@ -128,7 +128,7 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
 			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", followingIDs}}}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, "$Likes"}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
@@ -209,7 +209,7 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.Obj
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, "$Likes"}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
@@ -400,7 +400,7 @@ func (t *TweetRepository) SaveComment(tweetComment *tweetdomain.PostComment) (pr
 
 	return insertedID, nil
 }
-func (t *TweetRepository) FindTweetbyId(idTweet, idt primitive.ObjectID) (tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) FindTweetbyId(idTweet, idT primitive.ObjectID) (tweetdomain.TweetGetFollowReq, error) {
 	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
 	pipeline := bson.A{
@@ -413,8 +413,8 @@ func (t *TweetRepository) FindTweetbyId(idTweet, idt primitive.ObjectID) (tweetd
 			{Key: "as", Value: "likesInfo"},
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idt, "$likesInfo.UserID"}}}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: "$likesInfo"}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
