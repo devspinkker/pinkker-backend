@@ -564,6 +564,24 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 		}}},
 		{{Key: "$skip", Value: skip}},
 		{{Key: "$limit", Value: 10}},
+		{{Key: "$addFields", Value: bson.D{
+			{Key: "IsLikedByID", Value: false},
+		}}},
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Likes"},
+			{Key: "let", Value: bson.D{{Key: "tweetID", Value: "$_id"}}},
+			{Key: "pipeline", Value: bson.A{
+				bson.D{{Key: "$match", Value: bson.D{
+					{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$TweetID", "$$tweetID"}}}},
+				}}},
+				bson.D{{Key: "$count", Value: "LikesCount"}},
+			}},
+			{Key: "as", Value: "LikesInfo"},
+		}}},
+		{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$LikesInfo"}, {Key: "preserveNullAndEmptyArrays", Value: true}}}},
+		{{Key: "$addFields", Value: bson.D{
+			{Key: "LikesCount", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$LikesInfo.LikesCount", 0}}}},
+		}}},
 		{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},
 			{Key: "Status", Value: "$Status"},
@@ -571,7 +589,7 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 			{Key: "Type", Value: "$Type"},
 			{Key: "TimeStamp", Value: "$TimeStamp"},
 			{Key: "UserID", Value: "$UserID"},
-			{Key: "Likes", Value: "$Likes"},
+			{Key: "Likes", Value: "$LikesCount"},
 			{Key: "Comments", Value: "$Comments"},
 			{Key: "RePosts", Value: "$RePosts"},
 			{Key: "Views", Value: "$Views"},
@@ -579,10 +597,11 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "IsLikedByID", Value: "$IsLikedByID"},
 		}}},
 	}
 
-	// Ejecutamos el primer pipeline y recolectamos los IDs
+	// Ejecutamos el pipeline y recolectamos los datos
 	cursor, err := GoMongoDBCollTweets.Aggregate(context.Background(), pipeline)
 	if err != nil {
 		return nil, err
@@ -590,7 +609,6 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 	defer cursor.Close(context.Background())
 
 	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
-	var tweetIDs []primitive.ObjectID
 	for cursor.Next(context.Background()) {
 		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
@@ -598,18 +616,14 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 		}
 
 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
-		tweetIDs = append(tweetIDs, tweetWithUserInfo.ID)
 	}
 
-	// Recolectamos los IDs de los OriginalPosts
-	var originalPostIDs []primitive.ObjectID
-	for _, tweet := range tweetsWithUserInfo {
-		if tweet.OriginalPost != primitive.NilObjectID {
-			originalPostIDs = append(originalPostIDs, tweet.OriginalPost)
-		}
+	// Actualizamos los documentos para incrementar las vistas
+	tweetIDs := make([]primitive.ObjectID, len(tweetsWithUserInfo))
+	for i, tweet := range tweetsWithUserInfo {
+		tweetIDs[i] = tweet.ID
 	}
 
-	// Actualizamos los documentos del primer pipeline
 	if len(tweetIDs) > 0 {
 		updateFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: tweetIDs}}}}
 		update := bson.D{
@@ -620,6 +634,14 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 		_, err := GoMongoDBCollTweets.UpdateMany(context.Background(), updateFilter, update)
 		if err != nil {
 			return nil, err
+		}
+	}
+
+	// Recolectamos los IDs de los OriginalPosts
+	var originalPostIDs []primitive.ObjectID
+	for _, tweet := range tweetsWithUserInfo {
+		if tweet.OriginalPost != primitive.NilObjectID {
+			originalPostIDs = append(originalPostIDs, tweet.OriginalPost)
 		}
 	}
 
@@ -692,6 +714,7 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 
 	return tweetsWithUserInfo, nil
 }
+
 func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGetFollowReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
