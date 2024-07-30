@@ -115,9 +115,18 @@ func (ts *TweetService) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGetFo
 	Tweet, errGetFollowedUsers := ts.TweetRepository.GetPostId(id)
 	return Tweet, errGetFollowedUsers
 }
+func (ts *TweetService) GetPostIdLogueado(id, idValueObj primitive.ObjectID) (tweetdomain.TweetGetFollowReq, error) {
+
+	Tweet, errGetFollowedUsers := ts.TweetRepository.GetPostIdLogueado(id, idValueObj)
+	return Tweet, errGetFollowedUsers
+}
 
 func (ts *TweetService) GetPostuser(page int, id primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
 	Tweets, errGetFollowedUsers := ts.TweetRepository.GetPostuser(page, id, 10)
+	return Tweets, errGetFollowedUsers
+}
+func (ts *TweetService) GetPostuserLogueado(page int, id, idValueObj primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
+	Tweets, errGetFollowedUsers := ts.TweetRepository.GetPostuserLogueado(page, id, idValueObj, 10)
 	return Tweets, errGetFollowedUsers
 }
 

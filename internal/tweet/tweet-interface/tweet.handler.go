@@ -216,6 +216,37 @@ func (th *TweetHandler) GetPostId(c *fiber.Ctx) error {
 		"data":    Tweet,
 	})
 }
+func (th *TweetHandler) GetPostIdLogueado(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	idStr := c.Query("id", "")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    "name error",
+		})
+	}
+
+	Tweet, errTweetGetFollow := th.TweetServise.GetPostIdLogueado(id, idValueObj)
+	if errTweetGetFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errTweetGetFollow.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Tweet,
+	})
+}
+
 func (th *TweetHandler) GetTweetsRecommended(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
@@ -261,6 +292,40 @@ func (th *TweetHandler) GetPostuser(c *fiber.Ctx) error {
 	}
 
 	Tweets, errTweetGetFollow := th.TweetServise.GetPostuser(page, id)
+	if errTweetGetFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errTweetGetFollow.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Tweets,
+	})
+}
+func (th *TweetHandler) GetPostuserLogueado(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	page, errpage := strconv.Atoi(c.Query("page", "1"))
+	if errpage != nil || page < 1 {
+		page = 1
+	}
+	idStr := c.Query("id", "")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    "name error",
+		})
+	}
+
+	Tweets, errTweetGetFollow := th.TweetServise.GetPostuserLogueado(page, id, idValueObj)
 	if errTweetGetFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
