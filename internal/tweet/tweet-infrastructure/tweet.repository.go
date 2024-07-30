@@ -113,6 +113,10 @@ func (t *TweetRepository) getExcludedIDs(excludeIDs []primitive.ObjectID) []inte
 }
 
 func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.ObjectID, collTweets *mongo.Collection, followingIDs []primitive.ObjectID, excludeFilter bson.D, last24Hours time.Time, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+	if followingIDs == nil {
+		followingIDs = []primitive.ObjectID{}
+	}
+
 	pipeline := bson.A{
 		bson.D{{Key: "$match", Value: bson.M{
 			"Type":      bson.M{"$in": []string{"Post", "RePost", "CitaPost", "PostComment"}},
