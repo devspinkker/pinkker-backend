@@ -93,12 +93,12 @@ type OriginalPostReference struct {
 }
 
 type TweetGetFollowReq struct {
-	ID           primitive.ObjectID   `json:"_id" bson:"_id"`
-	Status       string               `json:"Status" bson:"Status"`
-	PostImage    string               `json:"PostImage" bson:"PostImage"`
-	TimeStamp    time.Time            `json:"TimeStamp"  bson:"TimeStamp"`
-	UserID       primitive.ObjectID   `json:"UserID" bson:"UserID"`
-	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
+	ID        primitive.ObjectID `json:"_id" bson:"_id"`
+	Status    string             `json:"Status" bson:"Status"`
+	PostImage string             `json:"PostImage" bson:"PostImage"`
+	TimeStamp time.Time          `json:"TimeStamp"  bson:"TimeStamp"`
+	UserID    primitive.ObjectID `json:"UserID" bson:"UserID"`
+	// Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 	OriginalPost primitive.ObjectID   `json:"OriginalPost"`
 	Type         string               `json:"Type" bson:"Type"`
@@ -140,7 +140,7 @@ type GetRecommended struct {
 func (u *GetRecommended) GetRecommended() error {
 	validate := validator.New()
 	if reflect.TypeOf(u.ExcludeIDs).Elem() != reflect.TypeOf(primitive.ObjectID{}) {
-		return errors.New("Clip debe ser del tipo primitive.ObjectID")
+		return errors.New("clip debe ser del tipo primitive.ObjectId")
 	}
 	return validate.Struct(u)
 }

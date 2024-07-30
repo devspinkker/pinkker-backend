@@ -30,6 +30,29 @@ type Clip struct {
 		UpdatedAt time.Time `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
 	} `json:"timestamps,omitempty" bson:"timestamps,omitempty"`
 }
+type GetClip struct {
+	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	NameUserCreator string             `json:"nameUserCreator" bson:"NameUserCreator"`
+	IDCreator       primitive.ObjectID `json:"idCreator" bson:"IDCreator"`
+	NameUser        string             `json:"NameUser" bson:"NameUser"`
+	StreamThumbnail string             `json:"streamThumbnail" bson:"StreamThumbnail"`
+	Category        string             `json:"category" bson:"Category"`
+	UserID          primitive.ObjectID `json:"UserID" bson:"UserID"`
+	Avatar          string             `json:"Avatar" bson:"Avatar"`
+	ClipTitle       string             `json:"clipTitle" bson:"ClipTitle"`
+	URL             string             `json:"url" bson:"url"`
+	Duration        int                `json:"duration" bson:"duration"`
+	Views           int                `json:"views" bson:"views"`
+	Cover           string             `json:"cover" bson:"cover"`
+	Timestamps      struct {
+		CreatedAt time.Time `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
+		UpdatedAt time.Time `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
+	} `json:"timestamps,omitempty" bson:"timestamps,omitempty"`
+	IsLikedByID  bool `json:"isLikedByID" bson:"isLikedByID"`
+	LikeCount    int  `json:"likeCount" bson:"likeCount"`
+	CommentCount int  `json:"commentCount" bson:"commentCount"`
+}
+
 type ClipRequest struct {
 	Video     []byte `json:"video" validate:"required"`
 	Start     int    `json:"start" validate:"required"`
