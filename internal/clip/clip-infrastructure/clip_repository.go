@@ -354,72 +354,60 @@ func (c *ClipRepository) UpdateClipPreviouImage(clipID primitive.ObjectID, newUR
 func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.GetClip, error) {
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
-	pipeline := []bson.D{
-		{{
-			Key:   "$match",
-			Value: bson.D{{Key: "_id", Value: IdClip}},
-		}},
-		{{
-			Key: "$lookup",
-			Value: bson.D{
-				{Key: "from", Value: "Likes"},
-				{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
-				{Key: "pipeline", Value: bson.A{
-					bson.D{{Key: "$match", Value: bson.D{
-						{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}},
-					}}},
-					bson.D{{Key: "$count", Value: "likesCount"}},
-				}},
-				{Key: "as", Value: "LikesInfo"},
-			},
-		}},
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.D{{Key: "_id", Value: IdClip}}}},
+		// Lookup to count likes
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Likes"},
+			{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
+			{Key: "pipeline", Value: bson.A{
+				bson.D{{Key: "$match", Value: bson.D{{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}}}}},
+				bson.D{{Key: "$count", Value: "likesCount"}},
+			}},
+			{Key: "as", Value: "LikesInfo"},
+		}}},
 		// Lookup to count comments
-		{{
-			Key: "$lookup",
-			Value: bson.D{
-				{Key: "from", Value: "Comments"},
-				{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
-				{Key: "pipeline", Value: bson.A{
-					bson.D{{Key: "$match", Value: bson.D{
-						{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}},
-					}}},
-					bson.D{{Key: "$count", Value: "commentsCount"}},
-				}},
-				{Key: "as", Value: "CommentsInfo"},
-			},
-		}},
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Comments"},
+			{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
+			{Key: "pipeline", Value: bson.A{
+				bson.D{{Key: "$match", Value: bson.D{{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}}}}},
+				bson.D{{Key: "$count", Value: "commentsCount"}},
+			}},
+			{Key: "as", Value: "CommentsInfo"},
+		}}},
 		// Add fields for like and comment counts
-		{{
-			Key: "$addFields",
-			Value: bson.D{
-				{Key: "LikeCount", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$LikesInfo.likesCount", 0}}}},
-				{Key: "CommentCount", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$CommentsInfo.commentsCount", 0}}}},
-				{Key: "IsLikedByID", Value: false}, // Default value
-			},
-		}},
+		{{Key: "$addFields", Value: bson.D{
+			{Key: "LikeCount", Value: bson.D{{Key: "$ifNull", Value: bson.A{
+				bson.D{{Key: "$arrayElemAt", Value: bson.A{"$LikesInfo.likesCount", 0}}},
+				0,
+			}}}},
+			{Key: "CommentCount", Value: bson.D{{Key: "$ifNull", Value: bson.A{
+				bson.D{{Key: "$arrayElemAt", Value: bson.A{"$CommentsInfo.commentsCount", 0}}},
+				0,
+			}}}},
+			{Key: "IsLikedByID", Value: false}, // Default value
+		}}},
 		// Project the required fields
-		{{
-			Key: "$project",
-			Value: bson.D{
-				{Key: "ID", Value: "$_id"},
-				{Key: "NameUserCreator", Value: "$NameUserCreator"},
-				{Key: "IDCreator", Value: "$IDCreator"},
-				{Key: "NameUser", Value: "$NameUser"},
-				{Key: "StreamThumbnail", Value: "$StreamThumbnail"},
-				{Key: "Category", Value: "$Category"},
-				{Key: "UserID", Value: "$UserID"},
-				{Key: "Avatar", Value: "$Avatar"},
-				{Key: "ClipTitle", Value: "$ClipTitle"},
-				{Key: "URL", Value: "$URL"},
-				{Key: "Duration", Value: "$Duration"},
-				{Key: "Views", Value: "$Views"},
-				{Key: "Cover", Value: "$Cover"},
-				{Key: "Timestamps", Value: "$Timestamps"},
-				{Key: "IsLikedByID", Value: "$IsLikedByID"},
-				{Key: "LikeCount", Value: "$LikeCount"},
-				{Key: "CommentCount", Value: "$CommentCount"},
-			},
-		}},
+		{{Key: "$project", Value: bson.D{
+			{Key: "ID", Value: "$_id"},
+			{Key: "NameUserCreator", Value: "$NameUserCreator"},
+			{Key: "IDCreator", Value: "$IDCreator"},
+			{Key: "NameUser", Value: "$NameUser"},
+			{Key: "StreamThumbnail", Value: "$StreamThumbnail"},
+			{Key: "Category", Value: "$Category"},
+			{Key: "UserID", Value: "$UserID"},
+			{Key: "Avatar", Value: "$Avatar"},
+			{Key: "ClipTitle", Value: "$ClipTitle"},
+			{Key: "URL", Value: "$URL"},
+			{Key: "Duration", Value: "$Duration"},
+			{Key: "Views", Value: "$Views"},
+			{Key: "Cover", Value: "$Cover"},
+			{Key: "Timestamps", Value: "$Timestamps"},
+			{Key: "IsLikedByID", Value: "$IsLikedByID"},
+			{Key: "LikeCount", Value: "$LikeCount"},
+			{Key: "CommentCount", Value: "$CommentCount"},
+		}}},
 	}
 
 	// Execute the aggregation pipeline
@@ -429,19 +417,17 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Get
 	}
 	defer cursor.Close(context.Background())
 
-	var clips []clipdomain.GetClip
+	var clip clipdomain.GetClip
 	if cursor.Next(context.Background()) {
-		if err := cursor.Decode(&clips); err != nil {
+		if err := cursor.Decode(&clip); err != nil {
 			return nil, err
 		}
-	}
-
-	if len(clips) == 0 {
+	} else {
 		return nil, fmt.Errorf("clip not found")
 	}
 
 	// Return the found clip
-	return &clips[0], nil
+	return &clip, nil
 }
 
 func (c *ClipRepository) FindUser(totalKey string) (*userdomain.User, error) {
