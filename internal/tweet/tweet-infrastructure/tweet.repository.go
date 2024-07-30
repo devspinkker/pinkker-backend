@@ -27,6 +27,7 @@ func NewTweetRepository(redisClient *redis.Client, mongoClient *mongo.Client) *T
 		mongoClient: mongoClient,
 	}
 }
+
 func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeIDs []primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
 	ctx := context.Background()
 	db := t.mongoClient.Database("PINKKER-BACKEND")
@@ -47,11 +48,11 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 
 	// Si no sigue a nadie, ejecutar pipeline para usuarios desconocidos y famosos
 	if len(followingIDs) == 0 {
-		return t.getRandomTweets(ctx, collTweets, excludeFilter, limit)
+		return t.getRandomTweets(ctx, idT, collTweets, excludeFilter, limit)
 	}
 
 	// Ejecutar pipeline principal para obtener tweets relevantes
-	tweetsWithUserInfo, err := t.getRelevantTweets(ctx, collTweets, followingIDs, excludeFilter, last24Hours, limit)
+	tweetsWithUserInfo, err := t.getRelevantTweets(ctx, idT, collTweets, followingIDs, excludeFilter, last24Hours, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +70,7 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 				{Key: "$nin", Value: append(excludedIDs, recommendedPostsIDs...)},
 			}},
 		}
-		randomTweets, err := t.getRandomTweets(ctx, collTweets, excludeFilter, newLimit)
+		randomTweets, err := t.getRandomTweets(ctx, idT, collTweets, excludeFilter, newLimit)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +112,7 @@ func (t *TweetRepository) getExcludedIDs(excludeIDs []primitive.ObjectID) []inte
 	return excludedIDs
 }
 
-func (t *TweetRepository) getRelevantTweets(ctx context.Context, collTweets *mongo.Collection, followingIDs []primitive.ObjectID, excludeFilter bson.D, last24Hours time.Time, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.ObjectID, collTweets *mongo.Collection, followingIDs []primitive.ObjectID, excludeFilter bson.D, last24Hours time.Time, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
 	pipeline := bson.A{
 		bson.D{{Key: "$match", Value: bson.M{
 			"Type":      bson.M{"$in": []string{"Post", "RePost", "CitaPost", "PostComment"}},
@@ -122,6 +123,8 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, collTweets *mon
 			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
 			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", followingIDs}}}},
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, "$Likes"}}}},
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
@@ -157,7 +160,6 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, collTweets *mon
 			{Key: "Type", Value: 1},
 			{Key: "TimeStamp", Value: 1},
 			{Key: "UserID", Value: 1},
-			{Key: "Likes", Value: 1},
 			{Key: "Comments", Value: 1},
 			{Key: "RePosts", Value: 1},
 			{Key: "OriginalPost", Value: 1},
@@ -165,6 +167,8 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, collTweets *mon
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "likeCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
 		}}},
 	}
 
@@ -186,7 +190,7 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, collTweets *mon
 	return tweetsWithUserInfo, nil
 }
 
-func (t *TweetRepository) getRandomTweets(ctx context.Context, collTweets *mongo.Collection, excludeFilter bson.D, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.ObjectID, collTweets *mongo.Collection, excludeFilter bson.D, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
 	pipelineRandom := bson.A{
 		bson.D{{Key: "$match", Value: bson.M{
 			"Type": bson.M{"$in": []string{"Post", "RePost", "CitaPost"}},
@@ -201,6 +205,7 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, collTweets *mongo
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, "$Likes"}}}},
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
@@ -221,7 +226,6 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, collTweets *mongo
 			{Key: "Type", Value: 1},
 			{Key: "TimeStamp", Value: 1},
 			{Key: "UserID", Value: 1},
-			{Key: "Likes", Value: 1},
 			{Key: "Comments", Value: 1},
 			{Key: "RePosts", Value: 1},
 			{Key: "OriginalPost", Value: 1},
@@ -229,6 +233,8 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, collTweets *mongo
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "likeCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
 		}}},
 	}
 
@@ -390,36 +396,62 @@ func (t *TweetRepository) SaveComment(tweetComment *tweetdomain.PostComment) (pr
 
 	return insertedID, nil
 }
-
-func (t *TweetRepository) FindTweetbyId(idTweet primitive.ObjectID) (tweetdomain.Post, error) {
-	// Selecciona la colección
+func (t *TweetRepository) FindTweetbyId(idTweet, idt primitive.ObjectID) (tweetdomain.TweetGetFollowReq, error) {
 	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
-	findTweet := bson.D{
-		{Key: "_id", Value: idTweet},
-	}
-
-	update := bson.D{
-		{Key: "$inc", Value: bson.D{
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.M{"_id": idTweet}}},
+		bson.D{{Key: "$addFields", Value: bson.D{{Key: "Views", Value: bson.D{{Key: "$add", Value: bson.A{"$Views", 1}}}}}}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Likes"},
+			{Key: "localField", Value: "_id"},
+			{Key: "foreignField", Value: "PostID"},
+			{Key: "as", Value: "likesInfo"},
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idt, "$likesInfo.UserID"}}}},
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: "$likesInfo"}}},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "Status", Value: 1},
+			{Key: "PostImage", Value: 1},
+			{Key: "TimeStamp", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "RePosts", Value: 1},
+			{Key: "OriginalPost", Value: 1},
+			{Key: "Type", Value: 1},
+			{Key: "Hashtags", Value: 1},
+			{Key: "UserInfo", Value: bson.D{
+				{Key: "FullName", Value: 1},
+				{Key: "Avatar", Value: 1},
+				{Key: "NameUser", Value: 1},
+			}},
+			{Key: "OriginalPostData", Value: 1},
 			{Key: "Views", Value: 1},
-		}},
+			{Key: "isLikedByID", Value: 1},
+			{Key: "likeCount", Value: 1},
+		}}},
 	}
 
-	var PostDocument tweetdomain.Post
-
-	err := GoMongoDBCollUsers.FindOneAndUpdate(
-		context.TODO(),
-		findTweet,
-		update,
-		options.FindOneAndUpdate().SetReturnDocument(options.After),
-	).Decode(&PostDocument)
-
+	cursor, err := GoMongoDBCollUsers.Aggregate(context.TODO(), pipeline)
 	if err != nil {
-		return tweetdomain.Post{}, err
+		return tweetdomain.TweetGetFollowReq{}, err
+	}
+	defer cursor.Close(context.TODO())
+
+	// Obtener el resultado
+	var PostDocument tweetdomain.TweetGetFollowReq
+	if cursor.Next(context.TODO()) {
+		if err := cursor.Decode(&PostDocument); err != nil {
+			return tweetdomain.TweetGetFollowReq{}, err
+		}
 	}
 
 	return PostDocument, nil
 }
+
 func (t *TweetRepository) UpdateTweetbyId(tweet tweetdomain.Post) error {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
