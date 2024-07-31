@@ -351,26 +351,24 @@ func (c *ClipRepository) UpdateClipPreviouImage(clipID primitive.ObjectID, newUR
 	clipCollection.UpdateOne(context.Background(), filter, update, opts)
 
 }
-func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.GetClip, error) {
+func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (*clipdomain.GetClip, error) {
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
 	pipeline := mongo.Pipeline{
 		// Match the clip by ID
 		{{Key: "$match", Value: bson.D{{Key: "_id", Value: IdClip}}}},
 
-		// Add fields for like and comment counts directly from arrays
+		// Add fields to count likes and comments from arrays
 		{{Key: "$addFields", Value: bson.D{
 			{Key: "LikeCount", Value: bson.D{{Key: "$size", Value: "$Likes"}}},
 			{Key: "CommentCount", Value: bson.D{{Key: "$size", Value: "$Comments"}}},
-			{Key: "IsLikedByID", Value: false}, // Default value
 		}}},
 
 		// Project the required fields
 		{{Key: "$project", Value: bson.D{
-			{Key: "IsLikedByID", Value: "$IsLikedByID"},
-			{Key: "LikeCount", Value: "$LikeCount"},
-			{Key: "CommentCount", Value: "$CommentCount"},
-			{Key: "id", Value: "$_id"},
+			{Key: "LikeCount", Value: 1},
+			{Key: "CommentCount", Value: 1},
+			{Key: "ID", Value: "$_id"},
 			{Key: "NameUserCreator", Value: 1},
 			{Key: "IDCreator", Value: 1},
 			{Key: "NameUser", Value: 1},
@@ -379,11 +377,12 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Get
 			{Key: "UserID", Value: 1},
 			{Key: "Avatar", Value: 1},
 			{Key: "ClipTitle", Value: 1},
-			{Key: "url", Value: 1},
-			{Key: "duration", Value: 1},
-			{Key: "views", Value: 1},
-			{Key: "cover", Value: 1},
-			{Key: "timestamps", Value: 1},
+			{Key: "URL", Value: 1},
+			{Key: "Duration", Value: 1},
+			{Key: "Views", Value: 1},
+			{Key: "Cover", Value: 1},
+			{Key: "Timestamps", Value: 1},
+			{Key: "IsLikedByID", Value: 1},
 		}}},
 	}
 
