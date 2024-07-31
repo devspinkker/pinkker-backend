@@ -48,9 +48,9 @@ type GetClip struct {
 		CreatedAt time.Time `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 		UpdatedAt time.Time `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
 	} `json:"timestamps,omitempty" bson:"timestamps,omitempty"`
-	IsLikedByID  bool `json:"isLikedByID" bson:"isLikedByID"`
-	LikeCount    int  `json:"likeCount" bson:"likeCount"`
-	CommentCount int  `json:"commentCount" bson:"commentCount"`
+	IsLikedByID   bool `json:"isLikedByID" bson:"isLikedByID"`
+	LikeCount     int  `json:"likeCount" bson:"likeCount"`
+	CommentsCount int  `json:"CommentsCount" bson:"CommentsCount"`
 }
 
 type ClipRequest struct {

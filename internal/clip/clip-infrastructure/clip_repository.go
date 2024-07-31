@@ -44,7 +44,7 @@ func (c *ClipRepository) TimeOutClipCreate(id primitive.ObjectID) error {
 
 	return nil
 }
-func (c *ClipRepository) GetClipsByTitle(title string, limit int) ([]clipdomain.Clip, error) {
+func (c *ClipRepository) GetClipsByTitle(title string, limit int) ([]clipdomain.GetClip, error) {
 	ctx := context.Background()
 	clipsDB := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
@@ -61,17 +61,43 @@ func (c *ClipRepository) GetClipsByTitle(title string, limit int) ([]clipdomain.
 		"ClipTitle": primitive.Regex{Pattern: title, Options: "i"},
 	}
 
-	findOptions := options.Find().SetLimit(int64(limit))
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+		}}},
+		bson.D{{Key: "$limit", Value: limit}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "id", Value: "$_id"},
+			{Key: "NameUserCreator", Value: 1},
+			{Key: "IDCreator", Value: 1},
+			{Key: "NameUser", Value: 1},
+			{Key: "StreamThumbnail", Value: 1},
+			{Key: "Category", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Avatar", Value: 1},
+			{Key: "ClipTitle", Value: 1},
+			{Key: "url", Value: 1},
+			{Key: "duration", Value: 1},
+			{Key: "views", Value: 1},
+			{Key: "cover", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "timestamps", Value: 1},
+		}}},
+	}
 
-	cursor, err := clipsDB.Find(ctx, filter, findOptions)
+	cursor, err := clipsDB.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	var clips []clipdomain.Clip
+	var clips []clipdomain.GetClip
 	for cursor.Next(ctx) {
-		var clip clipdomain.Clip
+		var clip clipdomain.GetClip
 		if err := cursor.Decode(&clip); err != nil {
 			return nil, err
 		}
@@ -126,7 +152,7 @@ func (c *ClipRepository) getFirstFourCategories(user *userdomain.User) []string 
 }
 
 // getRelevantClips obtiene los clips relevantes basados en los seguidores y categorías del usuario
-func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Collection, followingIDs []primitive.ObjectID, excludeFilter bson.D, categories []string, limit int) ([]clipdomain.Clip, error) {
+func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Collection, followingIDs []primitive.ObjectID, excludeFilter bson.D, categories []string, limit int, idT primitive.ObjectID) ([]clipdomain.GetClip, error) {
 	timeLimit := time.Now().Add(-72 * time.Hour)
 	pipeline := mongo.Pipeline{
 		// Filtrar por categorías y clips creados en las últimas 48 horas
@@ -140,6 +166,11 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Co
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 		// Calcular el factor de relevancia
 		bson.D{{Key: "$addFields", Value: bson.D{
@@ -164,6 +195,10 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Co
 		bson.D{{Key: "$limit", Value: limit}},
 		// Proyección de los campos necesarios
 		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
+
 			{Key: "id", Value: "$_id"},
 			{Key: "NameUserCreator", Value: 1},
 			{Key: "IDCreator", Value: 1},
@@ -189,9 +224,9 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Co
 	}
 	defer cursor.Close(ctx)
 
-	var clips []clipdomain.Clip
+	var clips []clipdomain.GetClip
 	for cursor.Next(ctx) {
-		var clip clipdomain.Clip
+		var clip clipdomain.GetClip
 		if err := cursor.Decode(&clip); err != nil {
 			return nil, err
 		}
@@ -201,7 +236,7 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Co
 	return clips, nil
 }
 
-func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.D, limit int, clipsDB *mongo.Collection) ([]clipdomain.Clip, error) {
+func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.D, limit int, clipsDB *mongo.Collection, idT primitive.ObjectID) ([]clipdomain.GetClip, error) {
 
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: bson.D{
@@ -209,8 +244,11 @@ func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.
 		}}},
 		bson.D{{Key: "$match", Value: excludeFilter}},
 		// Agregar campos auxiliares
+
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 		// Calcular el factor de relevancia
 		bson.D{{Key: "$addFields", Value: bson.D{
@@ -227,6 +265,29 @@ func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.
 		}}},
 		// Limitar el número de resultados
 		bson.D{{Key: "$limit", Value: limit}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+
+			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
+
+			{Key: "NameUserCreator", Value: 1},
+			{Key: "IDCreator", Value: 1},
+			{Key: "NameUser", Value: 1},
+			{Key: "StreamThumbnail", Value: 1},
+			{Key: "Category", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Avatar", Value: 1},
+			{Key: "ClipTitle", Value: 1},
+			{Key: "url", Value: 1},
+			{Key: "Likes", Value: 1},
+			{Key: "duration", Value: 1},
+			{Key: "views", Value: 1},
+			{Key: "cover", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "timestamps", Value: 1},
+		}}},
 	}
 
 	cursor, err := clipsDB.Aggregate(ctx, pipeline)
@@ -235,9 +296,9 @@ func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.
 	}
 	defer cursor.Close(ctx)
 
-	var clips []clipdomain.Clip
+	var clips []clipdomain.GetClip
 	for cursor.Next(ctx) {
-		var clip clipdomain.Clip
+		var clip clipdomain.GetClip
 		if err := cursor.Decode(&clip); err != nil {
 			return nil, err
 		}
@@ -247,7 +308,7 @@ func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.
 	return clips, nil
 }
 
-func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, excludeIDs []primitive.ObjectID) ([]clipdomain.Clip, error) {
+func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, excludeIDs []primitive.ObjectID) ([]clipdomain.GetClip, error) {
 	ctx := context.Background()
 	Database := c.mongoClient.Database("PINKKER-BACKEND")
 	UsersDB := Database.Collection("Users")
@@ -261,15 +322,15 @@ func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, exc
 	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
 
 	categories := c.getFirstFourCategories(user)
-	var recommendedClips []clipdomain.Clip
+	var recommendedClips []clipdomain.GetClip
 	clipsDB := Database.Collection("Clips")
 	if len(followingIDs) == 0 {
-		return c.getRandomClips(ctx, excludeFilter, limit-len(recommendedClips), clipsDB)
+		return c.getRandomClips(ctx, excludeFilter, limit-len(recommendedClips), clipsDB, idT)
 	}
 
-	recommendedClips, err = c.getRelevantClips(ctx, clipsDB, followingIDs, excludeFilter, categories, limit)
+	recommendedClips, err = c.getRelevantClips(ctx, clipsDB, followingIDs, excludeFilter, categories, limit, idT)
 	if err != nil {
-		recommendedClips = []clipdomain.Clip{}
+		recommendedClips = []clipdomain.GetClip{}
 	}
 
 	if len(recommendedClips) < limit {
@@ -283,7 +344,7 @@ func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, exc
 				{Key: "$nin", Value: append(excludedIDs, recommendedClipIDs...)},
 			}},
 		}
-		randomClips, err := c.getRandomClips(ctx, excludeFilter, limit-len(recommendedClips), clipsDB)
+		randomClips, err := c.getRandomClips(ctx, excludeFilter, limit-len(recommendedClips), clipsDB, idT)
 		if err != nil {
 			fmt.Println(err)
 
@@ -359,17 +420,71 @@ func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (*clipdomain.Ge
 		{{Key: "$match", Value: bson.D{{Key: "_id", Value: IdClip}}}},
 
 		// Add fields to count likes and comments from arrays
-		{{Key: "$addFields", Value: bson.D{
-			{Key: "CommentCount", Value: bson.D{{Key: "$size", Value: "$Comments"}}},
-		}}},
-
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 		}}},
 		// Project the required fields
 		{{Key: "$project", Value: bson.D{
-			{Key: "LikeCount", Value: 1},
-			{Key: "CommentCount", Value: "$CommentCount"},
+			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "id", Value: "$_id"},
+			{Key: "NameUserCreator", Value: 1},
+			{Key: "IDCreator", Value: 1},
+			{Key: "NameUser", Value: 1},
+			{Key: "StreamThumbnail", Value: 1},
+			{Key: "Category", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Avatar", Value: 1},
+			{Key: "ClipTitle", Value: 1},
+			{Key: "url", Value: 1},
+			{Key: "Likes", Value: 1},
+			{Key: "duration", Value: 1},
+			{Key: "views", Value: 1},
+			{Key: "cover", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "timestamps", Value: 1},
+		}}},
+	}
+
+	// Execute the aggregation pipeline
+	cursor, err := GoMongoDBColl.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var clip clipdomain.GetClip
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&clip); err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("clip not found")
+	}
+
+	// Return the found clip
+	return &clip, nil
+}
+func (c *ClipRepository) GetClipIdLogueado(IdClip, idValueObj primitive.ObjectID) (*clipdomain.GetClip, error) {
+	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+
+	pipeline := mongo.Pipeline{
+		// Match the clip by ID
+		{{Key: "$match", Value: bson.D{{Key: "_id", Value: IdClip}}}},
+
+		// Add fields to count likes and comments from arrays
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idValueObj, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+		}}},
+		// Project the required fields
+		{{Key: "$project", Value: bson.D{
+			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
+
 			{Key: "id", Value: "$_id"},
 			{Key: "NameUserCreator", Value: 1},
 			{Key: "IDCreator", Value: 1},
@@ -436,28 +551,54 @@ func (c *ClipRepository) FindCategorieStream(StreamerID primitive.ObjectID) (*st
 	errCollUsers := GoMongoDBColl.FindOne(context.Background(), FindInDb).Decode(&findStream)
 	return findStream, errCollUsers
 }
-func (c *ClipRepository) GetClipsNameUser(page int, GetClipsNameUser string) ([]clipdomain.Clip, error) {
+func (c *ClipRepository) GetClipsNameUser(page int, GetClipsNameUser string) ([]clipdomain.GetClip, error) {
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
-	options := options.Find()
-	options.SetSort(bson.D{{Key: "TimeStamp", Value: -1}})
-	options.SetSkip(int64((page - 1) * 10))
-	options.SetLimit(10)
-	filter := bson.D{{Key: "NameUser", Value: GetClipsNameUser}}
+	pipeline := mongo.Pipeline{
+		// Filtrar por el nombre de usuario
+		bson.D{{Key: "$match", Value: bson.D{{Key: "NameUser", Value: GetClipsNameUser}}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "TimeStamp", Value: -1}}}},
+		bson.D{{Key: "$skip", Value: (page - 1) * 10}},
+		bson.D{{Key: "$limit", Value: 10}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "id", Value: "$_id"},
+			{Key: "NameUserCreator", Value: 1},
+			{Key: "IDCreator", Value: 1},
+			{Key: "NameUser", Value: 1},
+			{Key: "StreamThumbnail", Value: 1},
+			{Key: "Category", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Avatar", Value: 1},
+			{Key: "ClipTitle", Value: 1},
+			{Key: "url", Value: 1},
+			{Key: "duration", Value: 1},
+			{Key: "views", Value: 1},
+			{Key: "cover", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "timestamps", Value: 1},
+		}}},
+	}
 
-	cursor, err := GoMongoDBColl.Find(context.Background(), filter, options)
+	cursor, err := GoMongoDBColl.Aggregate(context.Background(), pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(context.Background())
 
-	var clips []clipdomain.Clip
+	var clips []clipdomain.GetClip
 	if err := cursor.All(context.Background(), &clips); err != nil {
 		return nil, err
 	}
 
 	return clips, nil
 }
+
 func (c *ClipRepository) GetClipsCategory(page int, Category string, lastClipID primitive.ObjectID) ([]clipdomain.Clip, error) {
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 

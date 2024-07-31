@@ -74,8 +74,12 @@ func (u *ClipService) GetClipId(clipId primitive.ObjectID) (*clipdomain.GetClip,
 	clip, err := u.ClipRepository.FindClipById(clipId)
 	return clip, err
 }
+func (u *ClipService) GetClipIdLogueado(clipId, idValueObj primitive.ObjectID) (*clipdomain.GetClip, error) {
+	clip, err := u.ClipRepository.GetClipIdLogueado(clipId, idValueObj)
+	return clip, err
+}
 
-func (u *ClipService) GetClipsNameUser(page int, NameUser string) ([]clipdomain.Clip, error) {
+func (u *ClipService) GetClipsNameUser(page int, NameUser string) ([]clipdomain.GetClip, error) {
 
 	Clips, err := u.ClipRepository.GetClipsNameUser(page, NameUser)
 	return Clips, err
@@ -108,12 +112,12 @@ func (u *ClipService) MoreViewOfTheClip(idClip primitive.ObjectID) error {
 	err := u.ClipRepository.MoreViewOfTheClip(idClip)
 	return err
 }
-func (u *ClipService) ClipsRecommended(idT primitive.ObjectID, excludeIDs []primitive.ObjectID) ([]clipdomain.Clip, error) {
+func (u *ClipService) ClipsRecommended(idT primitive.ObjectID, excludeIDs []primitive.ObjectID) ([]clipdomain.GetClip, error) {
 	limit := 10
 	clips, err := u.ClipRepository.ClipsRecommended(idT, limit, excludeIDs)
 	return clips, err
 }
-func (u *ClipService) GetClipsByTitle(title string) ([]clipdomain.Clip, error) {
+func (u *ClipService) GetClipsByTitle(title string) ([]clipdomain.GetClip, error) {
 	limit := 10
 	clips, err := u.ClipRepository.GetClipsByTitle(title, limit)
 	return clips, err

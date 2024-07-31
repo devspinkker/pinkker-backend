@@ -104,7 +104,54 @@ func (clip *ClipHandler) GetClipId(c *fiber.Ctx) error {
 		"video":    localVideoContent,
 	})
 }
+func (clip *ClipHandler) GetClipIdLogueado(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusNetworkAuthenticationRequired",
+			"data":    errorID,
+		})
+	}
+	clipIDStr := c.Query("clipId")
+	clipID, err := primitive.ObjectIDFromHex(clipIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid clipId format",
+			"data":    err.Error(),
+		})
+	}
+	clipGet, err := clip.ClipService.GetClipIdLogueado(clipID, idValueObj)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	if strings.HasPrefix(clipGet.URL, "https://") {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message":  "StatusOK",
+			"dataClip": clipGet,
+			"videoURL": true,
+			"video":    false,
+		})
+	}
+	localVideoPath := clipGet.URL
+	localVideoContent, err := ioutil.ReadFile(localVideoPath)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error retrieving local video content",
+			"data":    err.Error(),
+		})
+	}
 
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":  "StatusOK",
+		"dataClip": clipGet,
+		"videoURL": false,
+		"video":    localVideoContent,
+	})
+}
 func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 	var clipRequest clipdomain.ClipRequest
 	if err := c.BodyParser(&clipRequest); err != nil {

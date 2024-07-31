@@ -112,6 +112,7 @@ type TweetGetFollowReq struct {
 	Views            int                `json:"Views" bson:"Views"`
 	IsLikedByID      bool               `json:"isLikedByID" bson:"isLikedByID"`
 	LikeCount        int                `json:"likeCount" bson:"likeCount"`
+	CommentsCount    int                `json:"CommentsCount" bson:"CommentsCount"`
 }
 type TweetCommentsGetReq struct {
 	ID           primitive.ObjectID   `json:"_id" bson:"_id"`

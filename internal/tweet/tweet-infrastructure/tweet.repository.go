@@ -128,6 +128,7 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
 			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", followingIDs}}}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
@@ -172,6 +173,7 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
 			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
 			{Key: "isLikedByID", Value: 1},
 		}}},
 	}
@@ -209,6 +211,7 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.Obj
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
@@ -238,6 +241,7 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.Obj
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
 			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
 			{Key: "isLikedByID", Value: 1},
 		}}},
 	}
@@ -414,6 +418,7 @@ func (t *TweetRepository) FindTweetbyId(idTweet, idT primitive.ObjectID) (tweetd
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: "$likesInfo"}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 		bson.D{{Key: "$project", Value: bson.D{
@@ -436,6 +441,7 @@ func (t *TweetRepository) FindTweetbyId(idTweet, idT primitive.ObjectID) (tweetd
 			{Key: "Views", Value: 1},
 			{Key: "isLikedByID", Value: 1},
 			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
 		}}},
 	}
 
@@ -742,6 +748,7 @@ func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGet
 		{{Key: "$unwind", Value: "$UserInfo"}},
 		{{Key: "$addFields", Value: bson.D{
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 		}}},
 		{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},
@@ -751,6 +758,8 @@ func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGet
 			{Key: "TimeStamp", Value: "$TimeStamp"},
 			{Key: "UserID", Value: "$UserID"},
 			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+
 			{Key: "isLikedByUser", Value: 1},
 			{Key: "Comments", Value: "$Comments"},
 			{Key: "RePosts", Value: "$RePosts"},
@@ -788,6 +797,7 @@ func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGet
 			bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 			bson.D{{Key: "$addFields", Value: bson.D{
 				{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+				{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			}}},
 			bson.D{{Key: "$project", Value: bson.D{
 				{Key: "id", Value: "$_id"},
@@ -797,6 +807,8 @@ func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGet
 				{Key: "TimeStamp", Value: "$TimeStamp"},
 				{Key: "UserID", Value: "$UserID"},
 				{Key: "likeCount", Value: 1},
+				{Key: "CommentsCount", Value: 1},
+
 				{Key: "isLikedByUser", Value: 1},
 				{Key: "Comments", Value: "$Comments"},
 				{Key: "RePosts", Value: "$RePosts"},
@@ -852,6 +864,7 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 		{{Key: "$unwind", Value: "$UserInfo"}},
 		{{Key: "$addFields", Value: bson.D{
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByUser", Value: bson.D{{Key: "$in", Value: bson.A{userID, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 		{{Key: "$project", Value: bson.D{
@@ -862,6 +875,8 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 			{Key: "TimeStamp", Value: "$TimeStamp"},
 			{Key: "UserID", Value: "$UserID"},
 			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+
 			{Key: "isLikedByUser", Value: 1},
 			{Key: "Comments", Value: "$Comments"},
 			{Key: "RePosts", Value: "$RePosts"},
@@ -900,6 +915,7 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 			bson.D{{Key: "$addFields", Value: bson.D{
 				{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 				{Key: "isLikedByUser", Value: bson.D{{Key: "$in", Value: bson.A{userID, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+				{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			}}},
 			bson.D{{Key: "$project", Value: bson.D{
 				{Key: "id", Value: "$_id"},
@@ -909,6 +925,7 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 				{Key: "TimeStamp", Value: "$TimeStamp"},
 				{Key: "UserID", Value: "$UserID"},
 				{Key: "likeCount", Value: 1},
+				{Key: "CommentsCount", Value: 1},
 				{Key: "isLikedByUser", Value: 1},
 				{Key: "Comments", Value: "$Comments"},
 				{Key: "RePosts", Value: "$RePosts"},
@@ -956,7 +973,9 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 		}}},
 		{{Key: "$addFields", Value: bson.D{
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 		}}},
+
 		{{Key: "$skip", Value: skip}},
 		{{Key: "$limit", Value: limit}},
 		{{Key: "$project", Value: bson.D{
@@ -975,6 +994,7 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
 			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
 		}}},
 	}
 
@@ -1024,10 +1044,12 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 			}}},
 			bson.D{{Key: "$addFields", Value: bson.D{
 				{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+				{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			}}},
 			bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 			bson.D{{Key: "$project", Value: bson.D{
 				{Key: "likeCount", Value: 1},
+				{Key: "CommentsCount", Value: 1},
 				{Key: "id", Value: "$_id"},
 				{Key: "Type", Value: "$Type"},
 				{Key: "Status", Value: "$Status"},
@@ -1088,6 +1110,7 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 		{{Key: "$addFields", Value: bson.D{
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idt, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 		}}},
 		{{Key: "$sort", Value: bson.D{
 			{Key: "TimeStamp", Value: -1},
@@ -1103,6 +1126,8 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 			{Key: "UserID", Value: "$UserID"},
 			{Key: "likeCount", Value: 1},
 			{Key: "isLikedByID", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+
 			{Key: "Comments", Value: "$Comments"},
 			{Key: "RePosts", Value: "$RePosts"},
 			{Key: "OriginalPost", Value: "$OriginalPost"},
@@ -1161,6 +1186,7 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 			bson.D{{Key: "$addFields", Value: bson.D{
 				{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 				{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idt, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+				{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			}}},
 			bson.D{{Key: "$project", Value: bson.D{
 				{Key: "id", Value: "$_id"},
@@ -1170,6 +1196,7 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 				{Key: "TimeStamp", Value: "$TimeStamp"},
 				{Key: "UserID", Value: "$UserID"},
 				{Key: "Likes", Value: "$Likes"},
+				{Key: "CommentsCount", Value: 1},
 				{Key: "likeCount", Value: 1},
 				{Key: "isLikedByID", Value: 1},
 				{Key: "Comments", Value: "$Comments"},
