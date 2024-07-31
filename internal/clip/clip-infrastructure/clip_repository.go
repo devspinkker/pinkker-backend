@@ -360,14 +360,16 @@ func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (*clipdomain.Ge
 
 		// Add fields to count likes and comments from arrays
 		{{Key: "$addFields", Value: bson.D{
-			{Key: "LikeCount", Value: bson.D{{Key: "$size", Value: "$Likes"}}},
 			{Key: "CommentCount", Value: bson.D{{Key: "$size", Value: "$Comments"}}},
 		}}},
 
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+		}}},
 		// Project the required fields
 		{{Key: "$project", Value: bson.D{
 			{Key: "LikeCount", Value: 1},
-			{Key: "CommentCount", Value: 1},
+			{Key: "CommentCount", Value: "$CommentCount"},
 			{Key: "id", Value: "$_id"},
 			{Key: "NameUserCreator", Value: 1},
 			{Key: "IDCreator", Value: 1},
