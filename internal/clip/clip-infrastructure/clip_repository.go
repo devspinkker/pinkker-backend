@@ -355,27 +355,35 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Get
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
 	pipeline := mongo.Pipeline{
+		// Match the clip by ID
 		{{Key: "$match", Value: bson.D{{Key: "_id", Value: IdClip}}}},
+
 		// Lookup to count likes
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Likes"},
 			{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
 			{Key: "pipeline", Value: bson.A{
-				bson.D{{Key: "$match", Value: bson.D{{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}}}}},
+				bson.D{{Key: "$match", Value: bson.D{
+					{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}},
+				}}},
 				bson.D{{Key: "$count", Value: "likesCount"}},
 			}},
 			{Key: "as", Value: "LikesInfo"},
 		}}},
+
 		// Lookup to count comments
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Comments"},
 			{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
 			{Key: "pipeline", Value: bson.A{
-				bson.D{{Key: "$match", Value: bson.D{{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}}}}},
+				bson.D{{Key: "$match", Value: bson.D{
+					{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}},
+				}}},
 				bson.D{{Key: "$count", Value: "commentsCount"}},
 			}},
 			{Key: "as", Value: "CommentsInfo"},
 		}}},
+
 		// Add fields for like and comment counts
 		{{Key: "$addFields", Value: bson.D{
 			{Key: "LikeCount", Value: bson.D{{Key: "$ifNull", Value: bson.A{
@@ -388,6 +396,7 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Get
 			}}}},
 			{Key: "IsLikedByID", Value: false}, // Default value
 		}}},
+
 		// Project the required fields
 		{{Key: "$project", Value: bson.D{
 			{Key: "ID", Value: "$_id"},
