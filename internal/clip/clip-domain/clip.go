@@ -20,7 +20,7 @@ type Clip struct {
 	Avatar          string               `json:"Avatar" bson:"Avatar"`
 	ClipTitle       string               `json:"clipTitle" bson:"ClipTitle"`
 	URL             string               `json:"url" bson:"url"`
-	Likes           []primitive.ObjectID `json:"likes" bson:"likes"`
+	Likes           []primitive.ObjectID `json:"likes" bson:"Likes"`
 	Duration        int                  `json:"duration" bson:"duration"`
 	Views           int                  `json:"views" bson:"views"`
 	Cover           string               `json:"cover" bson:"cover"`
@@ -113,7 +113,7 @@ type ClipComment struct {
 	NameUser  string               `json:"NameUser,omitempty" bson:"nameUser,omitempty"`
 	Comment   string               `json:"comment,omitempty" bson:"comment,omitempty"`
 	CreatedAt time.Time            `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
-	Likes     []primitive.ObjectID `json:"likes" bson:"likes"`
+	Likes     []primitive.ObjectID `json:"likes" bson:"Likes"`
 }
 
 type CommentClip struct {
@@ -134,7 +134,7 @@ type ClipCommentGet struct {
 	NameUser  string               `json:"NameUser" bson:"nameUser"`
 	Comment   string               `json:"comment,omitempty" bson:"comment,omitempty"`
 	CreatedAt time.Time            `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
-	Likes     []primitive.ObjectID `json:"likes" bson:"likes"`
+	Likes     []primitive.ObjectID `json:"likes" bson:"Likes"`
 	FullName  string               `json:"FullName"`
 	Avatar    string               `json:"Avatar"`
 }
