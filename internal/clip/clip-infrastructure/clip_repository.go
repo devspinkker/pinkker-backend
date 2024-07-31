@@ -358,42 +358,10 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Get
 		// Match the clip by ID
 		{{Key: "$match", Value: bson.D{{Key: "_id", Value: IdClip}}}},
 
-		// Lookup to count likes
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Likes"},
-			{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
-			{Key: "pipeline", Value: bson.A{
-				bson.D{{Key: "$match", Value: bson.D{
-					{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}},
-				}}},
-				bson.D{{Key: "$count", Value: "likesCount"}},
-			}},
-			{Key: "as", Value: "LikesInfo"},
-		}}},
-
-		// Lookup to count comments
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Comments"},
-			{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
-			{Key: "pipeline", Value: bson.A{
-				bson.D{{Key: "$match", Value: bson.D{
-					{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{"$ClipID", "$$clipID"}}}},
-				}}},
-				bson.D{{Key: "$count", Value: "commentsCount"}},
-			}},
-			{Key: "as", Value: "CommentsInfo"},
-		}}},
-
-		// Add fields for like and comment counts
+		// Add fields for like and comment counts directly from arrays
 		{{Key: "$addFields", Value: bson.D{
-			{Key: "LikeCount", Value: bson.D{{Key: "$ifNull", Value: bson.A{
-				bson.D{{Key: "$arrayElemAt", Value: bson.A{"$LikesInfo.likesCount", 0}}},
-				0,
-			}}}},
-			{Key: "CommentCount", Value: bson.D{{Key: "$ifNull", Value: bson.A{
-				bson.D{{Key: "$arrayElemAt", Value: bson.A{"$CommentsInfo.commentsCount", 0}}},
-				0,
-			}}}},
+			{Key: "LikeCount", Value: bson.D{{Key: "$size", Value: "$Likes"}}},
+			{Key: "CommentCount", Value: bson.D{{Key: "$size", Value: "$Comments"}}},
 			{Key: "IsLikedByID", Value: false}, // Default value
 		}}},
 
@@ -412,11 +380,9 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Get
 			{Key: "Avatar", Value: 1},
 			{Key: "ClipTitle", Value: 1},
 			{Key: "url", Value: 1},
-			{Key: "Likes", Value: 1},
 			{Key: "duration", Value: 1},
 			{Key: "views", Value: 1},
 			{Key: "cover", Value: 1},
-			{Key: "comments", Value: 1},
 			{Key: "timestamps", Value: 1},
 		}}},
 	}
