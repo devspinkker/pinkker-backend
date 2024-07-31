@@ -71,7 +71,7 @@ func (u *ClipService) UpdateClipPreviouImage(clipUpdate *clipdomain.Clip, ulrCli
 	u.ClipRepository.UpdateClip(clipUpdate.ID, ulrClip)
 }
 func (u *ClipService) GetClipId(clipId primitive.ObjectID) (*clipdomain.GetClip, error) {
-	clip, err := u.ClipRepository.FindrClipId(clipId)
+	clip, err := u.ClipRepository.FindClipById(clipId)
 	return clip, err
 }
 
