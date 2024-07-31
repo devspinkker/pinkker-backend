@@ -954,6 +954,9 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 		{{Key: "$sort", Value: bson.D{
 			{Key: "TimeStamp", Value: -1},
 		}}},
+		{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+		}}},
 		{{Key: "$skip", Value: skip}},
 		{{Key: "$limit", Value: limit}},
 		{{Key: "$project", Value: bson.D{
@@ -971,6 +974,7 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "likeCount", Value: 1},
 		}}},
 	}
 
@@ -1018,8 +1022,12 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 				{Key: "foreignField", Value: "_id"},
 				{Key: "as", Value: "UserInfo"},
 			}}},
+			bson.D{{Key: "$addFields", Value: bson.D{
+				{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			}}},
 			bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 			bson.D{{Key: "$project", Value: bson.D{
+				{Key: "likeCount", Value: 1},
 				{Key: "id", Value: "$_id"},
 				{Key: "Type", Value: "$Type"},
 				{Key: "Status", Value: "$Status"},
