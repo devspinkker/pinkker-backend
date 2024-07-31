@@ -368,7 +368,7 @@ func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (*clipdomain.Ge
 		{{Key: "$project", Value: bson.D{
 			{Key: "LikeCount", Value: 1},
 			{Key: "CommentCount", Value: 1},
-			{Key: "ID", Value: "$_id"},
+			{Key: "id", Value: "$_id"},
 			{Key: "NameUserCreator", Value: 1},
 			{Key: "IDCreator", Value: 1},
 			{Key: "NameUser", Value: 1},
@@ -377,12 +377,13 @@ func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (*clipdomain.Ge
 			{Key: "UserID", Value: 1},
 			{Key: "Avatar", Value: 1},
 			{Key: "ClipTitle", Value: 1},
-			{Key: "URL", Value: 1},
-			{Key: "Duration", Value: 1},
-			{Key: "Views", Value: 1},
-			{Key: "Cover", Value: 1},
-			{Key: "Timestamps", Value: 1},
-			{Key: "IsLikedByID", Value: 1},
+			{Key: "url", Value: 1},
+			{Key: "Likes", Value: 1},
+			{Key: "duration", Value: 1},
+			{Key: "views", Value: 1},
+			{Key: "cover", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "timestamps", Value: 1},
 		}}},
 	}
 
