@@ -138,6 +138,10 @@ func (u *ClipService) GetClipComments(idClip primitive.ObjectID, page int) ([]cl
 	clips, err := u.ClipRepository.GetClipComments(idClip, page)
 	return clips, err
 }
+func (u *ClipService) GetClipCommentsLoguedo(idClip primitive.ObjectID, page int, idt primitive.ObjectID) ([]clipdomain.ClipCommentGet, error) {
+	clips, err := u.ClipRepository.GetClipCommentsLoguedo(idClip, page, idt)
+	return clips, err
+}
 
 // func (u *ClipService) ExtractFrameFromVideo(videoPath, outputPath, ffmpegPath string) error {
 // 	transcoder.FFmpegBin = ffmpegPath

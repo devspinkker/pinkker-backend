@@ -638,3 +638,44 @@ func (clip *ClipHandler) GetClipComments(c *fiber.Ctx) error {
 		"data":    Clips,
 	})
 }
+func (clip *ClipHandler) GetClipCommentsLoguedo(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errorID.Error(),
+		})
+	}
+
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	IdClipStr := c.Query("IdClip", "")
+	if IdClipStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "IdClip parameter is required",
+		})
+	}
+
+	IdClip, err := primitive.ObjectIDFromHex(IdClipStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid IdClip parameter",
+		})
+	}
+
+	Clips, err := clip.ClipService.GetClipCommentsLoguedo(IdClip, page, idValueToken)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Clips,
+	})
+}
