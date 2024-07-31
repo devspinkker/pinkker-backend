@@ -139,7 +139,7 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Co
 		// Agregar campos auxiliares
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
-			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$likes", followingIDs}}}},
+			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
 		}}},
 		// Calcular el factor de relevancia
 		bson.D{{Key: "$addFields", Value: bson.D{
@@ -174,11 +174,11 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Co
 			{Key: "Avatar", Value: 1},
 			{Key: "ClipTitle", Value: 1},
 			{Key: "url", Value: 1},
-			{Key: "likes", Value: 1},
+			{Key: "Likes", Value: 1},
 			{Key: "duration", Value: 1},
 			{Key: "views", Value: 1},
 			{Key: "cover", Value: 1},
-			{Key: "comments", Value: 1},
+			{Key: "Comments", Value: 1},
 			{Key: "timestamps", Value: 1},
 		}}},
 	}
@@ -210,7 +210,7 @@ func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.
 		bson.D{{Key: "$match", Value: excludeFilter}},
 		// Agregar campos auxiliares
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$likes", bson.A{}}}}}}},
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 		}}},
 		// Calcular el factor de relevancia
 		bson.D{{Key: "$addFields", Value: bson.D{
@@ -360,7 +360,7 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Get
 
 		// Lookup to count likes
 		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "likes"},
+			{Key: "from", Value: "Likes"},
 			{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
 			{Key: "pipeline", Value: bson.A{
 				bson.D{{Key: "$match", Value: bson.D{
@@ -412,7 +412,7 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Get
 			{Key: "Avatar", Value: 1},
 			{Key: "ClipTitle", Value: 1},
 			{Key: "url", Value: 1},
-			{Key: "likes", Value: 1},
+			{Key: "Likes", Value: 1},
 			{Key: "duration", Value: 1},
 			{Key: "views", Value: 1},
 			{Key: "cover", Value: 1},
@@ -733,7 +733,7 @@ func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username
 			{Key: "Avatar", Value: "$UserInfo.Avatar"},
 			{Key: "comment", Value: 1},
 			{Key: "createdAt", Value: 1},
-			{Key: "likes", Value: 1},
+			{Key: "Likes", Value: 1},
 			{Key: "nameUser", Value: 1},
 		}}},
 	})
@@ -767,7 +767,7 @@ func (c *ClipRepository) LikeComment(commentID, userID primitive.ObjectID) error
 
 	commentCollection := db.Collection("CommentsClips")
 	filter := bson.M{"_id": commentID}
-	update := bson.M{"$addToSet": bson.M{"likes": userID}}
+	update := bson.M{"$addToSet": bson.M{"Likes": userID}}
 
 	_, err := commentCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
@@ -782,7 +782,7 @@ func (c *ClipRepository) UnlikeComment(commentID, userID primitive.ObjectID) err
 
 	commentCollection := db.Collection("CommentsClips")
 	filter := bson.M{"_id": commentID}
-	update := bson.M{"$pull": bson.M{"likes": userID}}
+	update := bson.M{"$pull": bson.M{"Likes": userID}}
 	_, err := commentCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
@@ -820,7 +820,7 @@ func (c *ClipRepository) GetClipComments(clipID primitive.ObjectID, page int) ([
 			{Key: "Avatar", Value: "$UserInfo.Avatar"},
 			{Key: "comment", Value: 1},
 			{Key: "createdAt", Value: 1},
-			{Key: "likes", Value: 1},
+			{Key: "Likes", Value: 1},
 			{Key: "nameUser", Value: 1},
 		}}},
 		bson.D{{Key: "$skip", Value: skip}},
