@@ -360,7 +360,7 @@ func (c *ClipRepository) FindrClipId(IdClip primitive.ObjectID) (*clipdomain.Get
 
 		// Lookup to count likes
 		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Likes"},
+			{Key: "from", Value: "likes"},
 			{Key: "let", Value: bson.D{{Key: "clipID", Value: "$_id"}}},
 			{Key: "pipeline", Value: bson.A{
 				bson.D{{Key: "$match", Value: bson.D{
