@@ -128,13 +128,14 @@ func (u *CommentClip) ValidateCommentClip() error {
 }
 
 type ClipCommentGet struct {
-	ID        primitive.ObjectID   `json:"_id,omitempty" bson:"_id,omitempty"`
-	ClipID    primitive.ObjectID   `json:"clipId,omitempty" bson:"clipId,omitempty"`
-	UserID    primitive.ObjectID   `json:"UserID" bson:"UserID"`
-	NameUser  string               `json:"NameUser" bson:"nameUser"`
-	Comment   string               `json:"comment,omitempty" bson:"comment,omitempty"`
-	CreatedAt time.Time            `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
-	Likes     []primitive.ObjectID `json:"likes" bson:"Likes"`
-	FullName  string               `json:"FullName"`
-	Avatar    string               `json:"Avatar"`
+	ID          primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	ClipID      primitive.ObjectID `json:"clipId,omitempty" bson:"clipId,omitempty"`
+	UserID      primitive.ObjectID `json:"UserID" bson:"UserID"`
+	NameUser    string             `json:"NameUser" bson:"nameUser"`
+	Comment     string             `json:"comment,omitempty" bson:"comment,omitempty"`
+	CreatedAt   time.Time          `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
+	FullName    string             `json:"FullName"`
+	IsLikedByID bool               `json:"isLikedByID" bson:"isLikedByID"`
+	LikeCount   int                `json:"likeCount" bson:"likeCount"`
+	Avatar      string             `json:"Avatar"`
 }

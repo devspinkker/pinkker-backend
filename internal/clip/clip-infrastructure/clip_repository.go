@@ -834,8 +834,16 @@ func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "UserInfo"},
 		}}},
+
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{userID, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+		}}},
+		// Project the required fields
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "likeCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
 			{Key: "clipId", Value: 1},
 			{Key: "UserID", Value: "$UserID"},
 			{Key: "FullName", Value: "$UserInfo.FullName"},
@@ -921,8 +929,76 @@ func (c *ClipRepository) GetClipComments(clipID primitive.ObjectID, page int) ([
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "UserInfo"},
 		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+		}}},
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "likeCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
+			{Key: "clipId", Value: 1},
+			{Key: "UserID", Value: "$UserID"},
+			{Key: "FullName", Value: "$UserInfo.FullName"},
+			{Key: "Avatar", Value: "$UserInfo.Avatar"},
+			{Key: "comment", Value: 1},
+			{Key: "createdAt", Value: 1},
+			{Key: "Likes", Value: 1},
+			{Key: "nameUser", Value: 1},
+		}}},
+		bson.D{{Key: "$skip", Value: skip}},
+		bson.D{{Key: "$limit", Value: 15}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Iterar sobre los documentos devueltos y decodificarlos en la estructura ClipComment
+	var comments []clipdomain.ClipCommentGet
+	for cursor.Next(ctx) {
+		var comment clipdomain.ClipCommentGet
+		if err := cursor.Decode(&comment); err != nil {
+			return nil, err
+		}
+		comments = append(comments, comment)
+	}
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return comments, nil
+}
+
+func (c *ClipRepository) GetClipCommentsLoguedo(clipID primitive.ObjectID, page int, idt primitive.ObjectID) ([]clipdomain.ClipCommentGet, error) {
+	ctx := context.Background()
+	db := c.mongoClient.Database("PINKKER-BACKEND")
+
+	// Colección de comentarios de clips
+	commentCollection := db.Collection("CommentsClips")
+
+	// Filtrar comentarios por ID de clip
+	filter := bson.M{"clipId": clipID}
+
+	// Calcular la cantidad de documentos para omitir
+	skip := (page - 1) * 15
+
+	// Consultar la base de datos para obtener los comentarios del clip, paginados
+	cursor, err := commentCollection.Aggregate(ctx, mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idt, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "likeCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
 			{Key: "clipId", Value: 1},
 			{Key: "UserID", Value: "$UserID"},
 			{Key: "FullName", Value: "$UserInfo.FullName"},

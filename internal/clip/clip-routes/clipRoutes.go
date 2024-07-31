@@ -18,7 +18,7 @@ func ClipRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 
 	App.Post("/clips/create-clips", middleware.UseExtractor(), clipHandler.CreateClips)
 	App.Get("/clips/GetClipId", clipHandler.GetClipId)
-	App.Get("/clips/GetClipIdLogueado", middleware.UseExtractor(), clipHandler.GetClipId)
+	App.Get("/clips/GetClipIdLogueado", middleware.UseExtractor(), clipHandler.GetClipIdLogueado)
 
 	App.Get("/clips/GetClipsByTitle", clipHandler.GetClipsByTitle)
 	App.Get("/clips/GetClipsNameUser", clipHandler.GetClipsNameUser)
@@ -37,6 +37,7 @@ func ClipRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 
 	App.Get("/clips/GetClipComments", clipHandler.GetClipComments)
 
+	App.Get("/clips/GetClipCommentsLoguedo", middleware.UseExtractor(), clipHandler.GetClipCommentsLoguedo)
 	App.Get("/clips/TimeOutClipCreate", middleware.UseExtractor(), clipHandler.TimeOutClipCreate)
 
 }
