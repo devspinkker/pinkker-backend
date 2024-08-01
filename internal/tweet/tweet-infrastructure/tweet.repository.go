@@ -117,7 +117,8 @@ func (t *TweetRepository) getRandomTweets(
 					bson.A{},
 				}},
 			}},
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", []interface{}{}}}}}}}},
+
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
 				bson.D{{Key: "$multiply", Value: bson.A{
 					bson.D{{Key: "$cond", Value: bson.D{
@@ -171,7 +172,6 @@ func (t *TweetRepository) getRandomTweets(
 
 	return tweetsWithUserInfoRandom, nil
 }
-
 func (t *TweetRepository) getRelevantTweets(
 	ctx context.Context,
 	idT primitive.ObjectID,
@@ -206,7 +206,8 @@ func (t *TweetRepository) getRelevantTweets(
 			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", "$followingIDs"}}}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", []interface{}{}}}}}}}},
+
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
 				bson.D{{Key: "$multiply", Value: bson.A{
 					bson.D{{Key: "$cond", Value: bson.D{
