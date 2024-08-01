@@ -177,7 +177,6 @@ func (t *TweetRepository) getRandomTweets(
 
 	return tweetsWithUserInfoRandom, nil
 }
-
 func (t *TweetRepository) getRelevantTweets(
 	ctx context.Context,
 	idT primitive.ObjectID,
@@ -203,7 +202,6 @@ func (t *TweetRepository) getRelevantTweets(
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "followingIDs", Value: bson.D{
 				{Key: "$slice", Value: bson.A{
-					// Convierte el campo `user.Following` en un array de claves y luego limita a 100 IDs
 					bson.D{{Key: "$map", Value: bson.D{
 						{Key: "input", Value: bson.D{{Key: "$objectToArray", Value: "$user.Following"}}},
 						{Key: "as", Value: "item"},
