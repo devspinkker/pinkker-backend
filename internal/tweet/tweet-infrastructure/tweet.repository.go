@@ -90,14 +90,7 @@ func (t *TweetRepository) getExcludedIDs(excludeIDs []primitive.ObjectID) []inte
 	}
 	return excludedIDs
 }
-func (t *TweetRepository) getRandomTweets(
-	ctx context.Context,
-	idT primitive.ObjectID,
-	collTweets *mongo.Collection,
-	excludeFilter bson.D,
-	limit int,
-) ([]tweetdomain.TweetGetFollowReq, error) {
-
+func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.ObjectID, collTweets *mongo.Collection, excludeFilter bson.D, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
 	pipelineRandom := bson.A{
 		bson.D{{Key: "$match", Value: bson.M{
 			"Type": bson.M{"$in": []string{"Post", "RePost", "CitaPost"}},
@@ -111,23 +104,15 @@ func (t *TweetRepository) getRandomTweets(
 		}}},
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "followingIDs", Value: bson.D{
-				{Key: "$ifNull", Value: bson.A{
-					bson.D{{Key: "$objectToArray", Value: "$UserInfo.Following"}},
-					bson.A{},
-				}},
-			}},
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", []interface{}{}}}}}}}},
-
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
-				bson.D{{Key: "$multiply", Value: bson.A{
-					bson.D{{Key: "$cond", Value: bson.D{
-						{Key: "if", Value: "$isLikedByID"},
-						{Key: "then", Value: 2},
-						{Key: "else", Value: 0},
-					}}},
-				}}},
-				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$likeCount"}}, 5}}},
+				// Ponderar más fuertemente los likes
+				bson.D{{Key: "$multiply", Value: bson.A{"$likeCount", 5}}},
+				// Frescura del post
 				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
 			}}}},
 		}}},
@@ -155,72 +140,95 @@ func (t *TweetRepository) getRandomTweets(
 		}}},
 	}
 
-	cursorRandom, err := collTweets.Aggregate(ctx, pipelineRandom)
+	cursor, err := collTweets.Aggregate(ctx, pipelineRandom)
 	if err != nil {
 		return nil, err
 	}
-	defer cursorRandom.Close(ctx)
+	defer cursor.Close(ctx)
 
-	var tweetsWithUserInfoRandom []tweetdomain.TweetGetFollowReq
-	for cursorRandom.Next(ctx) {
+	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
+	for cursor.Next(ctx) {
 		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
-		if err := cursorRandom.Decode(&tweetWithUserInfo); err != nil {
+		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
 			return nil, err
 		}
-		tweetsWithUserInfoRandom = append(tweetsWithUserInfoRandom, tweetWithUserInfo)
+		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
 	}
 
-	return tweetsWithUserInfoRandom, nil
+	return tweetsWithUserInfo, nil
 }
-func (t *TweetRepository) getRelevantTweets(
-	ctx context.Context,
-	idT primitive.ObjectID,
-	collTweets *mongo.Collection,
-	excludeFilter bson.D,
-	last24Hours time.Time,
-	limit int,
-) ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.ObjectID, collTweets *mongo.Collection, excludeFilter bson.D, last24Hours time.Time, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+	userCollection := collTweets.Database().Collection("Users")
+	userPipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.M{"_id": idT}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Following", Value: bson.D{{Key: "$objectToArray", Value: "$Following"}}},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$Following"}},
+		bson.D{{Key: "$limit", Value: 100}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Following.k", Value: 1},
+		}}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: bson.D{}},
+			{Key: "followingIDs", Value: bson.D{{Key: "$push", Value: "$Following.k"}}},
+		}}},
+	}
 
-	pipeline := bson.A{
+	cursor, err := userCollection.Aggregate(ctx, userPipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var userResult struct {
+		FollowingIDs []primitive.ObjectID `bson:"followingIDs"`
+	}
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&userResult); err != nil {
+			return nil, err
+		}
+	}
+
+	followingIDs := userResult.FollowingIDs
+
+	tweetPipeline := bson.A{
 		bson.D{{Key: "$match", Value: bson.M{
-			"TimeStamp": bson.M{"$gte": last24Hours},
 			"Type":      bson.M{"$in": []string{"Post", "RePost", "CitaPost", "PostComment"}},
+			"TimeStamp": bson.M{"$gte": last24Hours},
 		}}},
 		bson.D{{Key: "$match", Value: excludeFilter}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
+			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
+			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", followingIDs}}}},
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
+				// Ponderar más fuertemente los posts de los usuarios seguidos
+				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$cond", Value: bson.D{
+					{Key: "if", Value: "$isFollowingUser"},
+					{Key: "then", Value: 5}, // Mayor ponderación para los posts de usuarios seguidos
+					{Key: "else", Value: 0},
+				}}}, 3}}},
+				// Ponderar más fuertemente los "me gusta" de los usuarios seguidos
+				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$likedByFollowing"}}, 5}}},
+				// Ponderar los reposts de los usuarios seguidos
+				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$repostedByFollowing"}}, 2}}},
+				// Frescura del post
+				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
+			}}}},
+		}}},
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
 			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "user"},
+			{Key: "as", Value: "UserInfo"},
 		}}},
-		bson.D{{Key: "$unwind", Value: "$user"}},
-		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "followingIDs", Value: bson.D{
-				{Key: "$ifNull", Value: bson.A{
-					bson.D{{Key: "$objectToArray", Value: "$user.Following"}},
-					bson.A{},
-				}},
-			}},
-			// {Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", "$followingIDs"}}}},
-			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", "$followingIDs"}}}},
-			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", "$followingIDs"}}}},
-			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
-			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", []interface{}{}}}}}}}},
-
-			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
-				bson.D{{Key: "$multiply", Value: bson.A{
-					bson.D{{Key: "$cond", Value: bson.D{
-						{Key: "if", Value: "$isFollowingUser"},
-						{Key: "then", Value: 3},
-						{Key: "else", Value: 0},
-					}}},
-				}}},
-				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$likedByFollowing"}}, 5}}},
-				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$repostedByFollowing"}}, 2}}},
-				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
-			}}}},
-		}}},
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$sort", Value: bson.D{
 			{Key: "relevanceScore", Value: -1},
 		}}},
@@ -236,16 +244,16 @@ func (t *TweetRepository) getRelevantTweets(
 			{Key: "RePosts", Value: 1},
 			{Key: "OriginalPost", Value: 1},
 			{Key: "Views", Value: 1},
-			{Key: "user.FullName", Value: 1},
-			{Key: "user.Avatar", Value: 1},
-			{Key: "user.NameUser", Value: 1},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
 			{Key: "likeCount", Value: 1},
 			{Key: "CommentsCount", Value: 1},
 			{Key: "isLikedByID", Value: 1},
 		}}},
 	}
 
-	cursor, err := collTweets.Aggregate(ctx, pipeline)
+	cursor, err = collTweets.Aggregate(ctx, tweetPipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -1593,3 +1601,155 @@ func (t *TweetRepository) GetTrendsByPrefix(prefix string, limit int) ([]tweetdo
 
 	return trends, nil
 }
+
+// func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.ObjectID, collTweets *mongo.Collection, followingIDs []primitive.ObjectID, excludeFilter bson.D, last24Hours time.Time, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+// 	if followingIDs == nil {
+// 		followingIDs = []primitive.ObjectID{}
+// 	}
+
+// 	pipeline := bson.A{
+// 		bson.D{{Key: "$match", Value: bson.M{
+// 			"Type":      bson.M{"$in": []string{"Post", "RePost", "CitaPost", "PostComment"}},
+// 			"TimeStamp": bson.M{"$gte": last24Hours},
+// 		}}},
+// 		bson.D{{Key: "$match", Value: excludeFilter}},
+// 		bson.D{{Key: "$addFields", Value: bson.D{
+// 			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
+// 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
+// 			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", followingIDs}}}},
+// 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+// 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+// 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+// 		}}},
+// 		bson.D{{Key: "$addFields", Value: bson.D{
+// 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
+// 				// Ponderar más fuertemente los posts de los usuarios seguidos
+// 				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$cond", Value: bson.D{
+// 					{Key: "if", Value: "$isFollowingUser"},
+// 					{Key: "then", Value: 5}, // Mayor ponderación para los posts de usuarios seguidos
+// 					{Key: "else", Value: 0},
+// 				}}}, 3}}},
+// 				// Ponderar más fuertemente los "me gusta" de los usuarios seguidos
+// 				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$likedByFollowing"}}, 5}}},
+// 				// Ponderar los reposts de los usuarios seguidos
+// 				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$repostedByFollowing"}}, 2}}},
+// 				// Frescura del post
+// 				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
+// 			}}}},
+// 		}}},
+// 		bson.D{{Key: "$lookup", Value: bson.D{
+// 			{Key: "from", Value: "Users"},
+// 			{Key: "localField", Value: "UserID"},
+// 			{Key: "foreignField", Value: "_id"},
+// 			{Key: "as", Value: "UserInfo"},
+// 		}}},
+// 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+// 		bson.D{{Key: "$sort", Value: bson.D{
+// 			{Key: "relevanceScore", Value: -1},
+// 		}}},
+// 		bson.D{{Key: "$limit", Value: limit}},
+// 		bson.D{{Key: "$project", Value: bson.D{
+// 			{Key: "id", Value: "$_id"},
+// 			{Key: "Status", Value: 1},
+// 			{Key: "PostImage", Value: 1},
+// 			{Key: "Type", Value: 1},
+// 			{Key: "TimeStamp", Value: 1},
+// 			{Key: "UserID", Value: 1},
+// 			{Key: "Comments", Value: 1},
+// 			{Key: "RePosts", Value: 1},
+// 			{Key: "OriginalPost", Value: 1},
+// 			{Key: "Views", Value: 1},
+// 			{Key: "UserInfo.FullName", Value: 1},
+// 			{Key: "UserInfo.Avatar", Value: 1},
+// 			{Key: "UserInfo.NameUser", Value: 1},
+// 			{Key: "likeCount", Value: 1},
+// 			{Key: "CommentsCount", Value: 1},
+// 			{Key: "isLikedByID", Value: 1},
+// 		}}},
+// 	}
+
+// 	cursor, err := collTweets.Aggregate(ctx, pipeline)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer cursor.Close(ctx)
+
+// 	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
+// 	for cursor.Next(ctx) {
+// 		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
+// 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
+// 			return nil, err
+// 		}
+// 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
+// 	}
+
+// 	return tweetsWithUserInfo, nil
+// }
+
+// func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.ObjectID, collTweets *mongo.Collection, excludeFilter bson.D, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+// 	pipelineRandom := bson.A{
+// 		bson.D{{Key: "$match", Value: bson.M{
+// 			"Type": bson.M{"$in": []string{"Post", "RePost", "CitaPost"}},
+// 		}}},
+// 		bson.D{{Key: "$match", Value: excludeFilter}},
+// 		bson.D{{Key: "$lookup", Value: bson.D{
+// 			{Key: "from", Value: "Users"},
+// 			{Key: "localField", Value: "UserID"},
+// 			{Key: "foreignField", Value: "_id"},
+// 			{Key: "as", Value: "UserInfo"},
+// 		}}},
+// 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+// 		bson.D{{Key: "$addFields", Value: bson.D{
+// 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+// 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+// 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+// 		}}},
+// 		bson.D{{Key: "$addFields", Value: bson.D{
+// 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
+// 				// Ponderar más fuertemente los likes
+// 				bson.D{{Key: "$multiply", Value: bson.A{"$likeCount", 5}}},
+// 				// Frescura del post
+// 				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
+// 			}}}},
+// 		}}},
+// 		bson.D{{Key: "$sort", Value: bson.D{
+// 			{Key: "relevanceScore", Value: -1},
+// 		}}},
+// 		bson.D{{Key: "$limit", Value: limit}},
+// 		bson.D{{Key: "$project", Value: bson.D{
+// 			{Key: "id", Value: "$_id"},
+// 			{Key: "Status", Value: 1},
+// 			{Key: "PostImage", Value: 1},
+// 			{Key: "Type", Value: 1},
+// 			{Key: "TimeStamp", Value: 1},
+// 			{Key: "UserID", Value: 1},
+// 			{Key: "Comments", Value: 1},
+// 			{Key: "RePosts", Value: 1},
+// 			{Key: "OriginalPost", Value: 1},
+// 			{Key: "Views", Value: 1},
+// 			{Key: "UserInfo.FullName", Value: 1},
+// 			{Key: "UserInfo.Avatar", Value: 1},
+// 			{Key: "UserInfo.NameUser", Value: 1},
+// 			{Key: "likeCount", Value: 1},
+// 			{Key: "CommentsCount", Value: 1},
+// 			{Key: "isLikedByID", Value: 1},
+// 		}}},
+// 	}
+
+// 	cursor, err := collTweets.Aggregate(ctx, pipelineRandom)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer cursor.Close(ctx)
+
+// 	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
+// 	for cursor.Next(ctx) {
+// 		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
+// 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
+// 			return nil, err
+// 		}
+// 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
+// 	}
+
+// 	return tweetsWithUserInfo, nil
+// }
