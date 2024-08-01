@@ -112,22 +112,19 @@ func (t *TweetRepository) getRandomTweets(
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "followingIDs", Value: bson.D{
-				{Key: "$map", Value: bson.D{
-					{Key: "input", Value: bson.D{{Key: "$objectToArray", Value: "$UserInfo.Following"}}},
-					{Key: "as", Value: "item"},
-					{Key: "in", Value: "$$item.k"},
+				{Key: "$slice", Value: bson.A{
+					bson.D{{Key: "$map", Value: bson.D{
+						{Key: "input", Value: bson.D{{Key: "$objectToArray", Value: "$UserInfo.Following"}}},
+						{Key: "as", Value: "item"},
+						{Key: "in", Value: "$$item.k"},
+					}}},
+					100,
 				}},
 			}},
-		}}},
-		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "followingIDs", Value: bson.D{{Key: "$slice", Value: bson.A{"$followingIDs", 100}}}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
-		}}},
-		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
-				// Convertir booleano a número antes de la multiplicación
 				bson.D{{Key: "$multiply", Value: bson.A{
 					bson.D{{Key: "$cond", Value: bson.D{
 						{Key: "if", Value: "$isLikedByID"},
@@ -205,14 +202,15 @@ func (t *TweetRepository) getRelevantTweets(
 		bson.D{{Key: "$unwind", Value: "$user"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "followingIDs", Value: bson.D{
-				{Key: "$map", Value: bson.D{
-					{Key: "input", Value: bson.D{{Key: "$objectToArray", Value: "$user.Following"}}},
-					{Key: "as", Value: "item"},
-					{Key: "in", Value: "$$item.k"},
+				{Key: "$slice", Value: bson.A{
+					// Convierte el campo `user.Following` en un array de claves y luego limita a 100 IDs
+					bson.D{{Key: "$map", Value: bson.D{
+						{Key: "input", Value: bson.D{{Key: "$objectToArray", Value: "$user.Following"}}},
+						{Key: "as", Value: "item"},
+						{Key: "in", Value: "$$item.k"},
+					}}},
+					100,
 				}},
-			}},
-			{Key: "followingIDs", Value: bson.D{
-				{Key: "$slice", Value: bson.A{"$followingIDs", 100}}, // Limita a 100 IDs de seguimiento
 			}},
 			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", "$followingIDs"}}}},
 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", "$followingIDs"}}}},
@@ -221,7 +219,6 @@ func (t *TweetRepository) getRelevantTweets(
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
-				// Convertir booleano a número antes de la multiplicación
 				bson.D{{Key: "$multiply", Value: bson.A{
 					bson.D{{Key: "$cond", Value: bson.D{
 						{Key: "if", Value: "$isFollowingUser"},
