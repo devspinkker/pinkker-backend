@@ -114,16 +114,25 @@ func (t *TweetRepository) getRelevantTweets(
 		}}},
 		bson.D{{Key: "$unwind", Value: "$user"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
-			// Convertir el mapa de Following a un array de IDs
 			{Key: "followingIDs", Value: bson.D{
 				{Key: "$objectToArray", Value: "$user.Following"},
+			}},
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "followingIDs", Value: bson.D{
 				{Key: "$map", Value: bson.D{
-					{Key: "input", Value: "$objectToArray"},
+					{Key: "input", Value: "$followingIDs"},
 					{Key: "as", Value: "item"},
 					{Key: "in", Value: "$$item.k"},
 				}},
-				{Key: "$slice", Value: bson.A{"$map", 100}},
 			}},
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "followingIDs", Value: bson.D{
+				{Key: "$slice", Value: bson.A{"$followingIDs", 100}}, // Limita a 100 IDs de seguimiento
+			}},
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", "$followingIDs"}}}},
 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", "$followingIDs"}}}},
 			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", "$followingIDs"}}}},
@@ -202,7 +211,6 @@ func (t *TweetRepository) getRandomTweets(
 		}}},
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
-			// Convertir el mapa de Following a un array de IDs
 			{Key: "followingIDs", Value: bson.D{
 				{Key: "$objectToArray", Value: "$UserInfo.Following"},
 				{Key: "$map", Value: bson.D{
