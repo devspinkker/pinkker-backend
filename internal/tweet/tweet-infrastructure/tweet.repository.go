@@ -112,17 +112,11 @@ func (t *TweetRepository) getRandomTweets(
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "followingIDs", Value: bson.D{
-				{Key: "$slice", Value: bson.A{
-					bson.D{{Key: "$map", Value: bson.D{
-						{Key: "input", Value: bson.D{{Key: "$objectToArray", Value: "$UserInfo.Following"}}},
-						{Key: "as", Value: "item"},
-						{Key: "in", Value: "$$item.k"},
-					}}},
-					100,
+				{Key: "$ifNull", Value: bson.A{
+					bson.D{{Key: "$objectToArray", Value: "$UserInfo.Following"}},
+					bson.A{},
 				}},
 			}},
-			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
-			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
 				bson.D{{Key: "$multiply", Value: bson.A{
@@ -177,6 +171,7 @@ func (t *TweetRepository) getRandomTweets(
 
 	return tweetsWithUserInfoRandom, nil
 }
+
 func (t *TweetRepository) getRelevantTweets(
 	ctx context.Context,
 	idT primitive.ObjectID,
@@ -201,13 +196,9 @@ func (t *TweetRepository) getRelevantTweets(
 		bson.D{{Key: "$unwind", Value: "$user"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "followingIDs", Value: bson.D{
-				{Key: "$slice", Value: bson.A{
-					bson.D{{Key: "$map", Value: bson.D{
-						{Key: "input", Value: bson.D{{Key: "$objectToArray", Value: "$user.Following"}}},
-						{Key: "as", Value: "item"},
-						{Key: "in", Value: "$$item.k"},
-					}}},
-					100,
+				{Key: "$ifNull", Value: bson.A{
+					bson.D{{Key: "$objectToArray", Value: "$user.Following"}},
+					bson.A{},
 				}},
 			}},
 			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", "$followingIDs"}}}},
