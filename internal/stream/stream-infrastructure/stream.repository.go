@@ -595,6 +595,55 @@ func (r *StreamRepository) GetAllStreamsOnlineThatUserFollows(idValueObj primiti
 	return streams, nil
 }
 
+// func (r *StreamRepository) GetAllStreamsOnlineThatUserFollows(idValueObj primitive.ObjectID, limit int64, offset int64) ([]streamdomain.Stream, error) {
+// 	GoMongoDBCollUsers := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+// 	pipeline := mongo.Pipeline{
+// 		{{Key: "$match", Value: bson.D{{Key: "_id", Value: idValueObj}}}},
+// 		{{Key: "$lookup", Value: bson.D{
+// 			{Key: "from", Value: "Streams"},
+// 			{Key: "let", Value: bson.D{{Key: "following", Value: "$Following"}}},
+// 			{Key: "pipeline", Value: mongo.Pipeline{
+// 				{{Key: "$match", Value: bson.D{
+// 					{Key: "$expr", Value: bson.D{
+// 						{Key: "$and", Value: bson.A{
+// 							bson.D{{Key: "$eq", Value: bson.A{"$Online", true}}},
+// 							bson.D{{Key: "$in", Value: bson.A{"$StreamerID", "$$following"}}},
+// 						}},
+// 					}},
+// 				}}},
+// 				{{Key: "$limit", Value: limit}},
+// 				{{Key: "$skip", Value: offset}},
+// 				{{Key: "$sort", Value: bson.D{{Key: "StartTime", Value: -1}}}}, // Ordenar por StartTime, del más reciente al más antiguo (opcional)
+// 			}},
+// 			{Key: "as", Value: "streams"},
+// 		}}},
+// 		{{Key: "$unwind", Value: "$streams"}},
+// 		{{Key: "$replaceRoot", Value: bson.D{{Key: "newRoot", Value: "$streams"}}}},
+// 	}
+
+// 	cursor, err := GoMongoDBCollUsers.Aggregate(context.Background(), pipeline)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer cursor.Close(context.Background())
+
+// 	var streams []streamdomain.Stream
+// 	for cursor.Next(context.Background()) {
+// 		var stream streamdomain.Stream
+// 		if err := cursor.Decode(&stream); err != nil {
+// 			return nil, err
+// 		}
+// 		streams = append(streams, stream)
+// 	}
+
+// 	if err := cursor.Err(); err != nil {
+// 		return nil, err
+// 	}
+
+//		return streams, nil
+//	}
+//
 // GetStremesIFollow
 func (r *StreamRepository) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID) ([]streamdomain.Stream, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")

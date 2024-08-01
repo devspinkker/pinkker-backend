@@ -32,27 +32,14 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 	ctx := context.Background()
 	db := t.mongoClient.Database("PINKKER-BACKEND")
 	collTweets := db.Collection("Post")
-	collUsers := db.Collection("Users")
-
-	// Obtener los IDs de los usuarios que sigue el usuario actual
-	user, err := t.getUser(ctx, collUsers, idT)
-	if err != nil {
-		return nil, err
-	}
 
 	// Extraer los ObjectID de los usuarios que sigue el usuario
-	followingIDs := t.getFollowingIDs(user)
 	last24Hours := time.Now().Add(-24 * time.Hour)
 	excludedIDs := t.getExcludedIDs(excludeIDs)
 	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
 
-	// Si no sigue a nadie, ejecutar pipeline para usuarios desconocidos y famosos
-	if len(followingIDs) == 0 {
-		return t.getRandomTweets(ctx, idT, collTweets, excludeFilter, limit)
-	}
-
 	// Ejecutar pipeline principal para obtener tweets relevantes
-	tweetsWithUserInfo, err := t.getRelevantTweets(ctx, idT, collTweets, followingIDs, excludeFilter, last24Hours, limit)
+	tweetsWithUserInfo, err := t.getRelevantTweets(ctx, idT, collTweets, excludeFilter, last24Hours, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -90,18 +77,10 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 	return tweetsWithUserInfo, nil
 }
 
-func (t *TweetRepository) getUser(ctx context.Context, collUsers *mongo.Collection, idT primitive.ObjectID) (userdomain.User, error) {
-	var user userdomain.User
+func (t *TweetRepository) getUser(ctx context.Context, collUsers *mongo.Collection, idT primitive.ObjectID) (userdomain.GetUser, error) {
+	var user userdomain.GetUser
 	err := collUsers.FindOne(ctx, bson.D{{Key: "_id", Value: idT}}).Decode(&user)
 	return user, err
-}
-
-func (t *TweetRepository) getFollowingIDs(user userdomain.User) []primitive.ObjectID {
-	var followingIDs []primitive.ObjectID
-	for id := range user.Following {
-		followingIDs = append(followingIDs, id)
-	}
-	return followingIDs
 }
 
 func (t *TweetRepository) getExcludedIDs(excludeIDs []primitive.ObjectID) []interface{} {
@@ -112,48 +91,49 @@ func (t *TweetRepository) getExcludedIDs(excludeIDs []primitive.ObjectID) []inte
 	return excludedIDs
 }
 
-func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.ObjectID, collTweets *mongo.Collection, followingIDs []primitive.ObjectID, excludeFilter bson.D, last24Hours time.Time, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
-	if followingIDs == nil {
-		followingIDs = []primitive.ObjectID{}
-	}
+func (t *TweetRepository) getRelevantTweets(
+	ctx context.Context,
+	idT primitive.ObjectID,
+	collTweets *mongo.Collection,
+	excludeFilter bson.D,
+	last24Hours time.Time,
+	limit int,
+) ([]tweetdomain.TweetGetFollowReq, error) {
 
 	pipeline := bson.A{
 		bson.D{{Key: "$match", Value: bson.M{
-			"Type":      bson.M{"$in": []string{"Post", "RePost", "CitaPost", "PostComment"}},
 			"TimeStamp": bson.M{"$gte": last24Hours},
+			"Type":      bson.M{"$in": []string{"Post", "RePost", "CitaPost", "PostComment"}},
 		}}},
 		bson.D{{Key: "$match", Value: excludeFilter}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "user"},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$user"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
-			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
-			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", followingIDs}}}},
+			{Key: "followingIDs", Value: bson.D{{Key: "$slice", Value: bson.A{"$user.Following", 100}}}},
+			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", "$followingIDs"}}}},
+			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", "$followingIDs"}}}},
+			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", "$followingIDs"}}}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
-				// Ponderar más fuertemente los posts de los usuarios seguidos
 				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$cond", Value: bson.D{
 					{Key: "if", Value: "$isFollowingUser"},
-					{Key: "then", Value: 5}, // Mayor ponderación para los posts de usuarios seguidos
+					{Key: "then", Value: 5},
 					{Key: "else", Value: 0},
 				}}}, 3}}},
-				// Ponderar más fuertemente los "me gusta" de los usuarios seguidos
 				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$likedByFollowing"}}, 5}}},
-				// Ponderar los reposts de los usuarios seguidos
 				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$repostedByFollowing"}}, 2}}},
-				// Frescura del post
 				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
 			}}}},
 		}}},
-		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "UserID"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "UserInfo"},
-		}}},
-		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$sort", Value: bson.D{
 			{Key: "relevanceScore", Value: -1},
 		}}},
@@ -196,7 +176,14 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 	return tweetsWithUserInfo, nil
 }
 
-func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.ObjectID, collTweets *mongo.Collection, excludeFilter bson.D, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) getRandomTweets(
+	ctx context.Context,
+	idT primitive.ObjectID,
+	collTweets *mongo.Collection,
+	excludeFilter bson.D,
+	limit int,
+) ([]tweetdomain.TweetGetFollowReq, error) {
+
 	pipelineRandom := bson.A{
 		bson.D{{Key: "$match", Value: bson.M{
 			"Type": bson.M{"$in": []string{"Post", "RePost", "CitaPost"}},
@@ -210,6 +197,7 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.Obj
 		}}},
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "followingIDs", Value: bson.D{{Key: "$slice", Value: bson.A{"$UserInfo.Following", 100}}}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},

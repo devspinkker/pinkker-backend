@@ -211,15 +211,15 @@ func (L *LoginValidatorStruct) LoginValidator() error {
 }
 
 type GetUser struct {
-	ID              primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
-	Avatar          string                 `json:"Avatar" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"Avatar"`
-	FullName        string                 `json:"FullName" bson:"FullName"`
-	NameUser        string                 `json:"NameUser" bson:"NameUser"`
-	Pais            string                 `json:"Pais" bson:"Pais"`
-	Subscriptions   []primitive.ObjectID   `bson:"Subscriptions"`
-	Subscribers     []primitive.ObjectID   `bson:"Subscribers"`
-	Clips           []primitive.ObjectID   `bson:"Clips,omitempty"`
-	ClipsLikes      []primitive.ObjectID   `bson:"ClipsLikes,omitempty"`
+	ID       primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Avatar   string             `json:"Avatar" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"Avatar"`
+	FullName string             `json:"FullName" bson:"FullName"`
+	NameUser string             `json:"NameUser" bson:"NameUser"`
+	Pais     string             `json:"Pais" bson:"Pais"`
+	// Subscriptions   []primitive.ObjectID   `bson:"Subscriptions"`
+	// Subscribers     []primitive.ObjectID   `bson:"Subscribers"`
+	// Clips           []primitive.ObjectID   `bson:"Clips,omitempty"`
+	// ClipsLikes      []primitive.ObjectID   `bson:"ClipsLikes,omitempty"`
 	Ciudad          string                 `json:"Ciudad" bson:"Ciudad"`
 	Email           string                 `json:"Email" bson:"Email"`
 	Role            int                    `json:"role" bson:"Role,default:0"`
@@ -245,21 +245,21 @@ type GetUser struct {
 		Youtube   string `json:"youtube,omitempty" bson:"youtube"`
 		Tiktok    string `json:"tiktok,omitempty" bson:"tiktok"`
 	} `json:"socialnetwork,omitempty" bson:"socialnetwork"`
-	Verified                 bool                              `json:"verified,omitempty" bson:"Verified"`
-	Website                  string                            `json:"website,omitempty" bson:"Website"`
-	Phone                    string                            `json:"phone,omitempty" bson:"Phone"`
-	Sex                      string                            `json:"sex,omitempty" bson:"Sex"`
-	Situation                string                            `json:"situation,omitempty" bson:"Situation"`
-	UserFriendsNotifications int                               `json:"userFriendsNotifications,omitempty" bson:"UserFriendsNotifications"`
-	Following                map[primitive.ObjectID]FollowInfo `json:"Following" bson:"Following"`
-	Followers                map[primitive.ObjectID]FollowInfo `json:"Followers" bson:"Followers"`
-	FollowersCount           int                               `json:"FollowersCount" bson:"FollowersCount"`
-	Timestamp                time.Time                         `json:"Timestamp" bson:"Timestamp"`
-	Likes                    []primitive.ObjectID              `json:"Likes" bson:"Likes"`
-	Wallet                   string                            `json:"Wallet" bson:"Wallet"`
-	Online                   bool                              `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
-	ClipsComment             []primitive.ObjectID              `json:"ClipsComment" bson:"ClipsComment"`
-	Banned                   bool                              `json:"Banned" bson:"Banned"`
+	Verified                 bool   `json:"verified,omitempty" bson:"Verified"`
+	Website                  string `json:"website,omitempty" bson:"Website"`
+	Phone                    string `json:"phone,omitempty" bson:"Phone"`
+	Sex                      string `json:"sex,omitempty" bson:"Sex"`
+	Situation                string `json:"situation,omitempty" bson:"Situation"`
+	UserFriendsNotifications int    `json:"userFriendsNotifications,omitempty" bson:"UserFriendsNotifications"`
+	// Following                map[primitive.ObjectID]FollowInfo `json:"Following" bson:"Following"`
+	// Followers                map[primitive.ObjectID]FollowInfo `json:"Followers" bson:"Followers"`
+	FollowersCount int       `json:"FollowersCount" bson:"FollowersCount"`
+	Timestamp      time.Time `json:"Timestamp" bson:"Timestamp"`
+	// Likes                    []primitive.ObjectID              `json:"Likes" bson:"Likes"`
+	Wallet string `json:"Wallet" bson:"Wallet"`
+	Online bool   `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
+	// ClipsComment             []primitive.ObjectID              `json:"ClipsComment" bson:"ClipsComment"`
+	Banned bool `json:"Banned" bson:"Banned"`
 }
 type UserInfoOAuth2 struct {
 	ID      string `json:"id"`
