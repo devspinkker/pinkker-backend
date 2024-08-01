@@ -114,7 +114,15 @@ func (t *TweetRepository) getRelevantTweets(
 		}}},
 		bson.D{{Key: "$unwind", Value: "$user"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "followingIDs", Value: bson.D{{Key: "$slice", Value: bson.A{"$user.Following", 100}}}},
+			// Convertir el mapa de Following a un array de IDs
+			{Key: "followingIDs", Value: bson.D{
+				{Key: "$objectToArray", Value: "$user.Following"},
+				{Key: "$map", Value: bson.D{
+					{Key: "input", Value: "$objectToArray"},
+					{Key: "as", Value: "item"},
+					{Key: "in", Value: "$$item.k"},
+				}},
+			}},
 			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", "$followingIDs"}}}},
 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", "$followingIDs"}}}},
 			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", "$followingIDs"}}}},
@@ -124,11 +132,7 @@ func (t *TweetRepository) getRelevantTweets(
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
-				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$cond", Value: bson.D{
-					{Key: "if", Value: "$isFollowingUser"},
-					{Key: "then", Value: 5},
-					{Key: "else", Value: 0},
-				}}}, 3}}},
+				bson.D{{Key: "$multiply", Value: bson.A{"$isFollowingUser", 3}}},
 				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$likedByFollowing"}}, 5}}},
 				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$repostedByFollowing"}}, 2}}},
 				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
@@ -197,7 +201,15 @@ func (t *TweetRepository) getRandomTweets(
 		}}},
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "followingIDs", Value: bson.D{{Key: "$slice", Value: bson.A{"$UserInfo.Following", 100}}}},
+			// Convertir el mapa de Following a un array de IDs
+			{Key: "followingIDs", Value: bson.D{
+				{Key: "$objectToArray", Value: "$UserInfo.Following"},
+				{Key: "$map", Value: bson.D{
+					{Key: "input", Value: "$objectToArray"},
+					{Key: "as", Value: "item"},
+					{Key: "in", Value: "$$item.k"},
+				}},
+			}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
@@ -234,22 +246,22 @@ func (t *TweetRepository) getRandomTweets(
 		}}},
 	}
 
-	cursor, err := collTweets.Aggregate(ctx, pipelineRandom)
+	cursorRandom, err := collTweets.Aggregate(ctx, pipelineRandom)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	defer cursorRandom.Close(ctx)
 
-	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
-	for cursor.Next(ctx) {
-		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
-		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
+	var tweetsWithUserInfoRandom []tweetdomain.TweetGetFollowReq
+	for cursorRandom.Next(ctx) {
+		var tweetWithUserInfoRandom tweetdomain.TweetGetFollowReq
+		if err := cursorRandom.Decode(&tweetWithUserInfoRandom); err != nil {
 			return nil, err
 		}
-		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
+		tweetsWithUserInfoRandom = append(tweetsWithUserInfoRandom, tweetWithUserInfoRandom)
 	}
 
-	return tweetsWithUserInfo, nil
+	return tweetsWithUserInfoRandom, nil
 }
 
 func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetGetFollowReq) error {
