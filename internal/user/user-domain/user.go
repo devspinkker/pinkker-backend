@@ -259,7 +259,8 @@ type GetUser struct {
 	Wallet string `json:"Wallet" bson:"Wallet"`
 	Online bool   `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
 	// ClipsComment             []primitive.ObjectID              `json:"ClipsComment" bson:"ClipsComment"`
-	Banned bool `json:"Banned" bson:"Banned"`
+	CategoryPreferences map[string]float64 `json:"categoryPreferences" bson:"categoryPreferences"`
+	Banned              bool               `json:"Banned" bson:"Banned"`
 }
 type UserInfoOAuth2 struct {
 	ID      string `json:"id"`
