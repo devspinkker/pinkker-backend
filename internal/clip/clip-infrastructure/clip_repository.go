@@ -112,19 +112,49 @@ func (c *ClipRepository) GetClipsByTitle(title string, limit int) ([]clipdomain.
 }
 
 // getUser obtiene un usuario de la colección Users
-func (c *ClipRepository) getUser(ctx context.Context, idT primitive.ObjectID, UsersDb *mongo.Collection) (*userdomain.User, error) {
-	var user *userdomain.User
+func (c *ClipRepository) getUser(ctx context.Context, idT primitive.ObjectID, UsersDb *mongo.Collection) (*userdomain.GetUser, error) {
+	var user *userdomain.GetUser
 	err := UsersDb.FindOne(ctx, bson.D{{Key: "_id", Value: idT}}).Decode(&user)
 	return user, err
 }
 
 // getFollowingIDs obtiene los IDs de los usuarios que sigue el usuario
-func (c *ClipRepository) getFollowingIDs(user *userdomain.User) []primitive.ObjectID {
-	var followingIDs []primitive.ObjectID
-	for id := range user.Following {
-		followingIDs = append(followingIDs, id)
+func (c *ClipRepository) getFollowingIDs(idT primitive.ObjectID, UsersDB *mongo.Collection, ctx context.Context) ([]primitive.ObjectID, error) {
+	userPipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.M{"_id": idT}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Following", Value: bson.D{{Key: "$objectToArray", Value: "$Following"}}},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$Following"}},
+		bson.D{{Key: "$limit", Value: 100}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Following.k", Value: 1},
+		}}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: bson.D{}},
+			{Key: "followingIDs", Value: bson.D{{Key: "$push", Value: "$Following.k"}}},
+		}}},
 	}
-	return followingIDs
+
+	cursor, err := UsersDB.Aggregate(ctx, userPipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var userResult struct {
+		FollowingIDs []primitive.ObjectID `bson:"followingIDs"`
+	}
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&userResult); err != nil {
+			return nil, err
+		}
+	} else {
+		// No se encontró ningún seguidor o la lista está vacía
+		return []primitive.ObjectID{}, nil
+	}
+
+	return userResult.FollowingIDs, nil
 }
 
 // ClipRepository obtiene los IDs de los clips que deben ser excluidos
@@ -137,7 +167,7 @@ func (t *ClipRepository) getExcludedIDs(excludeIDs []primitive.ObjectID) []inter
 }
 
 // getFirstFourCategories obtiene las primeras cuatro categorías de preferencias del usuario
-func (c *ClipRepository) getFirstFourCategories(user *userdomain.User) []string {
+func (c *ClipRepository) getFirstFourCategories(user *userdomain.GetUser) []string {
 	var categories []string
 	for category := range user.CategoryPreferences {
 		categories = append(categories, category)
@@ -317,7 +347,10 @@ func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, exc
 		return nil, err
 	}
 
-	followingIDs := c.getFollowingIDs(user)
+	followingIDs, err := c.getFollowingIDs(idT, UsersDB, ctx)
+	if err != nil {
+		return nil, err
+	}
 	excludedIDs := c.getExcludedIDs(excludeIDs)
 	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
 
@@ -346,7 +379,6 @@ func (c *ClipRepository) ClipsRecommended(idT primitive.ObjectID, limit int, exc
 		}
 		randomClips, err := c.getRandomClips(ctx, excludeFilter, limit-len(recommendedClips), clipsDB, idT)
 		if err != nil {
-			fmt.Println(err)
 
 			return nil, err
 		}
