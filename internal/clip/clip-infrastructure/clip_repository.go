@@ -187,8 +187,8 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Co
 	pipeline := mongo.Pipeline{
 		// Filtrar por categorías y clips creados en las últimas 48 horas
 		bson.D{{Key: "$match", Value: bson.M{
-			"Category":             bson.M{"$in": categories},
 			"timestamps.createdAt": bson.M{"$gte": timeLimit},
+			"Category":             bson.M{"$in": categories},
 		}}},
 		// Aplicar filtro adicional para excluir ciertos clips
 		bson.D{{Key: "$match", Value: excludeFilter}},
