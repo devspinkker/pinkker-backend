@@ -13,6 +13,7 @@ import (
 	tweetroutes "PINKKER-BACKEND/internal/tweet/tweet-routes"
 	userroutes "PINKKER-BACKEND/internal/user/user-routes"
 	withdrawroutes "PINKKER-BACKEND/internal/withdraw/withdraw-routes"
+	"time"
 
 	"context"
 	"fmt"
@@ -98,22 +99,31 @@ func setupRedisClient() *redis.Client {
 func setupMongoDB() *mongo.Client {
 	URI := config.MONGODB_URI()
 	if URI == "" {
-		log.Fatal("MONGODB_URI FATAL")
+		log.Fatal("MONGODB_URI no está configurado")
 	}
 
-	clientOptions := options.Client().ApplyURI(URI)
+	clientOptions := options.Client().
+		ApplyURI(URI).
+		SetMaxPoolSize(100).
+		SetMinPoolSize(10).
+		SetMaxConnIdleTime(30 * time.Second)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	client, err := mongo.NewClient(clientOptions)
 	if err != nil {
-		log.Fatal("MONGODB ERROR", err.Error())
+		log.Fatalf("Error al crear el cliente de MongoDB: %v", err)
 	}
 
-	if err = client.Connect(context.Background()); err != nil {
-		log.Fatal("MONGODB ERROR", err.Error())
+	if err = client.Connect(ctx); err != nil {
+		log.Fatalf("Error al conectar a MongoDB: %v", err)
 	}
 
-	if err = client.Ping(context.Background(), nil); err != nil {
-		log.Fatal("MONGODB ERROR", err.Error())
+	if err = client.Ping(ctx, nil); err != nil {
+		log.Fatalf("Error al hacer ping a MongoDB: %v", err)
 	}
+
+	log.Println("Conexión a MongoDB establecida")
 	return client
 }
