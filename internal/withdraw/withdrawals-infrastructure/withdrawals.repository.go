@@ -245,6 +245,7 @@ func (r *WithdrawalsRepository) GetWithdrawalToken(id primitive.ObjectID) ([]wit
 	findOptions := options.Find()
 	sort := bson.D{{Key: "TimeStamp", Value: -1}}
 	findOptions.SetSort(sort)
+	findOptions.SetLimit(20)
 
 	cursor, err := GoMongoDBCollWithdrawals.Find(ctx, filter, findOptions)
 	if err != nil {
