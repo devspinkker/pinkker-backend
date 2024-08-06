@@ -316,35 +316,19 @@ func (r *StreamRepository) CommercialInStreamSelectAdvertisements(data string) (
 	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
 	ctx := context.TODO()
 
-	// Pipeline para obtener cualquier documento aleatorio
-
 	pipelineMatch := bson.A{
 		bson.M{"$match": bson.M{"Categorie": data, "Destination": "Streams"}},
 		bson.M{"$sample": bson.M{"size": 1}},
 	}
+
 	pipelineRandom := bson.A{
 		bson.M{"$match": bson.M{"Destination": "Streams"}},
 		bson.M{"$sample": bson.M{"size": 1}},
 	}
+
 	var advertisement advertisements.Advertisements
 
-	// Buscar coincidencia
 	cursor, err := GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineMatch)
-	if err != nil {
-		return advertisements.Advertisements{}, err
-	}
-	defer cursor.Close(ctx)
-
-	// Decodificar el resultado
-	if err := cursor.Decode(&advertisement); err != nil {
-		if cursor.Next(ctx) {
-			return advertisements.Advertisements{}, err
-		}
-		return advertisement, nil
-	}
-
-	// Si no hay coincidencia, obtener cualquier documento aleatorio
-	cursor, err = GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineRandom)
 	if err != nil {
 		return advertisements.Advertisements{}, err
 	}
@@ -357,7 +341,19 @@ func (r *StreamRepository) CommercialInStreamSelectAdvertisements(data string) (
 		return advertisement, nil
 	}
 
-	// Si no se encuentra ningún documento, retornar un error
+	cursor, err = GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineRandom)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+	defer cursor.Close(ctx)
+
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&advertisement); err != nil {
+			return advertisements.Advertisements{}, err
+		}
+		return advertisement, nil
+	}
+	fmt.Println("?")
 	return advertisements.Advertisements{}, errors.New("no advertisements found")
 }
 
