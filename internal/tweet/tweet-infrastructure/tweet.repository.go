@@ -200,8 +200,8 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 		bson.D{{Key: "$match", Value: excludeFilter}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
-			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
-			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", followingIDs}}}},
+			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$ifNull", bson.A{"$Likes", bson.A{}}, followingIDs}}}},
+			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$ifNull", bson.A{"$RePosts", bson.A{}}, followingIDs}}}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
