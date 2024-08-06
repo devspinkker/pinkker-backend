@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -142,6 +143,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			Title:                StreamFind.StreamTitle,
 			StreamThumbnail:      StreamFind.StreamThumbnail,
 			StreamCategory:       StreamFind.StreamCategory,
+			Admoney:              0,
 		}
 
 		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
@@ -177,6 +179,14 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			AverageViewers = AverageViewers / totalCount
 		}
 
+		AverageAdPaymentInStreams, err := r.AverageAdPaymentInStreams()
+		if err != nil {
+			return LastStreamSummary, err
+		}
+		err = r.PayUserForStreamsAd(AverageAdPaymentInStreams, userFind.ID, GoMongoDBCollUsers)
+		if err != nil {
+			return LastStreamSummary, err
+		}
 		// Actualizar el resumen del stream
 		updateSummary := bson.D{
 			{Key: "$set", Value: bson.D{
@@ -188,6 +198,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 				{Key: "Title", Value: StreamFind.StreamTitle},
 				{Key: "StreamThumbnail", Value: StreamFind.StreamThumbnail},
 				{Key: "StreamCategory", Value: StreamFind.StreamCategory},
+				{Key: "Admoney", Value: AverageAdPaymentInStreams},
 			}},
 		}
 
@@ -211,6 +222,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 		if err != nil {
 			return LastStreamSummary, err
 		}
+
 	}
 
 	err = session.CommitTransaction(ctx)
@@ -220,6 +232,62 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 
 	return LastStreamSummary, nil
 }
+
+func (r *StreamRepository) AverageAdPaymentInStreams() (float64, error) {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollAdvertisements := GoMongoDB.Collection("Advertisements")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.D{{Key: "Destination", Value: "Streams"}}}},
+		{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: nil},
+			{Key: "averagePayPerPrint", Value: bson.D{{Key: "$avg", Value: "$PayPerPrint"}}},
+		}}},
+	}
+
+	cursor, err := GoMongoDBCollAdvertisements.Aggregate(ctx, pipeline)
+	if err != nil {
+		return 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var result []bson.M
+	if err := cursor.All(ctx, &result); err != nil {
+		return 0, err
+	}
+
+	if len(result) > 0 {
+		if average, ok := result[0]["averagePayPerPrint"].(float64); ok {
+			percentage := average * 0.05
+			rounded := math.Round(percentage*100) / 100
+			return rounded, nil
+		}
+	}
+
+	return 0, nil
+}
+func (r *StreamRepository) PayUserForStreamsAd(averageAdPayment float64, idUser primitive.ObjectID, coll *mongo.Collection) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	filter := bson.D{{Key: "_id", Value: idUser}}
+
+	update := bson.D{
+		{Key: "$inc", Value: bson.D{
+			{Key: "Pixeles", Value: averageAdPayment},
+		}},
+	}
+
+	_, err := coll.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *StreamRepository) publishNotification(Type, streamerName, id, Title, Avatar string) error {
 	message := map[string]interface{}{
 		"Type":     Type,
