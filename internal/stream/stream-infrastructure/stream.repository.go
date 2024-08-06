@@ -316,15 +316,15 @@ func (r *StreamRepository) CommercialInStreamSelectAdvertisements(data string) (
 	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
 	ctx := context.TODO()
 
-	// Pipeline para obtener cualquier documento aleatorio
-	pipelineRandom := bson.A{
-		bson.M{"$sample": bson.M{"size": 1}},
-	}
 	pipelineMatch := bson.A{
 		bson.M{"$match": bson.M{"Categorie": data, "Destination": "Streams"}},
 		bson.M{"$sample": bson.M{"size": 1}},
 	}
 
+	pipelineRandom := bson.A{
+		bson.M{"$match": bson.M{"Destination": "Streams"}},
+		bson.M{"$sample": bson.M{"size": 1}},
+	}
 	var advertisement advertisements.Advertisements
 
 	// Buscar coincidencia
