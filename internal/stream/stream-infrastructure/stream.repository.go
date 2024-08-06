@@ -316,14 +316,12 @@ func (r *StreamRepository) CommercialInStreamSelectAdvertisements(data string) (
 	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
 	ctx := context.TODO()
 
-	// Pipeline para encontrar una coincidencia aleatoria
-	pipelineMatch := bson.A{
-		bson.M{"$match": bson.M{"Categorie": data}},
-		bson.M{"$sample": bson.M{"size": 1}},
-	}
-
 	// Pipeline para obtener cualquier documento aleatorio
 	pipelineRandom := bson.A{
+		bson.M{"$sample": bson.M{"size": 1}},
+	}
+	pipelineMatch := bson.A{
+		bson.M{"$match": bson.M{"Categorie": data, "Destination": "Streams"}},
 		bson.M{"$sample": bson.M{"size": 1}},
 	}
 
@@ -337,8 +335,8 @@ func (r *StreamRepository) CommercialInStreamSelectAdvertisements(data string) (
 	defer cursor.Close(ctx)
 
 	// Decodificar el resultado
-	if cursor.Next(ctx) {
-		if err := cursor.Decode(&advertisement); err != nil {
+	if err := cursor.Decode(&advertisement); err != nil {
+		if cursor.Next(ctx) {
 			return advertisements.Advertisements{}, err
 		}
 		return advertisement, nil
