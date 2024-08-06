@@ -128,7 +128,7 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.Obj
 			{Key: "TimeStamp", Value: 1},
 			{Key: "UserID", Value: 1},
 			{Key: "Comments", Value: 1},
-			{Key: "RePosts", Value: 1},
+
 			{Key: "OriginalPost", Value: 1},
 			{Key: "Views", Value: 1},
 			{Key: "UserInfo.FullName", Value: 1},
@@ -250,7 +250,7 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 			{Key: "TimeStamp", Value: 1},
 			{Key: "UserID", Value: 1},
 			{Key: "Comments", Value: 1},
-			{Key: "RePosts", Value: 1},
+
 			{Key: "OriginalPost", Value: 1},
 			{Key: "Views", Value: 1},
 			{Key: "UserInfo.FullName", Value: 1},
@@ -447,7 +447,7 @@ func (t *TweetRepository) FindTweetbyId(idTweet, idT primitive.ObjectID) (tweetd
 			{Key: "TimeStamp", Value: 1},
 			{Key: "UserID", Value: 1},
 			{Key: "Comments", Value: 1},
-			{Key: "RePosts", Value: 1},
+
 			{Key: "OriginalPost", Value: 1},
 			{Key: "Type", Value: 1},
 			{Key: "Hashtags", Value: 1},
@@ -1236,7 +1236,6 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 				{Key: "RePostsCount", Value: 1},
 				{Key: "isLikedByID", Value: 1},
 				{Key: "Comments", Value: "$Comments"},
-				{Key: "RePosts", Value: "$RePosts"},
 				{Key: "Views", Value: "$Views"},
 				{Key: "OriginalPost", Value: "$OriginalPost"},
 				{Key: "UserInfo.FullName", Value: 1},
@@ -1685,7 +1684,7 @@ func (t *TweetRepository) GetTrendsByPrefix(prefix string, limit int) ([]tweetdo
 // 			{Key: "TimeStamp", Value: 1},
 // 			{Key: "UserID", Value: 1},
 // 			{Key: "Comments", Value: 1},
-// 			{Key: "RePosts", Value: 1},
+//
 // 			{Key: "OriginalPost", Value: 1},
 // 			{Key: "Views", Value: 1},
 // 			{Key: "UserInfo.FullName", Value: 1},
@@ -1753,7 +1752,7 @@ func (t *TweetRepository) GetTrendsByPrefix(prefix string, limit int) ([]tweetdo
 // 			{Key: "TimeStamp", Value: 1},
 // 			{Key: "UserID", Value: 1},
 // 			{Key: "Comments", Value: 1},
-// 			{Key: "RePosts", Value: 1},
+//
 // 			{Key: "OriginalPost", Value: 1},
 // 			{Key: "Views", Value: 1},
 // 			{Key: "UserInfo.FullName", Value: 1},
