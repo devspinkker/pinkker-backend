@@ -108,14 +108,10 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.Obj
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
-
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
 				// Ponderar más fuertemente los likes
-				bson.D{{Key: "$multiply", Value: bson.A{
-					bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$likeCount", bson.A{}}}}}},
-					5,
-				}}},
+				bson.D{{Key: "$multiply", Value: bson.A{"$likeCount", 5}}},
 				// Frescura del post
 				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
 			}}}},
@@ -204,8 +200,8 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 		bson.D{{Key: "$match", Value: excludeFilter}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
-			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$ifNull", bson.A{"$Likes", bson.A{}}, followingIDs}}}},
-			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$ifNull", bson.A{"$RePosts", bson.A{}}, followingIDs}}}},
+			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
+			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", followingIDs}}}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
@@ -218,7 +214,7 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 					{Key: "then", Value: 5}, // Mayor ponderación para los posts de usuarios seguidos
 					{Key: "else", Value: 0},
 				}}}, 3}}},
-
+				// Ponderar más fuertemente los "me gusta" de los usuarios seguidos
 				bson.D{{Key: "$multiply", Value: bson.A{
 					bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$likedByFollowing", bson.A{}}}}}},
 					5,
