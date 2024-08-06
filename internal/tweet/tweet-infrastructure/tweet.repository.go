@@ -41,9 +41,11 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 	// Ejecutar pipeline principal para obtener tweets relevantes
 	tweetsWithUserInfo, err := t.getRelevantTweets(ctx, idT, collTweets, excludeFilter, last24Hours, limit)
 	if err != nil {
+		fmt.Println(err)
+
 		return nil, err
 	}
-
+	fmt.Println("JEA")
 	// Calcular el nuevo límite para el pipeline secundario
 	newLimit := limit - len(tweetsWithUserInfo)
 	if newLimit > 0 {
