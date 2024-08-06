@@ -124,6 +124,6 @@ func setupMongoDB() *mongo.Client {
 		log.Fatalf("Error al hacer ping a MongoDB: %v", err)
 	}
 
-	log.Println("Conexión a MongoDB establecida")
+	fmt.Println("Conexión a MongoDB establecida")
 	return client
 }
