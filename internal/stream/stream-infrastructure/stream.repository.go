@@ -179,15 +179,22 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			AverageViewers = AverageViewers / totalCount
 		}
 
-		AverageAdPaymentInStreams, err := r.AverageAdPaymentInStreams()
+		AverageAdPaymentInStreams, err := r.AverageAdPaymentInStreams(ctx, latestSummary.Advertisements)
+
+		fmt.Println(err)
+		fmt.Println("AverageAdPaymentInStreams")
 		if err != nil {
 			return LastStreamSummary, err
 		}
-		err = r.PayUserForStreamsAd(AverageAdPaymentInStreams, userFind.ID, GoMongoDBCollUsers)
+
+		err = r.PayUserForStreamsAd(ctx, AverageAdPaymentInStreams, userFind.ID, GoMongoDBCollUsers)
+		fmt.Println(err)
+
+		fmt.Println("PayUserForStreamsAd")
 		if err != nil {
 			return LastStreamSummary, err
 		}
-		// Actualizar el resumen del stream
+		fmt.Println(AverageAdPaymentInStreams)
 		updateSummary := bson.D{
 			{Key: "$set", Value: bson.D{
 				{Key: "EndOfStream", Value: time.Now()},
@@ -233,12 +240,10 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 	return LastStreamSummary, nil
 }
 
-func (r *StreamRepository) AverageAdPaymentInStreams() (float64, error) {
+func (r *StreamRepository) AverageAdPaymentInStreams(ctx context.Context, Advertisements int) (float64, error) {
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollAdvertisements := GoMongoDB.Collection("Advertisements")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 	pipeline := mongo.Pipeline{
 		{{Key: "$match", Value: bson.D{{Key: "Destination", Value: "Streams"}}}},
 		{{Key: "$group", Value: bson.D{
@@ -260,7 +265,8 @@ func (r *StreamRepository) AverageAdPaymentInStreams() (float64, error) {
 
 	if len(result) > 0 {
 		if average, ok := result[0]["averagePayPerPrint"].(float64); ok {
-			percentage := average * 0.05
+			total := average * float64(Advertisements)
+			percentage := total * 0.03
 			rounded := math.Round(percentage*100) / 100
 			return rounded, nil
 		}
@@ -268,10 +274,7 @@ func (r *StreamRepository) AverageAdPaymentInStreams() (float64, error) {
 
 	return 0, nil
 }
-func (r *StreamRepository) PayUserForStreamsAd(averageAdPayment float64, idUser primitive.ObjectID, coll *mongo.Collection) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
+func (r *StreamRepository) PayUserForStreamsAd(ctx context.Context, averageAdPayment float64, idUser primitive.ObjectID, coll *mongo.Collection) error {
 	filter := bson.D{{Key: "_id", Value: idUser}}
 
 	update := bson.D{
