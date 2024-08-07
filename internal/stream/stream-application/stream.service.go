@@ -30,8 +30,8 @@ func (s *StreamService) GetStreamById(id primitive.ObjectID) (*streamdomain.Stre
 	stream, err := s.StreamRepository.GetStreamById(id)
 	return stream, err
 }
-func (s *StreamService) CommercialInStreamSelectAdvertisements(data string) (advertisements.Advertisements, error) {
-	Advertisements, err := s.StreamRepository.CommercialInStreamSelectAdvertisements(data)
+func (s *StreamService) CommercialInStreamSelectAdvertisements(StreamCategory string, ViewerCount int) (advertisements.Advertisements, error) {
+	Advertisements, err := s.StreamRepository.CommercialInStreamSelectAdvertisements(StreamCategory, ViewerCount)
 	return Advertisements, err
 }
 func (s *StreamService) GetStreamSummaryById(id primitive.ObjectID) (*StreamSummarydomain.StreamSummary, error) {

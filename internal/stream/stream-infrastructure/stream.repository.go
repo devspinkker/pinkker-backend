@@ -181,20 +181,15 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 
 		AverageAdPaymentInStreams, err := r.AverageAdPaymentInStreams(ctx, latestSummary.Advertisements)
 
-		fmt.Println(err)
-		fmt.Println("AverageAdPaymentInStreams")
 		if err != nil {
 			return LastStreamSummary, err
 		}
 
 		err = r.PayUserForStreamsAd(ctx, AverageAdPaymentInStreams, userFind.ID, GoMongoDBCollUsers)
-		fmt.Println(err)
 
-		fmt.Println("PayUserForStreamsAd")
 		if err != nil {
 			return LastStreamSummary, err
 		}
-		fmt.Println(AverageAdPaymentInStreams)
 		updateSummary := bson.D{
 			{Key: "$set", Value: bson.D{
 				{Key: "EndOfStream", Value: time.Now()},
@@ -245,7 +240,10 @@ func (r *StreamRepository) AverageAdPaymentInStreams(ctx context.Context, Advert
 	GoMongoDBCollAdvertisements := GoMongoDB.Collection("Advertisements")
 
 	pipeline := mongo.Pipeline{
-		{{Key: "$match", Value: bson.D{{Key: "Destination", Value: "Streams"}}}},
+		{{Key: "$match", Value: bson.D{
+			{Key: "Destination", Value: "Streams"},
+			{Key: "Impressions", Value: bson.D{{Key: "$lte", Value: "$ImpressionsMax"}}},
+		}}},
 		{{Key: "$group", Value: bson.D{
 			{Key: "_id", Value: nil},
 			{Key: "averagePayPerPrint", Value: bson.D{{Key: "$avg", Value: "$PayPerPrint"}}},
@@ -274,6 +272,7 @@ func (r *StreamRepository) AverageAdPaymentInStreams(ctx context.Context, Advert
 
 	return 0, nil
 }
+
 func (r *StreamRepository) PayUserForStreamsAd(ctx context.Context, averageAdPayment float64, idUser primitive.ObjectID, coll *mongo.Collection) error {
 	filter := bson.D{{Key: "_id", Value: idUser}}
 
@@ -311,29 +310,40 @@ func (r *StreamRepository) publishNotification(Type, streamerName, id, Title, Av
 	}
 	return nil
 }
-func (r *StreamRepository) CommercialInStreamSelectAdvertisements(data string) (advertisements.Advertisements, error) {
+func (r *StreamRepository) CommercialInStreamSelectAdvertisements(StreamCategory string, ViewerCount int) (advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
 	ctx := context.TODO()
 
+	// Pipeline para buscar coincidencias específicas
 	pipelineMatch := bson.A{
-		bson.M{"$match": bson.M{"Categorie": data, "Destination": "Streams"}},
+		bson.M{"$match": bson.M{
+			"Categorie":   StreamCategory,
+			"Destination": "Streams",
+			"$expr":       bson.M{"$lte": bson.A{bson.M{"$add": bson.A{"$Impressions", ViewerCount}}, "$ImpressionsMax"}},
+		}},
 		bson.M{"$sample": bson.M{"size": 1}},
 	}
 
+	// Pipeline para obtener cualquier documento aleatorio que cumpla con la condición
 	pipelineRandom := bson.A{
-		bson.M{"$match": bson.M{"Destination": "Streams"}},
+		bson.M{"$match": bson.M{
+			"Destination": "Streams",
+			"$expr":       bson.M{"$lte": bson.A{bson.M{"$add": bson.A{"$Impressions", ViewerCount}}, "$ImpressionsMax"}},
+		}},
 		bson.M{"$sample": bson.M{"size": 1}},
 	}
 
 	var advertisement advertisements.Advertisements
 
+	// Buscar coincidencia específica
 	cursor, err := GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineMatch)
 	if err != nil {
 		return advertisements.Advertisements{}, err
 	}
 	defer cursor.Close(ctx)
 
+	// Decodificar el resultado si se encuentra
 	if cursor.Next(ctx) {
 		if err := cursor.Decode(&advertisement); err != nil {
 			return advertisements.Advertisements{}, err
@@ -341,19 +351,22 @@ func (r *StreamRepository) CommercialInStreamSelectAdvertisements(data string) (
 		return advertisement, nil
 	}
 
+	// Si no hay coincidencia específica, obtener cualquier documento aleatorio
 	cursor, err = GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineRandom)
 	if err != nil {
 		return advertisements.Advertisements{}, err
 	}
 	defer cursor.Close(ctx)
 
+	// Decodificar el resultado si se encuentra
 	if cursor.Next(ctx) {
 		if err := cursor.Decode(&advertisement); err != nil {
 			return advertisements.Advertisements{}, err
 		}
 		return advertisement, nil
 	}
-	fmt.Println("?")
+
+	// Si no se encuentra ningún documento, retornar un error
 	return advertisements.Advertisements{}, errors.New("no advertisements found")
 }
 
