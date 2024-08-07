@@ -103,7 +103,7 @@ func (s *StreamHandler) CommercialInStream(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
-	Commercial, err := s.StreamServise.CommercialInStreamSelectAdvertisements(Stream.StreamCategory)
+	Commercial, err := s.StreamServise.CommercialInStreamSelectAdvertisements(Stream.StreamCategory, Stream.ViewerCount)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "StatusNotFound",
