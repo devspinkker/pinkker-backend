@@ -387,6 +387,7 @@ func (t *TweetRepository) GetAdsMuroAndPost() (tweetdomain.PostAds, error) {
 	PostAds.LikeCount = post.LikeCount
 	PostAds.RePostsCount = post.RePostsCount
 	PostAds.CommentsCount = post.CommentsCount
+	PostAds.PostImage = post.PostImage
 
 	return PostAds, err
 
