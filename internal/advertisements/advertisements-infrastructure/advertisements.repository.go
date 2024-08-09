@@ -120,6 +120,34 @@ func (r *AdvertisementsRepository) UpdateAdvertisement(ad advertisements.UpdateA
 
 	return updatedAd, nil
 }
+
+func (r *AdvertisementsRepository) IdOfTheUsersWhoClicked(IdU primitive.ObjectID, idAdvertisements primitive.ObjectID) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Advertisements")
+	ctx := context.TODO()
+
+	filter := bson.M{
+		"_id":                    idAdvertisements,
+		"IdOfTheUsersWhoClicked": bson.M{"$ne": IdU},
+	}
+
+	update := bson.M{
+		"$addToSet": bson.M{
+			"IdOfTheUsersWhoClicked": IdU,
+		},
+		"$inc": bson.M{
+			"Clicks": 1,
+		},
+	}
+
+	_, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *AdvertisementsRepository) DeleteAdvertisement(id primitive.ObjectID) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("Advertisements")

@@ -40,7 +40,11 @@ func (s *AdvertisementsService) UpdateAdvertisement(StreamerID primitive.ObjectI
 	advertisementsGet, err := s.AdvertisementsRepository.UpdateAdvertisement(data)
 	return advertisementsGet, err
 }
+func (s *AdvertisementsService) IdOfTheUsersWhoClicked(IdU primitive.ObjectID, idAdvertisements primitive.ObjectID) error {
 
+	return s.AdvertisementsRepository.IdOfTheUsersWhoClicked(IdU, idAdvertisements)
+
+}
 func (s *AdvertisementsService) DeleteAdvertisement(StreamerID primitive.ObjectID, data advertisements.DeleteAdvertisement) error {
 	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
 	if err != nil {

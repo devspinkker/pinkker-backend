@@ -81,6 +81,39 @@ func (s *AdvertisementsRepository) CreateAdvertisement(c *fiber.Ctx) error {
 		"data":    advertisementsGet,
 	})
 }
+
+func (s *AdvertisementsRepository) IdOfTheUsersWhoClicked(c *fiber.Ctx) error {
+	type request struct {
+		IdAdvertisements primitive.ObjectID `json:"idAdvertisements" `
+	}
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var req request
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"err":     err.Error(),
+		})
+	}
+
+	err := s.Servise.IdOfTheUsersWhoClicked(idValueObj, req.IdAdvertisements)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
+
 func (s *AdvertisementsRepository) UpdateAdvertisement(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)

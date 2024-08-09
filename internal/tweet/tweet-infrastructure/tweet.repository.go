@@ -402,6 +402,9 @@ func (t *TweetRepository) GetAdsMuro() (advertisements.Advertisements, error) {
 			"$expr":       bson.M{"$lte": bson.A{bson.M{"$add": bson.A{"$Clicks", 0}}, "$ClicksMax"}},
 		}},
 		bson.M{"$sample": bson.M{"size": 1}},
+		bson.M{"$project": bson.M{
+			"IdOfTheUsersWhoClicked": 0,
+		}},
 	}
 
 	var advertisement advertisements.Advertisements
