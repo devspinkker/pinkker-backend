@@ -82,6 +82,9 @@ func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateA
 	documento.ImpressionsMax = ad.ImpressionsMax
 	documento.PayPerPrint = 10
 	documento.Impressions = 0
+	documento.ClicksMax = ad.ClicksMax
+	documento.Clicks = ad.Clicks
+	documento.DocumentToBeAnnounced = ad.DocumentToBeAnnounced
 
 	_, err := collection.InsertOne(context.Background(), ad)
 	if err != nil {
@@ -97,13 +100,15 @@ func (r *AdvertisementsRepository) UpdateAdvertisement(ad advertisements.UpdateA
 	filter := bson.M{"_id": ad.ID}
 	update := bson.M{
 		"$set": bson.M{
-			"Name":           ad.Name,
-			"Destination":    ad.Destination,
-			"Categorie":      ad.Categorie,
-			"Impressions":    0,
-			"UrlVideo":       ad.UrlVideo,
-			"ReferenceLink":  ad.ReferenceLink,
-			"ImpressionsMax": ad.ImpressionsMax,
+			"Name":                  ad.Name,
+			"Destination":           ad.Destination,
+			"Categorie":             ad.Categorie,
+			"Impressions":           0,
+			"UrlVideo":              ad.UrlVideo,
+			"ReferenceLink":         ad.ReferenceLink,
+			"ClicksMax":             ad.ClicksMax,
+			"Clicks":                ad.Clicks,
+			"DocumentToBeAnnounced": ad.DocumentToBeAnnounced,
 		},
 	}
 

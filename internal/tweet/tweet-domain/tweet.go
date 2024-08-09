@@ -133,7 +133,30 @@ type TweetCommentsGetReq struct {
 		NameUser string `json:"NameUser"`
 	} `json:"UserInfo"`
 }
-
+type PostAds struct {
+	ID        primitive.ObjectID `json:"_id" bson:"_id"`
+	Status    string             `json:"Status" bson:"Status"`
+	PostImage string             `json:"PostImage" bson:"PostImage"`
+	TimeStamp time.Time          `json:"TimeStamp"  bson:"TimeStamp"`
+	UserID    primitive.ObjectID `json:"UserID" bson:"UserID"`
+	// Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
+	Type     string   `json:"Type" bson:"Type"`
+	Hashtags []string `json:"hashtags" bson:"Hashtags"`
+	UserInfo struct {
+		FullName string `json:"FullName"`
+		Avatar   string `json:"Avatar"`
+		NameUser string `json:"NameUser"`
+	} `json:"UserInfo"`
+	OriginalPostData *TweetGetFollowReq `json:"OriginalPostData"`
+	Views            int                `json:"Views" bson:"Views"`
+	IsLikedByID      bool               `json:"isLikedByID" bson:"isLikedByID"`
+	LikeCount        int                `json:"likeCount" bson:"likeCount"`
+	RePostsCount     int                `json:"RePostsCount" bson:"RePostsCount"`
+	CommentsCount    int                `json:"CommentsCount" bson:"CommentsCount"`
+	//ads
+	AdvertisementsId primitive.ObjectID `json:"AdvertisementsId" bson:"AdvertisementsId"`
+	ReferenceLink    string             `json:"ReferenceLink" bson:"ReferenceLink"`
+}
 type GetRecommended struct {
 	ExcludeIDs []primitive.ObjectID `json:"ExcludeIDs" validate:"required"`
 }

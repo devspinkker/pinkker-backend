@@ -18,6 +18,11 @@ func NewTweetService(TweetRepository *tweetinfrastructure.TweetRepository) *Twee
 		TweetRepository: TweetRepository,
 	}
 }
+func (ts *TweetService) GetAdsMuroAndPost() (tweetdomain.PostAds, error) {
+
+	Tweet, errGetFollowedUsers := ts.TweetRepository.GetAdsMuroAndPost()
+	return Tweet, errGetFollowedUsers
+}
 
 // save
 func (ts *TweetService) SaveTweet(status string, img string, user primitive.ObjectID) (primitive.ObjectID, error) {
@@ -115,6 +120,7 @@ func (ts *TweetService) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGetFo
 	Tweet, errGetFollowedUsers := ts.TweetRepository.GetPostId(id)
 	return Tweet, errGetFollowedUsers
 }
+
 func (ts *TweetService) GetPostIdLogueado(id, idValueObj primitive.ObjectID) (tweetdomain.TweetGetFollowReq, error) {
 
 	Tweet, errGetFollowedUsers := ts.TweetRepository.GetPostIdLogueado(id, idValueObj)

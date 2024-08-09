@@ -4,6 +4,7 @@ import (
 	tweetapplication "PINKKER-BACKEND/internal/tweet/tweet-application"
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	"PINKKER-BACKEND/pkg/helpers"
+	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -269,6 +270,27 @@ func (th *TweetHandler) GetTweetsRecommended(c *fiber.Ctx) error {
 			"message": "StatusInternalServerError",
 			"data":    errTweetGetFollow.Error(),
 		})
+	}
+	if len(req.ExcludeIDs) > 0 && len(req.ExcludeIDs)%15 == 0 {
+
+		PostAds, err := th.TweetServise.GetAdsMuroAndPost()
+		if err != nil {
+			fmt.Println(err)
+		}
+		if PostAds.ReferenceLink != "" {
+			var combinedData []interface{}
+
+			for _, tweet := range Tweets {
+				combinedData = append(combinedData, tweet)
+			}
+
+			combinedData = append(combinedData, PostAds)
+
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{
+				"message": "ok",
+				"data":    combinedData,
+			})
+		}
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",

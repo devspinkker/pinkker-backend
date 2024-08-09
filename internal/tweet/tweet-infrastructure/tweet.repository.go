@@ -1,6 +1,7 @@
 package tweetinfrastructure
 
 import (
+	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
@@ -358,6 +359,69 @@ func (t *TweetRepository) addOriginalPostData(ctx context.Context, collTweets *m
 		}
 	}
 	return nil
+}
+
+func (t *TweetRepository) GetAdsMuroAndPost() (tweetdomain.PostAds, error) {
+	Advertisements, err := t.GetAdsMuro()
+	if err != nil {
+		return tweetdomain.PostAds{}, err
+	}
+	post, err := t.GetPostId(Advertisements.DocumentToBeAnnounced)
+	if err != nil {
+		return tweetdomain.PostAds{}, err
+	}
+	var PostAds tweetdomain.PostAds
+
+	PostAds.AdvertisementsId = Advertisements.ID
+	PostAds.ReferenceLink = Advertisements.ReferenceLink
+
+	PostAds.ID = post.ID
+	PostAds.Status = post.Status
+	PostAds.TimeStamp = post.TimeStamp
+	PostAds.Type = post.Type
+	PostAds.Hashtags = post.Hashtags
+	PostAds.UserInfo = post.UserInfo
+	PostAds.OriginalPostData = post.OriginalPostData
+	PostAds.Views = post.Views
+	PostAds.IsLikedByID = post.IsLikedByID
+	PostAds.LikeCount = post.LikeCount
+	PostAds.RePostsCount = post.RePostsCount
+	PostAds.CommentsCount = post.CommentsCount
+
+	return PostAds, err
+
+}
+func (t *TweetRepository) GetAdsMuro() (advertisements.Advertisements, error) {
+	db := t.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
+	ctx := context.TODO()
+
+	pipelineRandom := bson.A{
+		bson.M{"$match": bson.M{
+			"Destination": "Muro",
+			"$expr":       bson.M{"$lte": bson.A{bson.M{"$add": bson.A{"$Clicks", 0}}, "$ClicksMax"}},
+		}},
+		bson.M{"$sample": bson.M{"size": 1}},
+	}
+
+	var advertisement advertisements.Advertisements
+
+	cursor, err := GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineRandom)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+	defer cursor.Close(ctx)
+
+	// Decodificar el resultado si se encuentra
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&advertisement); err != nil {
+			return advertisements.Advertisements{}, err
+		}
+		return advertisement, nil
+	}
+
+	// Si no se encuentra ningún documento, retornar un error
+	return advertisements.Advertisements{}, errors.New("no advertisements found")
 }
 
 // Save
@@ -1629,155 +1693,3 @@ func (t *TweetRepository) GetTrendsByPrefix(prefix string, limit int) ([]tweetdo
 
 	return trends, nil
 }
-
-// func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.ObjectID, collTweets *mongo.Collection, followingIDs []primitive.ObjectID, excludeFilter bson.D, last24Hours time.Time, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
-// 	if followingIDs == nil {
-// 		followingIDs = []primitive.ObjectID{}
-// 	}
-
-// 	pipeline := bson.A{
-// 		bson.D{{Key: "$match", Value: bson.M{
-// 			"Type":      bson.M{"$in": []string{"Post", "RePost", "CitaPost", "PostComment"}},
-// 			"TimeStamp": bson.M{"$gte": last24Hours},
-// 		}}},
-// 		bson.D{{Key: "$match", Value: excludeFilter}},
-// 		bson.D{{Key: "$addFields", Value: bson.D{
-// 			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
-// 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
-// 			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", followingIDs}}}},
-// 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
-// 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
-// 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
-// 		}}},
-// 		bson.D{{Key: "$addFields", Value: bson.D{
-// 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
-// 				// Ponderar más fuertemente los posts de los usuarios seguidos
-// 				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$cond", Value: bson.D{
-// 					{Key: "if", Value: "$isFollowingUser"},
-// 					{Key: "then", Value: 5}, // Mayor ponderación para los posts de usuarios seguidos
-// 					{Key: "else", Value: 0},
-// 				}}}, 3}}},
-// 				// Ponderar más fuertemente los "me gusta" de los usuarios seguidos
-// 				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$likedByFollowing"}}, 5}}},
-// 				// Ponderar los reposts de los usuarios seguidos
-// 				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$size", Value: "$repostedByFollowing"}}, 2}}},
-// 				// Frescura del post
-// 				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
-// 			}}}},
-// 		}}},
-// 		bson.D{{Key: "$lookup", Value: bson.D{
-// 			{Key: "from", Value: "Users"},
-// 			{Key: "localField", Value: "UserID"},
-// 			{Key: "foreignField", Value: "_id"},
-// 			{Key: "as", Value: "UserInfo"},
-// 		}}},
-// 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
-// 		bson.D{{Key: "$sort", Value: bson.D{
-// 			{Key: "relevanceScore", Value: -1},
-// 		}}},
-// 		bson.D{{Key: "$limit", Value: limit}},
-// 		bson.D{{Key: "$project", Value: bson.D{
-// 			{Key: "id", Value: "$_id"},
-// 			{Key: "Status", Value: 1},
-// 			{Key: "PostImage", Value: 1},
-// 			{Key: "Type", Value: 1},
-// 			{Key: "TimeStamp", Value: 1},
-// 			{Key: "UserID", Value: 1},
-// 			{Key: "Comments", Value: 1},
-//
-// 			{Key: "OriginalPost", Value: 1},
-// 			{Key: "Views", Value: 1},
-// 			{Key: "UserInfo.FullName", Value: 1},
-// 			{Key: "UserInfo.Avatar", Value: 1},
-// 			{Key: "UserInfo.NameUser", Value: 1},
-// 			{Key: "likeCount", Value: 1},
-// 			{Key: "CommentsCount", Value: 1},
-// 			{Key: "isLikedByID", Value: 1},
-// 		}}},
-// 	}
-
-// 	cursor, err := collTweets.Aggregate(ctx, pipeline)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer cursor.Close(ctx)
-
-// 	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
-// 	for cursor.Next(ctx) {
-// 		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
-// 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
-// 			return nil, err
-// 		}
-// 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
-// 	}
-
-// 	return tweetsWithUserInfo, nil
-// }
-
-// func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.ObjectID, collTweets *mongo.Collection, excludeFilter bson.D, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
-// 	pipelineRandom := bson.A{
-// 		bson.D{{Key: "$match", Value: bson.M{
-// 			"Type": bson.M{"$in": []string{"Post", "RePost", "CitaPost"}},
-// 		}}},
-// 		bson.D{{Key: "$match", Value: excludeFilter}},
-// 		bson.D{{Key: "$lookup", Value: bson.D{
-// 			{Key: "from", Value: "Users"},
-// 			{Key: "localField", Value: "UserID"},
-// 			{Key: "foreignField", Value: "_id"},
-// 			{Key: "as", Value: "UserInfo"},
-// 		}}},
-// 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
-// 		bson.D{{Key: "$addFields", Value: bson.D{
-// 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
-// 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
-// 			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
-// 		}}},
-// 		bson.D{{Key: "$addFields", Value: bson.D{
-// 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
-// 				// Ponderar más fuertemente los likes
-// 				bson.D{{Key: "$multiply", Value: bson.A{"$likeCount", 5}}},
-// 				// Frescura del post
-// 				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
-// 			}}}},
-// 		}}},
-// 		bson.D{{Key: "$sort", Value: bson.D{
-// 			{Key: "relevanceScore", Value: -1},
-// 		}}},
-// 		bson.D{{Key: "$limit", Value: limit}},
-// 		bson.D{{Key: "$project", Value: bson.D{
-// 			{Key: "id", Value: "$_id"},
-// 			{Key: "Status", Value: 1},
-// 			{Key: "PostImage", Value: 1},
-// 			{Key: "Type", Value: 1},
-// 			{Key: "TimeStamp", Value: 1},
-// 			{Key: "UserID", Value: 1},
-// 			{Key: "Comments", Value: 1},
-//
-// 			{Key: "OriginalPost", Value: 1},
-// 			{Key: "Views", Value: 1},
-// 			{Key: "UserInfo.FullName", Value: 1},
-// 			{Key: "UserInfo.Avatar", Value: 1},
-// 			{Key: "UserInfo.NameUser", Value: 1},
-// 			{Key: "likeCount", Value: 1},
-// 			{Key: "CommentsCount", Value: 1},
-// 			{Key: "isLikedByID", Value: 1},
-// 		}}},
-// 	}
-
-// 	cursor, err := collTweets.Aggregate(ctx, pipelineRandom)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer cursor.Close(ctx)
-
-// 	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
-// 	for cursor.Next(ctx) {
-// 		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
-// 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
-// 			return nil, err
-// 		}
-// 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
-// 	}
-
-// 	return tweetsWithUserInfo, nil
-// }
