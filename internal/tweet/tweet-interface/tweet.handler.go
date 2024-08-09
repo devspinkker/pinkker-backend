@@ -271,26 +271,24 @@ func (th *TweetHandler) GetTweetsRecommended(c *fiber.Ctx) error {
 			"data":    errTweetGetFollow.Error(),
 		})
 	}
-	if len(req.ExcludeIDs) > 0 && len(req.ExcludeIDs)%15 == 0 {
 
-		PostAds, err := th.TweetServise.GetAdsMuroAndPost()
-		if err != nil {
-			fmt.Println(err)
+	PostAds, err := th.TweetServise.GetAdsMuroAndPost()
+	if err != nil {
+		fmt.Println(err)
+	}
+	if PostAds.ReferenceLink != "" {
+		var combinedData []interface{}
+
+		for _, tweet := range Tweets {
+			combinedData = append(combinedData, tweet)
 		}
-		if PostAds.ReferenceLink != "" {
-			var combinedData []interface{}
 
-			for _, tweet := range Tweets {
-				combinedData = append(combinedData, tweet)
-			}
+		combinedData = append(combinedData, PostAds)
 
-			combinedData = append(combinedData, PostAds)
-
-			return c.Status(fiber.StatusOK).JSON(fiber.Map{
-				"message": "ok",
-				"data":    combinedData,
-			})
-		}
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "ok",
+			"data":    combinedData,
+		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",

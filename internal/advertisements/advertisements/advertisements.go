@@ -35,7 +35,6 @@ type UpdateAdvertisement struct {
 	UrlVideo              string             `json:"UrlVideo" bson:"UrlVideo"`
 	ReferenceLink         string             `json:"ReferenceLink" bson:"ReferenceLink"`
 	Code                  string             `json:"Code"`
-	Clicks                int                `json:"Clicks"`
 	ClicksMax             int                `json:"ClicksMax"`
 	DocumentToBeAnnounced primitive.ObjectID `json:"DocumentToBeAnnounced"`
 }

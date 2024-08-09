@@ -83,7 +83,6 @@ func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateA
 	documento.PayPerPrint = 10
 	documento.Impressions = 0
 	documento.ClicksMax = ad.ClicksMax
-	documento.Clicks = ad.Clicks
 	documento.DocumentToBeAnnounced = ad.DocumentToBeAnnounced
 
 	_, err := collection.InsertOne(context.Background(), ad)
@@ -107,7 +106,6 @@ func (r *AdvertisementsRepository) UpdateAdvertisement(ad advertisements.UpdateA
 			"UrlVideo":              ad.UrlVideo,
 			"ReferenceLink":         ad.ReferenceLink,
 			"ClicksMax":             ad.ClicksMax,
-			"Clicks":                ad.Clicks,
 			"DocumentToBeAnnounced": ad.DocumentToBeAnnounced,
 		},
 	}
