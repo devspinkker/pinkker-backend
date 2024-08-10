@@ -400,7 +400,9 @@ func (t *TweetRepository) GetAdsMuro() (advertisements.Advertisements, error) {
 	pipelineRandom := bson.A{
 		bson.M{"$match": bson.M{
 			"Destination": "Muro",
-			"Clicks":      bson.M{"$lte": "$ClicksMax"},
+			"$expr": bson.M{
+				"$lte": bson.A{"$Clicks", "$ClicksMax"},
+			},
 		}},
 		bson.M{"$sample": bson.M{"size": 1}},
 		bson.M{"$project": bson.M{
@@ -424,7 +426,6 @@ func (t *TweetRepository) GetAdsMuro() (advertisements.Advertisements, error) {
 		return advertisement, nil
 	}
 
-	// Si no se encuentra ningún documento, retornar un error
 	return advertisements.Advertisements{}, errors.New("no advertisements found")
 }
 
