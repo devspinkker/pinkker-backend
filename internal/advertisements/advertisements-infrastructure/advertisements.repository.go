@@ -85,7 +85,7 @@ func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateA
 	documento.ClicksMax = ad.ClicksMax
 	documento.DocumentToBeAnnounced = ad.DocumentToBeAnnounced
 
-	_, err := collection.InsertOne(context.Background(), ad)
+	_, err := collection.InsertOne(context.Background(), documento)
 	if err != nil {
 		return advertisements.Advertisements{}, err
 	}
