@@ -34,8 +34,8 @@ func (r *AdvertisementsRepository) IdOfTheUsersWhoClicked(IdU primitive.ObjectID
 	currentDate := time.Now().Format("2006-01-02")
 
 	filter := bson.M{
-		"_id": idAdvertisements,
-		// "IdOfTheUsersWhoClicked": bson.M{"$ne": IdU},
+		"_id":                    idAdvertisements,
+		"IdOfTheUsersWhoClicked": bson.M{"$ne": IdU},
 	}
 	count, err := collection.CountDocuments(ctx, filter)
 	if err != nil {
@@ -133,6 +133,36 @@ func (r *AdvertisementsRepository) AdvertisementsGet() ([]advertisements.Adverti
 	return advertisementsArray, nil
 
 }
+func (r *AdvertisementsRepository) GetAdsUser(NameUser string) ([]advertisements.Advertisements, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	Advertisements := db.Collection("Advertisements")
+
+	ctx := context.TODO()
+
+	filter := bson.M{"NameUser": NameUser}
+
+	cursor, err := Advertisements.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var advertisementsArray []advertisements.Advertisements
+	for cursor.Next(ctx) {
+		var advertisement advertisements.Advertisements
+		if err := cursor.Decode(&advertisement); err != nil {
+			return nil, err
+		}
+		advertisementsArray = append(advertisementsArray, advertisement)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return advertisementsArray, nil
+}
+
 func (r *AdvertisementsRepository) AutCode(id primitive.ObjectID, code string) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collectionUsers := db.Collection("Users")

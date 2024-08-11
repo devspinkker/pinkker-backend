@@ -343,7 +343,7 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 	}
 
 	// Establecer el valor en Redis
-	err = r.redisClient.Set(ctx, key, "true", time.Minute*1).Err()
+	err = r.redisClient.Set(ctx, key, "true", time.Minute*10).Err()
 	if err != nil {
 		return err
 	}

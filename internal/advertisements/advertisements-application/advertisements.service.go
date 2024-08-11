@@ -24,6 +24,11 @@ func (s *AdvertisementsService) GetAdvertisements(StreamerID primitive.ObjectID,
 	advertisementsGet, err := s.AdvertisementsRepository.AdvertisementsGet()
 	return advertisementsGet, err
 }
+func (s *AdvertisementsService) GetAdsUser(NameUser string) ([]advertisements.Advertisements, error) {
+
+	advertisementsGet, err := s.AdvertisementsRepository.GetAdsUser(NameUser)
+	return advertisementsGet, err
+}
 func (s *AdvertisementsService) CreateAdvertisement(StreamerID primitive.ObjectID, data advertisements.UpdateAdvertisement) (advertisements.Advertisements, error) {
 	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
 	if err != nil {

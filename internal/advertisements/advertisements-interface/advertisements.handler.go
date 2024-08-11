@@ -46,6 +46,22 @@ func (s *AdvertisementsRepository) GetAdvertisements(c *fiber.Ctx) error {
 		"data":    advertisementsGet,
 	})
 }
+func (s *AdvertisementsRepository) GetAdsUser(c *fiber.Ctx) error {
+	nameUser := c.Context().UserValue("nameUser").(string)
+
+	advertisementsGet, err := s.Servise.GetAdsUser(nameUser)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    advertisementsGet,
+	})
+}
+
 func (s *AdvertisementsRepository) CreateAdvertisement(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
