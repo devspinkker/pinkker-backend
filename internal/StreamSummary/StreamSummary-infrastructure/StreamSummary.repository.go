@@ -313,17 +313,6 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		"$inc": bson.M{
 			"ImpressionsPerDay.$[elem].Impressions": 1,
 		},
-		"$setOnInsert": bson.M{
-			"ImpressionsPerDay": bson.M{
-				"$each": []bson.M{
-					{
-						"Date":        currentDate,
-						"Impressions": 1,
-					},
-				},
-				"$position": -1,
-			},
-		},
 	}
 
 	// Filtros de array para encontrar la fecha actual
@@ -333,11 +322,30 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		},
 	}
 
-	_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, updateImpressionsPerDay, options.Update().SetArrayFilters(arrayFilter))
+	// Ejecutar la actualización de impresiones diarias
+	updateResult, err := GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, updateImpressionsPerDay, options.Update().SetArrayFilters(arrayFilter))
 	if err != nil {
 		return err
 	}
 
+	// Si no se actualizó ningún documento, crear un nuevo registro para la fecha actual
+	if updateResult.MatchedCount == 0 {
+		newDateUpdate := bson.M{
+			"$addToSet": bson.M{
+				"ImpressionsPerDay": bson.M{
+					"Date":        currentDate,
+					"Impressions": 1,
+				},
+			},
+		}
+
+		_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, newDateUpdate)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Establecer el valor en Redis
 	err = r.redisClient.Set(ctx, key, "true", time.Minute*5).Err()
 	if err != nil {
 		return err
