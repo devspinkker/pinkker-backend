@@ -4,6 +4,7 @@ import (
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -321,7 +322,11 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 	}
 
 	// Si no se actualizó ningún documento, crear un nuevo registro para la fecha actual
+	fmt.Println("here1")
+	fmt.Println(updateResult.MatchedCount)
+
 	if updateResult.MatchedCount == 0 {
+		fmt.Println("here")
 		newDateUpdate := bson.M{
 			"$addToSet": bson.M{
 				"ImpressionsPerDay": bson.M{
