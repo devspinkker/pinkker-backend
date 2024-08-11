@@ -11,6 +11,7 @@ import (
 type Advertisements struct {
 	ID                     primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
 	Name                   string               `json:"Name" bson:"Name"`
+	NameUser               string               `json:"NameUser" bson:"NameUser"`
 	Destination            string               `json:"Destination" bson:"Destination"` // para stream o para muro o que
 	Categorie              string               `json:"Categorie" bson:"Categorie"`
 	Impressions            int                  `json:"Impressions" bson:"Impressions"`
@@ -35,6 +36,7 @@ type AdvertisementGet struct {
 type UpdateAdvertisement struct {
 	ID                    primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Name                  string             `json:"Name" bson:"Name"`
+	NameUser              string             `json:"NameUser" bson:"NameUser"`
 	Destination           string             `json:"Destination" bson:"Destination"` // para stream o para muro o que
 	Categorie             string             `json:"Categorie" bson:"Categorie"`
 	ImpressionsMax        int                `json:"ImpressionsMax" bson:"ImpressionsMax"`
