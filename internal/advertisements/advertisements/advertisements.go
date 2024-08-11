@@ -22,8 +22,13 @@ type Advertisements struct {
 	ClicksMax              int                  `json:"ClicksMax" bson:"ClicksMax"`
 	DocumentToBeAnnounced  primitive.ObjectID   `json:"DocumentToBeAnnounced" bson:"DocumentToBeAnnounced"`
 	IdOfTheUsersWhoClicked []primitive.ObjectID `json:"IdOfTheUsersWhoClicked" bson:"IdOfTheUsersWhoClicked"`
+	ClicksPerDay           []ClicksPerDay       `json:"ClicksPerDay" bson:"ClicksPerDay"` // Nuevo campo
 }
 
+type ClicksPerDay struct {
+	Date   string `json:"Date" bson:"Date"`
+	Clicks int    `json:"Clicks" bson:"Clicks"`
+}
 type AdvertisementGet struct {
 	Code string `json:"Code"`
 }
