@@ -25,6 +25,76 @@ func NewadvertisementsRepository(redisClient *redis.Client, mongoClient *mongo.C
 		mongoClient: mongoClient,
 	}
 }
+func (r *AdvertisementsRepository) IdOfTheUsersWhoClicked(IdU primitive.ObjectID, idAdvertisements primitive.ObjectID) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Advertisements")
+	ctx := context.TODO()
+
+	// Obtener la fecha actual en formato de cadena (YYYY-MM-DD)
+	currentDate := time.Now().Format("2006-01-02")
+
+	// Filtro para encontrar el documento relevante
+	filter := bson.M{
+		"_id": idAdvertisements,
+		// "IdOfTheUsersWhoClicked": bson.M{"$ne": IdU},
+	}
+
+	// Actualización para añadir el ID y manejar la longitud de la lista, y agregar clics por día
+	update := bson.M{
+		"$push": bson.M{
+			"IdOfTheUsersWhoClicked": bson.M{
+				"$each":     []primitive.ObjectID{IdU},
+				"$position": -1,
+				"$slice":    -50,
+			},
+		},
+		"$inc": bson.M{
+			"Clicks": 1,
+		},
+		"$setOnInsert": bson.M{
+			"": []bson.M{
+				{"Date": currentDate, "Clicks": 1},
+			},
+		},
+	}
+
+	// Opciones para definir el arrayFilters
+	options := options.Update().SetArrayFilters(options.ArrayFilters{
+		Filters: []interface{}{
+			bson.M{"element.Date": currentDate},
+		},
+	}).SetUpsert(true) // Upsert para insertar si no existe
+
+	// Ejecutar la actualización
+	result, err := collection.UpdateOne(ctx, filter, update, options)
+	if err != nil {
+		return err
+	}
+
+	// Si no se actualizó ningún documento, significa que no existe un registro para la fecha actual
+	if result.ModifiedCount == 0 {
+		// Insertar un nuevo objeto para la fecha actual
+		newDateUpdate := bson.M{
+			"$push": bson.M{
+				"ClicksPerDay": bson.M{
+					"Date":   currentDate,
+					"Clicks": 1,
+				},
+			},
+			"$inc": bson.M{
+				"Clicks": 1,
+			},
+		}
+
+		_, err = collection.UpdateOne(ctx, filter, newDateUpdate)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *AdvertisementsRepository) AdvertisementsGet() ([]advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	Advertisements := db.Collection("Advertisements")
@@ -86,6 +156,7 @@ func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateA
 	documento.ClicksMax = ad.ClicksMax
 	documento.DocumentToBeAnnounced = ad.DocumentToBeAnnounced
 	documento.IdOfTheUsersWhoClicked = []primitive.ObjectID{}
+	documento.ClicksPerDay = []advertisements.ClicksPerDay{}
 
 	_, err := collection.InsertOne(context.Background(), documento)
 	if err != nil {
@@ -121,72 +192,6 @@ func (r *AdvertisementsRepository) UpdateAdvertisement(ad advertisements.UpdateA
 	}
 
 	return updatedAd, nil
-}
-
-func (r *AdvertisementsRepository) IdOfTheUsersWhoClicked(IdU primitive.ObjectID, idAdvertisements primitive.ObjectID) error {
-	db := r.mongoClient.Database("PINKKER-BACKEND")
-	collection := db.Collection("Advertisements")
-	ctx := context.TODO()
-
-	// Obtener la fecha actual en formato de cadena (YYYY-MM-DD)
-	currentDate := time.Now().Format("2006-01-02")
-
-	// Filtro para encontrar el documento relevante
-	filter := bson.M{
-		"_id": idAdvertisements,
-		// "IdOfTheUsersWhoClicked": bson.M{"$ne": IdU},
-	}
-
-	// Actualización para añadir el ID y manejar la longitud de la lista, y agregar clics por día
-	update := bson.M{
-		"$push": bson.M{
-			"IdOfTheUsersWhoClicked": bson.M{
-				"$each":     []primitive.ObjectID{IdU},
-				"$position": -1,
-				"$slice":    -50,
-			},
-		},
-		"$inc": bson.M{
-			"Clicks":                         1,
-			"ClicksPerDay.$[element].Clicks": 1, // Incrementa los clics para la fecha actual
-		},
-	}
-
-	// Opciones para definir el arrayFilters
-	options := options.Update().SetArrayFilters(options.ArrayFilters{
-		Filters: []interface{}{
-			bson.M{"element.Date": currentDate},
-		},
-	})
-
-	// Ejecutar la actualización
-	result, err := collection.UpdateOne(ctx, filter, update, options)
-	if err != nil {
-		return err
-	}
-
-	// Si no se actualizó ningún documento, significa que no existe un registro para la fecha actual, así que lo creamos
-	if result.MatchedCount == 0 {
-		// Insertar un nuevo objeto para la fecha actual
-		newDateUpdate := bson.M{
-			"$addToSet": bson.M{
-				"ClicksPerDay": advertisements.ClicksPerDay{
-					Date:   currentDate,
-					Clicks: 1,
-				},
-			},
-			"$inc": bson.M{
-				"Clicks": 1,
-			},
-		}
-
-		_, err = collection.UpdateOne(ctx, filter, newDateUpdate)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (r *AdvertisementsRepository) DeleteAdvertisement(id primitive.ObjectID) error {
