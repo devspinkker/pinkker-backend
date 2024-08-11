@@ -339,14 +339,14 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 			},
 		}
 
-		_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, newDateUpdate)
+		_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, bson.M{"_id": AddAds.AdvertisementsId}, newDateUpdate)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Establecer el valor en Redis
-	err = r.redisClient.Set(ctx, key, "true", time.Minute*5).Err()
+	err = r.redisClient.Set(ctx, key, "true", time.Minute*1).Err()
 	if err != nil {
 		return err
 	}
