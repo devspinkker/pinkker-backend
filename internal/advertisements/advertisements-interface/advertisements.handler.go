@@ -3,6 +3,7 @@ package advertisementsinterface
 import (
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	advertisementsapplication "PINKKER-BACKEND/internal/advertisements/advertisements-application"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -26,6 +27,7 @@ func (s *AdvertisementsRepository) GetAdvertisements(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
+
 	var req advertisements.AdvertisementGet
 
 	if err := c.BodyParser(&req); err != nil {
@@ -34,7 +36,15 @@ func (s *AdvertisementsRepository) GetAdvertisements(c *fiber.Ctx) error {
 			"err":     err.Error(),
 		})
 	}
-	advertisementsGet, err := s.Servise.GetAdvertisements(idValueObj, req)
+
+	page, err := strconv.ParseInt(c.Query("page", "1"), 10, 64)
+	if err != nil || page < 1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "InvalidPageNumber",
+		})
+	}
+
+	advertisementsGet, err := s.Servise.GetAdvertisements(idValueObj, req, page)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -46,6 +56,7 @@ func (s *AdvertisementsRepository) GetAdvertisements(c *fiber.Ctx) error {
 		"data":    advertisementsGet,
 	})
 }
+
 func (s *AdvertisementsRepository) GetAdsUser(c *fiber.Ctx) error {
 	nameUser := c.Context().UserValue("nameUser").(string)
 
@@ -61,7 +72,34 @@ func (s *AdvertisementsRepository) GetAdsUser(c *fiber.Ctx) error {
 		"data":    advertisementsGet,
 	})
 }
+func (s *AdvertisementsRepository) GetAdsUserCode(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var req advertisements.GetAdsUserCode
 
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"err":     err.Error(),
+		})
+	}
+	advertisementsGet, err := s.Servise.GetAdsUserCode(req, idValueObj)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    advertisementsGet,
+	})
+}
 func (s *AdvertisementsRepository) CreateAdvertisement(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)

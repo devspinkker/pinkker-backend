@@ -16,19 +16,30 @@ func NewAdvertisementsService(AdvertisementsRepository *advertisementsinfrastruc
 		AdvertisementsRepository: AdvertisementsRepository,
 	}
 }
-func (s *AdvertisementsService) GetAdvertisements(StreamerID primitive.ObjectID, data advertisements.AdvertisementGet) ([]advertisements.Advertisements, error) {
+func (s *AdvertisementsService) GetAdvertisements(StreamerID primitive.ObjectID, data advertisements.AdvertisementGet, page int64) ([]advertisements.Advertisements, error) {
 	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
 	if err != nil {
 		return []advertisements.Advertisements{}, err
 	}
-	advertisementsGet, err := s.AdvertisementsRepository.AdvertisementsGet()
+	advertisementsGet, err := s.AdvertisementsRepository.AdvertisementsGet(page)
 	return advertisementsGet, err
 }
+
 func (s *AdvertisementsService) GetAdsUser(NameUser string) ([]advertisements.Advertisements, error) {
 
 	advertisementsGet, err := s.AdvertisementsRepository.GetAdsUser(NameUser)
 	return advertisementsGet, err
 }
+
+func (s *AdvertisementsService) GetAdsUserCode(data advertisements.GetAdsUserCode, StreamerID primitive.ObjectID) ([]advertisements.Advertisements, error) {
+	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
+	if err != nil {
+		return []advertisements.Advertisements{}, err
+	}
+	advertisementsGet, err := s.AdvertisementsRepository.GetAdsUser(data.NameUser)
+	return advertisementsGet, err
+}
+
 func (s *AdvertisementsService) CreateAdvertisement(StreamerID primitive.ObjectID, data advertisements.UpdateAdvertisement) (advertisements.Advertisements, error) {
 	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
 	if err != nil {

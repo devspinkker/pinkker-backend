@@ -103,15 +103,17 @@ func (r *AdvertisementsRepository) IdOfTheUsersWhoClicked(IdU primitive.ObjectID
 	return nil
 }
 
-func (r *AdvertisementsRepository) AdvertisementsGet() ([]advertisements.Advertisements, error) {
+func (r *AdvertisementsRepository) AdvertisementsGet(page int64) ([]advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	Advertisements := db.Collection("Advertisements")
 
 	ctx := context.TODO()
 
 	findOptions := options.Find()
+	findOptions.SetLimit(6)
+	findOptions.SetSkip((page - 1) * 6)
 
-	cursor, err := Advertisements.Find(ctx, findOptions)
+	cursor, err := Advertisements.Find(ctx, bson.M{}, findOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +133,8 @@ func (r *AdvertisementsRepository) AdvertisementsGet() ([]advertisements.Adverti
 	}
 
 	return advertisementsArray, nil
-
 }
+
 func (r *AdvertisementsRepository) GetAdsUser(NameUser string) ([]advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	Advertisements := db.Collection("Advertisements")
