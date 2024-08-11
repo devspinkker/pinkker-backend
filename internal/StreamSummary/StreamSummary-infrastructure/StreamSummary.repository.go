@@ -247,18 +247,20 @@ func (r *StreamSummaryRepository) UpdateStreamSummary(StreamerID primitive.Objec
 func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds StreamSummarydomain.AddAds) error {
 	ctx := context.Background()
 
+	// Inicializar colecciones
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
 	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
 	GoMongoDBCollAdvertisements := GoMongoDB.Collection("Advertisements")
 
+	// Verificar si el usuario existe
 	filter := bson.M{"_id": idValueObj}
-
 	result := GoMongoDBCollUsers.FindOne(ctx, filter)
 	if result.Err() != nil {
 		return result.Err()
 	}
 
+	// Verificar si la entrada ya existe en Redis
 	key := "ADS_" + idValueObj.Hex()
 	exists, err := r.redisClient.Exists(ctx, key).Result()
 	if err != nil {
@@ -287,18 +289,26 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		return err
 	}
 
-	// Actualización del conteo de impresiones y impresiones diarias en el anuncio
-	advertisementFilter := bson.M{"_id": AddAds.AdvertisementsId}
+	// Obtener la fecha actual
+	currentDate := time.Now().Format("2006-01-02")
 
 	// Actualización principal para impresiones
+	advertisementFilter := bson.M{"_id": AddAds.AdvertisementsId}
+
+	// Actualización para incrementar el conteo total de impresiones
 	updateImpressions := bson.M{
 		"$inc": bson.M{
 			"Impressions": 1,
 		},
 	}
 
+	// Ejecutar la actualización de impresiones
+	_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, updateImpressions)
+	if err != nil {
+		return err
+	}
+
 	// Actualización para impresiones diarias
-	currentDate := time.Now().Format("2006-01-02")
 	updateImpressionsPerDay := bson.M{
 		"$inc": bson.M{
 			"ImpressionsPerDay.$[elem].Impressions": 1,
@@ -321,12 +331,6 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		Filters: []interface{}{
 			bson.M{"elem.Date": currentDate},
 		},
-	}
-
-	// Actualizar las impresiones y las impresiones diarias
-	_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, updateImpressions, options.Update().SetArrayFilters(arrayFilter))
-	if err != nil {
-		return err
 	}
 
 	_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, updateImpressionsPerDay, options.Update().SetArrayFilters(arrayFilter))
