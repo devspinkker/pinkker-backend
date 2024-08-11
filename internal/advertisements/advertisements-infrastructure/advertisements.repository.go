@@ -166,6 +166,7 @@ func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateA
 	documento.DocumentToBeAnnounced = ad.DocumentToBeAnnounced
 	documento.IdOfTheUsersWhoClicked = []primitive.ObjectID{}
 	documento.ClicksPerDay = []advertisements.ClicksPerDay{}
+	documento.ImpressionsPerDay = []advertisements.ImpressionsPerDay{}
 
 	_, err := collection.InsertOne(context.Background(), documento)
 	if err != nil {

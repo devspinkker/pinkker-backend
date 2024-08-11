@@ -179,11 +179,11 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			AverageViewers = AverageViewers / totalCount
 		}
 
-		AverageAdPaymentInStreams, err := r.AverageAdPaymentInStreams(ctx, latestSummary.Advertisements)
-
-		if err != nil {
-			return LastStreamSummary, err
-		}
+		// AverageAdPaymentInStreams, err := r.AverageAdPaymentInStreams(ctx, latestSummary.Advertisements)
+		// if err != nil {
+		// 	return LastStreamSummary, err
+		// }
+		AverageAdPaymentInStreams := latestSummary.Advertisements * 10
 
 		err = r.PayUserForStreamsAd(ctx, AverageAdPaymentInStreams, userFind.ID, GoMongoDBCollUsers)
 
@@ -273,7 +273,7 @@ func (r *StreamRepository) AverageAdPaymentInStreams(ctx context.Context, Advert
 	return 0, nil
 }
 
-func (r *StreamRepository) PayUserForStreamsAd(ctx context.Context, averageAdPayment float64, idUser primitive.ObjectID, coll *mongo.Collection) error {
+func (r *StreamRepository) PayUserForStreamsAd(ctx context.Context, averageAdPayment int, idUser primitive.ObjectID, coll *mongo.Collection) error {
 	filter := bson.D{{Key: "_id", Value: idUser}}
 
 	update := bson.D{

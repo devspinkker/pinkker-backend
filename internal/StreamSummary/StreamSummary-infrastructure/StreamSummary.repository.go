@@ -268,6 +268,7 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		return nil
 	}
 
+	// Obtener el resumen del stream más reciente
 	filterSummary := bson.M{"StreamerID": AddAds.StreamerID}
 	opts := options.FindOne().SetSort(bson.D{{Key: "StartOfStream", Value: -1}})
 	var streamSummary StreamSummarydomain.StreamSummary
@@ -276,6 +277,7 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		return err
 	}
 
+	// Actualización del conteo de anuncios en el resumen del stream
 	updateStream := bson.M{
 		"$inc": bson.M{"Advertisements": 1},
 	}
@@ -285,14 +287,54 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		return err
 	}
 
+	// Actualización del conteo de impresiones y impresiones diarias en el anuncio
 	advertisementFilter := bson.M{"_id": AddAds.AdvertisementsId}
-	advertisementUpdate := bson.M{"$inc": bson.M{"Impressions": 1}}
-	_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, advertisementUpdate)
+
+	// Actualización principal para impresiones
+	updateImpressions := bson.M{
+		"$inc": bson.M{
+			"Impressions": 1,
+		},
+	}
+
+	// Actualización para impresiones diarias
+	currentDate := time.Now().Format("2006-01-02")
+	updateImpressionsPerDay := bson.M{
+		"$inc": bson.M{
+			"ImpressionsPerDay.$[elem].Impressions": 1,
+		},
+		"$setOnInsert": bson.M{
+			"ImpressionsPerDay": bson.M{
+				"$each": []bson.M{
+					{
+						"Date":        currentDate,
+						"Impressions": 1,
+					},
+				},
+				"$position": -1,
+			},
+		},
+	}
+
+	// Filtros de array para encontrar la fecha actual
+	arrayFilter := options.ArrayFilters{
+		Filters: []interface{}{
+			bson.M{"elem.Date": currentDate},
+		},
+	}
+
+	// Actualizar las impresiones y las impresiones diarias
+	_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, updateImpressions, options.Update().SetArrayFilters(arrayFilter))
 	if err != nil {
 		return err
 	}
 
-	err = r.redisClient.Set(ctx, key, "true", time.Minute).Err()
+	_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, updateImpressionsPerDay, options.Update().SetArrayFilters(arrayFilter))
+	if err != nil {
+		return err
+	}
+
+	err = r.redisClient.Set(ctx, key, "true", time.Minute*5).Err()
 	if err != nil {
 		return err
 	}
