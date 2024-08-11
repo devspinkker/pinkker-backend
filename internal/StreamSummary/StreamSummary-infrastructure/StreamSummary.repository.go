@@ -325,7 +325,7 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 	fmt.Println("here1")
 	fmt.Println(updateResult.MatchedCount)
 
-	if updateResult.MatchedCount == 0 {
+	if updateResult.ModifiedCount == 0 {
 		fmt.Println("here")
 		newDateUpdate := bson.M{
 			"$addToSet": bson.M{

@@ -84,7 +84,7 @@ func (r *AdvertisementsRepository) IdOfTheUsersWhoClicked(IdU primitive.ObjectID
 		return err
 	}
 
-	if result.MatchedCount == 0 {
+	if result.ModifiedCount == 0 {
 		newDateUpdate := bson.M{
 			"$addToSet": bson.M{
 				"ClicksPerDay": bson.M{
