@@ -247,20 +247,17 @@ func (r *StreamSummaryRepository) UpdateStreamSummary(StreamerID primitive.Objec
 func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds StreamSummarydomain.AddAds) error {
 	ctx := context.Background()
 
-	// Inicializar colecciones
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
 	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
 	GoMongoDBCollAdvertisements := GoMongoDB.Collection("Advertisements")
 
-	// Verificar si el usuario existe
 	filter := bson.M{"_id": idValueObj}
 	result := GoMongoDBCollUsers.FindOne(ctx, filter)
 	if result.Err() != nil {
 		return result.Err()
 	}
 
-	// Verificar si la entrada ya existe en Redis
 	key := "ADS_" + idValueObj.Hex()
 	exists, err := r.redisClient.Exists(ctx, key).Result()
 	if err != nil {
@@ -270,7 +267,6 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		return nil
 	}
 
-	// Obtener el resumen del stream más reciente
 	filterSummary := bson.M{"StreamerID": AddAds.StreamerID}
 	opts := options.FindOne().SetSort(bson.D{{Key: "StartOfStream", Value: -1}})
 	var streamSummary StreamSummarydomain.StreamSummary
@@ -289,10 +285,8 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		return err
 	}
 
-	// Obtener la fecha actual
 	currentDate := time.Now().Format("2006-01-02")
 
-	// Actualización principal para impresiones
 	advertisementFilter := bson.M{"_id": AddAds.AdvertisementsId}
 
 	// Actualización para incrementar el conteo total de impresiones
@@ -315,14 +309,12 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		},
 	}
 
-	// Filtros de array para encontrar la fecha actual
 	arrayFilter := options.ArrayFilters{
 		Filters: []interface{}{
 			bson.M{"elem.Date": currentDate},
 		},
 	}
 
-	// Ejecutar la actualización de impresiones diarias
 	updateResult, err := GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, updateImpressionsPerDay, options.Update().SetArrayFilters(arrayFilter))
 	if err != nil {
 		return err
