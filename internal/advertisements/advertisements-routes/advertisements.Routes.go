@@ -24,5 +24,5 @@ func AdvertisementsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB 
 	App.Post("/advertisements/IdOfTheUsersWhoClicked", middleware.UseExtractor(), Handler.IdOfTheUsersWhoClicked)
 
 	App.Get("/advertisements/GetAdsUser", middleware.UseExtractor(), Handler.GetAdsUser)
-	App.Get("/advertisements/GetAdsUserCode", middleware.UseExtractor(), Handler.GetAdsUserCode)
+	App.Post("/advertisements/GetAdsUserCode", middleware.UseExtractor(), Handler.GetAdsUserCode)
 }
