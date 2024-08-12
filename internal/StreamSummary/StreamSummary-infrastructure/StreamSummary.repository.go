@@ -285,7 +285,7 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		return err
 	}
 
-	currentDate := time.Now().Format("2006-01-02")
+	currentDate := time.Now().AddDate(0, 0, 3).Format("2006-01-02")
 
 	advertisementFilter := bson.M{"_id": AddAds.AdvertisementsId}
 
