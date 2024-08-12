@@ -31,7 +31,7 @@ func (r *AdvertisementsRepository) IdOfTheUsersWhoClicked(IdU primitive.ObjectID
 	collection := db.Collection("Advertisements")
 	ctx := context.TODO()
 
-	currentDate := time.Now().Format("2006-01-02")
+	currentDate := time.Now().AddDate(0, 0, 3).Format("2006-01-02")
 
 	filter := bson.M{
 		"_id":                    idAdvertisements,
