@@ -490,9 +490,31 @@ func (r *StreamRepository) UpdateModChatSlowMode(updateInfo streamdomain.UpdateM
 		return err
 	}
 
+	notification := map[string]interface{}{
+		"action":      "ModSlowMode",
+		"ModSlowMode": updateInfo.ModSlowMode,
+	}
+	r.PublishAction(previousStream.ID.Hex()+"action", notification)
 	return nil
 }
 
+func (r *StreamRepository) PublishAction(roomID string, noty map[string]interface{}) error {
+
+	chatMessageJSON, err := json.Marshal(noty)
+	if err != nil {
+		return err
+	}
+	err = r.redisClient.Publish(
+		context.Background(),
+		roomID,
+		string(chatMessageJSON),
+	).Err()
+	if err != nil {
+		return err
+	}
+
+	return err
+}
 func (r *StreamRepository) AddCommercialInStream(CommercialInStream int, id primitive.ObjectID) error {
 
 	userFilter := bson.M{"_id": id}
@@ -920,6 +942,11 @@ func (r *StreamRepository) UpdateModChat(updateInfo streamdomain.UpdateModChat, 
 			return err
 		}
 	}
+	notification := map[string]interface{}{
+		"action":  "ModChat",
+		"ModChat": updateInfo.Mod,
+	}
+	r.PublishAction(previousStream.ID.Hex()+"action", notification)
 	return nil
 }
 
