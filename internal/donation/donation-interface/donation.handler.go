@@ -67,6 +67,13 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 			"message": errdonatePixels.Error(),
 		})
 	}
+
+	LatestStreamSummaryByUpdate := d.VodServise.LatestStreamSummaryByUpdateDonations(idReq.ToUser, idReq.Pixeles)
+	if LatestStreamSummaryByUpdate != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": LatestStreamSummaryByUpdate.Error(),
+		})
+	}
 	d.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", nameUser, idReq.Pixeles, idReq.Text)
 	d.NotifyActivityToChat(idReq.ToUser, nameUser, idReq.Pixeles, idReq.Text)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{

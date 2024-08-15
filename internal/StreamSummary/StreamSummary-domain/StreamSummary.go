@@ -23,6 +23,9 @@ type StreamSummary struct {
 	StartSubsCount       int                `json:"StartSubsCount" bson:"StartSubsCount"`
 	StreamCategory       string             `json:"stream_category" bson:"StreamCategory"`
 	Admoney              float64            `json:"Admoney" bson:"Admoney"`
+	SubscriptionsMoney   float64            `json:"SubscriptionsMoney" bson:"SubscriptionsMoney"`
+	DonationsMoney       float64            `json:"DonationsMoney" bson:"DonationsMoney"`
+	TotalMoney           float64            `json:"TotalMoney" bson:"TotalMoney"`
 }
 type StreamSummaryGet struct {
 	Title               string             `json:"Title" bson:"Title"`

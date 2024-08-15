@@ -105,3 +105,16 @@ func ResendDominio() string {
 	}
 	return os.Getenv("RESENDDOMINIO")
 }
+
+func AdvertisementsPayPerPrint() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("AdvertisementsPayPerPrint")
+}
+func SubsPayPerPrint() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("SubsPayPerPrint")
+}

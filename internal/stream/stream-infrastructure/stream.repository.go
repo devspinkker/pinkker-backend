@@ -1,6 +1,7 @@
 package streaminfrastructure
 
 import (
+	"PINKKER-BACKEND/config"
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
@@ -10,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -56,13 +58,11 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 		{Key: "KeyTransmission", Value: Key},
 	}
 
-	var userFind userdomain.User
-	err = GoMongoDBCollUsers.FindOne(ctx, filterUsers).Decode(&userFind)
+	userFind, err := r.getUser(filterUsers)
 	if err != nil {
 		session.AbortTransaction(ctx)
 		return LastStreamSummary, err
 	}
-
 	filterStreams := bson.D{
 		{Key: "StreamerID", Value: userFind.ID},
 	}
@@ -124,8 +124,8 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 				return LastStreamSummary, err
 			}
 		}
-		startFollowersCount := len(userFind.Followers)
-		startSubsCount := len(userFind.Subscriptions)
+		startFollowersCount := userFind.FollowersCount
+		startSubsCount := userFind.SubscribersCount
 
 		// aqui quiero crear el resumen del Stream con valores predeterminnados
 		summary := StreamSummarydomain.StreamSummary{
@@ -144,6 +144,9 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			StreamThumbnail:      StreamFind.StreamThumbnail,
 			StreamCategory:       StreamFind.StreamCategory,
 			Admoney:              0,
+			SubscriptionsMoney:   0,
+			DonationsMoney:       0,
+			TotalMoney:           0,
 		}
 
 		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
@@ -161,8 +164,8 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			session.AbortTransaction(ctx)
 			return LastStreamSummary, err
 		}
-		newFollowersCount := len(userFind.Followers) - latestSummary.StartFollowersCount
-		newSubsCount := len(userFind.Subscriptions) - latestSummary.StartSubsCount
+		newFollowersCount := userFind.FollowersCount - latestSummary.StartFollowersCount
+		newSubsCount := userFind.SubscribersCount - latestSummary.StartSubsCount
 		AverageViewers := 0
 		maxViewers := 0
 		totalCount := 0
@@ -183,13 +186,26 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 		// if err != nil {
 		// 	return LastStreamSummary, err
 		// }
-		AverageAdPaymentInStreams := latestSummary.Advertisements * 10
+		AdvertisementsPayPerPrint := config.AdvertisementsPayPerPrint()
+		intValue, err := strconv.Atoi(AdvertisementsPayPerPrint)
+		if err != nil {
+			fmt.Printf("el valor  no es un número válido, usando 10 como valor predeterminado")
+			intValue = 10
+		}
+		AverageAdPaymentInStreams := latestSummary.Advertisements * intValue
 
 		err = r.PayUserForStreamsAd(ctx, AverageAdPaymentInStreams, userFind.ID, GoMongoDBCollUsers)
 
 		if err != nil {
 			return LastStreamSummary, err
 		}
+		SubsPayPerPrint := config.SubsPayPerPrint()
+		moneySubs, err := strconv.Atoi(SubsPayPerPrint)
+		if err != nil {
+			fmt.Printf("el valor SubsPayPerPrint no es un número válido, usando 1000 como valor predeterminado")
+			intValue = 1000
+		}
+		incTotalMoney := AverageAdPaymentInStreams + moneySubs
 		updateSummary := bson.D{
 			{Key: "$set", Value: bson.D{
 				{Key: "EndOfStream", Value: time.Now()},
@@ -201,6 +217,10 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 				{Key: "StreamThumbnail", Value: StreamFind.StreamThumbnail},
 				{Key: "StreamCategory", Value: StreamFind.StreamCategory},
 				{Key: "Admoney", Value: AverageAdPaymentInStreams},
+				{Key: "SubscriptionsMoney", Value: moneySubs},
+			}},
+			{Key: "$inc", Value: bson.D{
+				{Key: "TotalMoney", Value: incTotalMoney},
 			}},
 		}
 
@@ -234,7 +254,48 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 
 	return LastStreamSummary, nil
 }
+func (r *StreamRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
+	GoMongoDBCollUsers := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+
+		bson.D{{Key: "$addFields", Value: bson.D{
+			// Contar el número de seguidores
+			{Key: "FollowersCount", Value: bson.D{
+				{Key: "$size", Value: bson.D{
+					{Key: "$ifNull", Value: bson.A{"$Followers", bson.D{}}},
+				}},
+			}},
+			{Key: "SubscribersCount", Value: bson.D{
+				{Key: "$size", Value: bson.D{
+					{Key: "$ifNull", Value: bson.A{"$Suscribers", bson.D{}}},
+				}},
+			}},
+		}}},
+
+		// Proyección para excluir campos si es necesario
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Followers", Value: 0},
+			{Key: "Suscribers", Value: 0},
+		}}},
+	}
+
+	cursor, err := GoMongoDBCollUsers.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var user userdomain.GetUser
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+	}
+
+	return &user, nil
+}
 func (r *StreamRepository) AverageAdPaymentInStreams(ctx context.Context, Advertisements int) (float64, error) {
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollAdvertisements := GoMongoDB.Collection("Advertisements")

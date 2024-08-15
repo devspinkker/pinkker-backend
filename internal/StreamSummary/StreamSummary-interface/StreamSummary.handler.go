@@ -3,6 +3,7 @@ package StreamSummaryinterfaces
 import (
 	StreamSummaryapplication "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-application"
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -206,5 +207,33 @@ func (s *StreamSummaryHandler) GetLastSixStreamSummaries(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 		"data":    LastSixStreamSummaries,
+	})
+}
+func (s *StreamSummaryHandler) AWeekOfStreaming(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, err := primitive.ObjectIDFromHex(idValue)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid user ID",
+		})
+	}
+
+	page, err := strconv.ParseInt(c.Query("page", "1"), 10, 64)
+	if err != nil || page < 1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid page number",
+		})
+	}
+
+	LastWeekStreamSummaries, err := s.StreamSummaryServise.AWeekOfStreaming(idValueObj, int(page))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    LastWeekStreamSummaries,
 	})
 }

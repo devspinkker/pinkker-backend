@@ -38,7 +38,6 @@ type User struct {
 		Active bool      `json:"active,omitempty" bson:"Active,omitempty"`
 		Date   time.Time `json:"date,omitempty" bson:"Date,omitempty"`
 	} `json:"Partner,omitempty" bson:"Partner"`
-	Suscribers    []string `json:"suscribers,omitempty" bson:"Suscribers"`
 	SocialNetwork struct {
 		Facebook  string `json:"facebook,omitempty" bson:"facebook"`
 		Twitter   string `json:"twitter,omitempty" bson:"twitter"`
@@ -253,8 +252,9 @@ type GetUser struct {
 	UserFriendsNotifications int    `json:"userFriendsNotifications,omitempty" bson:"UserFriendsNotifications"`
 	// Following                map[primitive.ObjectID]FollowInfo `json:"Following" bson:"Following"`
 	// Followers                map[primitive.ObjectID]FollowInfo `json:"Followers" bson:"Followers"`
-	FollowersCount int       `json:"FollowersCount" bson:"FollowersCount"`
-	Timestamp      time.Time `json:"Timestamp" bson:"Timestamp"`
+	FollowersCount   int       `json:"FollowersCount" bson:"FollowersCount"`
+	SubscribersCount int       `json:"SubscribersCount" bson:"SubscribersCount"`
+	Timestamp        time.Time `json:"Timestamp" bson:"Timestamp"`
 	// Likes                    []primitive.ObjectID              `json:"Likes" bson:"Likes"`
 	Wallet string `json:"Wallet" bson:"Wallet"`
 	Online bool   `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`

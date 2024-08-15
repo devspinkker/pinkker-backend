@@ -31,7 +31,10 @@ func (D *DonationService) UserHasNumberPikels(FromUser primitive.ObjectID, Pixel
 	err := D.DonationRepository.UserHasNumberPikels(FromUser, Pixeles)
 	return err
 }
-
+func (D *DonationService) LatestStreamSummaryByUpdateDonations(FromUser primitive.ObjectID, pixeles float64) error {
+	err := D.DonationRepository.LatestStreamSummaryByUpdateDonations(FromUser, pixeles)
+	return err
+}
 func (D *DonationService) StateTheUserInChat(Donado primitive.ObjectID, Donante primitive.ObjectID) (bool, error) {
 	return D.DonationRepository.StateTheUserInChat(Donado, Donante)
 }

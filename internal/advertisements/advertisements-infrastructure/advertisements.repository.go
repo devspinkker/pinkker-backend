@@ -1,10 +1,13 @@
 package advertisementsinfrastructure
 
 import (
+	"PINKKER-BACKEND/config"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"fmt"
+	"log"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -183,7 +186,11 @@ func (r *AdvertisementsRepository) AutCode(id primitive.ObjectID, code string) e
 func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateAdvertisement) (advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("Advertisements")
-
+	AdvertisementsPayPerPrint := config.AdvertisementsPayPerPrint()
+	floatValue, err := strconv.ParseFloat(AdvertisementsPayPerPrint, 64)
+	if err != nil {
+		log.Fatalf("error al convertir el valor")
+	}
 	var documento advertisements.Advertisements
 	documento.Name = ad.Name
 	documento.NameUser = ad.NameUser
@@ -192,7 +199,7 @@ func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateA
 	documento.UrlVideo = ad.UrlVideo
 	documento.ReferenceLink = ad.ReferenceLink
 	documento.ImpressionsMax = ad.ImpressionsMax
-	documento.PayPerPrint = 10
+	documento.PayPerPrint = floatValue
 	documento.Impressions = 0
 	documento.ClicksMax = ad.ClicksMax
 	documento.DocumentToBeAnnounced = ad.DocumentToBeAnnounced
@@ -200,7 +207,7 @@ func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateA
 	documento.ClicksPerDay = []advertisements.ClicksPerDay{}
 	documento.ImpressionsPerDay = []advertisements.ImpressionsPerDay{}
 
-	_, err := collection.InsertOne(context.Background(), documento)
+	_, err = collection.InsertOne(context.Background(), documento)
 	if err != nil {
 		return advertisements.Advertisements{}, err
 	}

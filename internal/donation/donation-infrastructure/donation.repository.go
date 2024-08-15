@@ -17,6 +17,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type DonationRepository struct {
@@ -91,6 +92,35 @@ func (d *DonationRepository) UserHasNumberPikels(FromUser primitive.ObjectID, Pi
 	}
 	return nil
 }
+func (D *DonationRepository) LatestStreamSummaryByUpdateDonations(streamerID primitive.ObjectID, pixeles float64) error {
+	ctx := context.Background()
+
+	// Conexión a la base de datos y colección
+	GoMongoDB := D.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
+
+	filter := bson.M{
+		"StreamerID": streamerID,
+	}
+
+	update := bson.M{
+		"$inc": bson.M{
+			"DonationsMoney": pixeles,
+			"TotalMoney":     pixeles,
+		},
+	}
+
+	opts := options.FindOneAndUpdate().SetSort(bson.D{{Key: "StartOfStream", Value: -1}}).SetReturnDocument(options.After)
+
+	// Ejecutar la actualización
+	result := GoMongoDBCollStreamSummary.FindOneAndUpdate(ctx, filter, update, opts)
+	if err := result.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (D *DonationRepository) GetWebSocketClientsInRoom(roomID string) ([]*websocket.Conn, error) {
 	clients, err := utils.NewChatService().GetWebSocketClientsInRoom(roomID)
 

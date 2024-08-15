@@ -34,6 +34,10 @@ func (s *StreamSummaryService) GetLastSixStreamSummaries(Streamer primitive.Obje
 	StreamSummarydomain, err := s.StreamSummaryRepository.GetLastSixStreamSummariesBeforeDate(Streamer, date)
 	return StreamSummarydomain, err
 }
+func (s *StreamSummaryService) AWeekOfStreaming(Streamer primitive.ObjectID, page int) ([]StreamSummarydomain.StreamSummary, error) {
+	StreamSummarydomain, err := s.StreamSummaryRepository.AWeekOfStreaming(Streamer, page)
+	return StreamSummarydomain, err
+}
 func (s *StreamSummaryService) GeStreamSummaries(Streamer primitive.ObjectID) (*StreamSummarydomain.StreamSummaryGet, error) {
 	GetStreamSummaryByID, err := s.StreamSummaryRepository.GetStreamSummaryByID(Streamer)
 	return GetStreamSummaryByID, err

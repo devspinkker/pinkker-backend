@@ -21,6 +21,8 @@ func StreamSummaryRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *
 	App.Post("StreamSummary/AdsAdd", middleware.UseExtractor(), StreamSummary.AddAds)
 
 	App.Post("StreamSummary/GetLastSixStreamSummaries", middleware.UseExtractor(), StreamSummary.GetLastSixStreamSummaries)
+	App.Get("StreamSummary/AWeekOfStreaming", middleware.UseExtractor(), StreamSummary.AWeekOfStreaming)
+
 	App.Post("StreamSummary/AverageViewers", StreamSummary.AverageViewers)
 
 	App.Get("StreamSummary/GeStreamSummaries", StreamSummary.GeStreamSummaries)

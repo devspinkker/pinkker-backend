@@ -3,6 +3,7 @@ package userinfrastructure
 import (
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	domain "PINKKER-BACKEND/internal/user/user-domain"
+	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"PINKKER-BACKEND/pkg/authGoogleAuthenticator"
 	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/utils"
@@ -165,17 +166,16 @@ func (u *UserRepository) ChangeNameUserCodeAdmin(changeNameUser domain.ChangeNam
 }
 
 func (u *UserRepository) doesUserExist(ctx context.Context, db *mongo.Database, nameUser string) bool {
-    GoMongoDBCollUsers := db.Collection("Users")
+	GoMongoDBCollUsers := db.Collection("Users")
 
-    filter := bson.M{"NameUser": bson.M{"$regex": "^" + nameUser + "$", "$options": "i"}}
+	filter := bson.M{"NameUser": bson.M{"$regex": "^" + nameUser + "$", "$options": "i"}}
 
-    count, err := GoMongoDBCollUsers.CountDocuments(ctx, filter)
-    if err != nil {
-        return false
-    }
-    return count > 0
+	count, err := GoMongoDBCollUsers.CountDocuments(ctx, filter)
+	if err != nil {
+		return false
+	}
+	return count > 0
 }
-
 
 func (u *UserRepository) updateUserInformationInAllRooms(ctx context.Context, db *mongo.Database, changeNameUser domain.ChangeNameUser) error {
 	GoMongoDBCollUsers := db.Collection("UserInformationInAllRooms")
@@ -1055,22 +1055,30 @@ func (u *UserRepository) RedisGetChangeGoogleAuthenticatorCode(code string) (*do
 	return &user, nil
 }
 
-func (u *UserRepository) getUser(filter bson.D) (*domain.GetUser, error) {
+func (u *UserRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: filter}},
+
 		bson.D{{Key: "$addFields", Value: bson.D{
+			// Contar el número de seguidores
 			{Key: "FollowersCount", Value: bson.D{
 				{Key: "$size", Value: bson.D{
-					{Key: "$objectToArray", Value: bson.D{
-						{Key: "$ifNull", Value: bson.A{"$Followers", bson.D{}}},
-					}},
+					{Key: "$ifNull", Value: bson.A{"$Followers", bson.D{}}},
+				}},
+			}},
+			{Key: "SubscribersCount", Value: bson.D{
+				{Key: "$size", Value: bson.D{
+					{Key: "$ifNull", Value: bson.A{"$Suscribers", bson.D{}}},
 				}},
 			}},
 		}}},
+
+		// Proyección para excluir campos si es necesario
 		bson.D{{Key: "$project", Value: bson.D{
-			{Key: "Followers", Value: 0}, // Excluir el campo Followers si es necesario
+			{Key: "Followers", Value: 0},
+			{Key: "Suscribers", Value: 0},
 		}}},
 	}
 

@@ -420,3 +420,51 @@ func (r *StreamSummaryRepository) GetLastSixStreamSummariesBeforeDate(StreamerID
 
 	return summaries, nil
 }
+func (r *StreamSummaryRepository) AWeekOfStreaming(StreamerID primitive.ObjectID, page int) ([]StreamSummarydomain.StreamSummary, error) {
+	ctx := context.Background()
+
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
+
+	now := time.Now()
+	startOfWeek := now.AddDate(0, 0, -((int(now.Weekday()) + 6) % 7))
+
+	startDate := startOfWeek.AddDate(0, 0, (page-1)*7)
+	endDate := startDate.AddDate(0, 0, 7)
+
+	filter := bson.M{
+		"StreamerID": StreamerID,
+		"StartOfStream": bson.M{
+			"$gte": startDate,
+			"$lt":  endDate,
+		},
+	}
+
+	pageSize := 12
+
+	opts := options.Find().
+		SetSort(bson.D{{Key: "StartOfStream", Value: -1}}).
+		SetSkip(int64((page - 1) * pageSize)).
+		SetLimit(int64(pageSize))
+
+	cursor, err := GoMongoDBCollStreamSummary.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var summaries []StreamSummarydomain.StreamSummary
+	for cursor.Next(ctx) {
+		var summary StreamSummarydomain.StreamSummary
+		if err := cursor.Decode(&summary); err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, summary)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return summaries, nil
+}
