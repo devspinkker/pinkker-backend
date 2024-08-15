@@ -205,7 +205,8 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			fmt.Printf("el valor SubsPayPerPrint no es un número válido, usando 1000 como valor predeterminado")
 			intValue = 1000
 		}
-		incTotalMoney := AverageAdPaymentInStreams + moneySubs
+		TotalSubsSummaryMoney := newSubsCount * moneySubs
+		incTotalMoney := AverageAdPaymentInStreams + TotalSubsSummaryMoney
 		updateSummary := bson.D{
 			{Key: "$set", Value: bson.D{
 				{Key: "EndOfStream", Value: time.Now()},
