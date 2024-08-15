@@ -259,22 +259,21 @@ func (r *StreamRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
 
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: filter}},
-
 		bson.D{{Key: "$addFields", Value: bson.D{
-			// Contar el número de seguidores
 			{Key: "FollowersCount", Value: bson.D{
 				{Key: "$size", Value: bson.D{
-					{Key: "$ifNull", Value: bson.A{"$Followers", bson.D{}}},
+					{Key: "$ifNull", Value: bson.A{
+						bson.D{{Key: "$objectToArray", Value: "$Followers"}},
+						bson.A{},
+					}},
 				}},
 			}},
 			{Key: "SubscribersCount", Value: bson.D{
 				{Key: "$size", Value: bson.D{
-					{Key: "$ifNull", Value: bson.A{"$Subscribers", bson.D{}}},
+					{Key: "$ifNull", Value: bson.A{"$Subscribers", bson.A{}}},
 				}},
 			}},
 		}}},
-
-		// Proyección para excluir campos si es necesario
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "Followers", Value: 0},
 			{Key: "Subscribers", Value: 0},
