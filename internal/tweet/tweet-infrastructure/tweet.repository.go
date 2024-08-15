@@ -42,11 +42,8 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 	// Ejecutar pipeline principal para obtener tweets relevantes
 	tweetsWithUserInfo, err := t.getRelevantTweets(ctx, idT, collTweets, excludeFilter, last24Hours, limit)
 	if err != nil {
-		fmt.Println("xs 1")
-		fmt.Println(err)
 		return nil, err
 	}
-	fmt.Println("xs")
 	// Calcular el nuevo límite para el pipeline secundario
 	newLimit := limit - len(tweetsWithUserInfo)
 	if newLimit > 0 {
@@ -179,11 +176,6 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 			{Key: "_id", Value: bson.D{}},
 			{Key: "followingIDs", Value: bson.D{{Key: "$push", Value: "$Following.k"}}},
 		}}},
-		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "followingIDs", Value: bson.D{
-				{Key: "$ifNull", Value: bson.A{"$followingIDs", bson.A{}}},
-			}},
-		}}},
 	}
 
 	cursor, err := userCollection.Aggregate(ctx, userPipeline)
@@ -210,25 +202,28 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 		}}},
 		bson.D{{Key: "$match", Value: excludeFilter}},
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
+			{Key: "isFollowingUser", Value: bson.D{
+				{Key: "$in", Value: bson.A{"$UserID", bson.D{
+					{Key: "$ifNull", Value: bson.A{followingIDs, bson.A{}}},
+				}}},
+			}},
+			// {Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
 			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", followingIDs}}}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 			{Key: "RePostsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$RePosts", bson.A{}}}}}}},
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, "$Likes"}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
 				// Ponderar más fuertemente los posts de los usuarios seguidos
-				bson.D{{Key: "$multiply", Value: bson.A{
-					bson.D{{Key: "$cond", Value: bson.D{
-						{Key: "if", Value: "$isFollowingUser"},
-						{Key: "then", Value: 5}, // Mayor ponderación para los posts de usuarios seguidos
-						{Key: "else", Value: 0},
-					}}},
-					3,
-				}}},
+				bson.D{{Key: "$multiply", Value: bson.A{bson.D{{Key: "$cond", Value: bson.D{
+					{Key: "if", Value: "$isFollowingUser"},
+					{Key: "then", Value: 5}, // Mayor ponderación para los posts de usuarios seguidos
+					{Key: "else", Value: 0},
+				}}}, 3}}},
+				// Ponderar más fuertemente los "me gusta" de los usuarios seguidos
 				bson.D{{Key: "$multiply", Value: bson.A{
 					bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$likedByFollowing", bson.A{}}}}}},
 					5,
@@ -239,10 +234,7 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 					2,
 				}}},
 				// Frescura del post
-				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{
-					bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}},
-					3600000,
-				}}}}}},
+				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}},
 			}}}},
 		}}},
 		bson.D{{Key: "$lookup", Value: bson.D{
@@ -264,12 +256,14 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 			{Key: "TimeStamp", Value: 1},
 			{Key: "UserID", Value: 1},
 			{Key: "Comments", Value: 1},
+
 			{Key: "OriginalPost", Value: 1},
 			{Key: "Views", Value: 1},
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
 			{Key: "likeCount", Value: 1},
+
 			{Key: "RePostsCount", Value: 1},
 			{Key: "CommentsCount", Value: 1},
 			{Key: "isLikedByID", Value: 1},
