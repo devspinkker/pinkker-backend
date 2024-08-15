@@ -176,6 +176,11 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 			{Key: "_id", Value: bson.D{}},
 			{Key: "followingIDs", Value: bson.D{{Key: "$push", Value: "$Following.k"}}},
 		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "followingIDs", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{"$followingIDs", bson.A{}}},
+			}},
+		}}},
 	}
 
 	cursor, err := userCollection.Aggregate(ctx, userPipeline)
