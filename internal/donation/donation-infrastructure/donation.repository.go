@@ -95,7 +95,6 @@ func (d *DonationRepository) UserHasNumberPikels(FromUser primitive.ObjectID, Pi
 func (D *DonationRepository) LatestStreamSummaryByUpdateDonations(streamerID primitive.ObjectID, pixeles float64) error {
 	ctx := context.Background()
 
-	// Conexión a la base de datos y colección
 	GoMongoDB := D.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
 
@@ -112,7 +111,6 @@ func (D *DonationRepository) LatestStreamSummaryByUpdateDonations(streamerID pri
 
 	opts := options.FindOneAndUpdate().SetSort(bson.D{{Key: "StartOfStream", Value: -1}}).SetReturnDocument(options.After)
 
-	// Ejecutar la actualización
 	result := GoMongoDBCollStreamSummary.FindOneAndUpdate(ctx, filter, update, opts)
 	if err := result.Err(); err != nil {
 		return err

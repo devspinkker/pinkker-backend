@@ -236,7 +236,7 @@ type GetUser struct {
 		Active bool      `json:"active,omitempty" bson:"Active,omitempty"`
 		Date   time.Time `json:"date,omitempty" bson:"Date,omitempty"`
 	} `json:"Partner,omitempty" bson:"Partner"`
-	Suscribers    []string `json:"suscribers,omitempty" bson:"Suscribers"`
+	// Suscribers    []string `json:"suscribers,omitempty" bson:"Suscribers"`
 	SocialNetwork struct {
 		Facebook  string `json:"facebook,omitempty" bson:"facebook"`
 		Twitter   string `json:"twitter,omitempty" bson:"twitter"`

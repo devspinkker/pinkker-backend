@@ -269,7 +269,7 @@ func (r *StreamRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
 			}},
 			{Key: "SubscribersCount", Value: bson.D{
 				{Key: "$size", Value: bson.D{
-					{Key: "$ifNull", Value: bson.A{"$Suscribers", bson.D{}}},
+					{Key: "$ifNull", Value: bson.A{"$Subscribers", bson.D{}}},
 				}},
 			}},
 		}}},
@@ -277,7 +277,7 @@ func (r *StreamRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
 		// Proyección para excluir campos si es necesario
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "Followers", Value: 0},
-			{Key: "Suscribers", Value: 0},
+			{Key: "Subscribers", Value: 0},
 		}}},
 	}
 
