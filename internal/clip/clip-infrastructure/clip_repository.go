@@ -193,8 +193,12 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Co
 		// Aplicar filtro adicional para excluir ciertos clips
 		bson.D{{Key: "$match", Value: excludeFilter}},
 		// Agregar campos auxiliares
+		bson.D{{Key: "isFollowingUser", Value: bson.D{
+			{Key: "$in", Value: bson.A{"$UserID", bson.D{
+				{Key: "$ifNull", Value: bson.A{followingIDs, bson.A{}}},
+			}}},
+		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
 		}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
