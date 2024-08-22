@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -160,7 +161,23 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
+	idValue := c.Context().UserValue("_id").(string)
+	nameUser := c.Context().UserValue("nameUser").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusNetworkAuthenticationRequired).JSON(fiber.Map{
+			"message": "StatusNetworkAuthenticationRequired",
+			"data":    errorID,
+		})
+	}
+	errTimeOutClipCreate := clip.ClipService.TimeOutClipCreate(idValueObj)
 
+	if errTimeOutClipCreate != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errTimeOutClipCreate.Error(),
+		})
+	}
 	if err := clipRequest.ValidateClipRequest(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
@@ -190,12 +207,32 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := ioutil.WriteFile(videoPath, clipRequest.Video, os.ModePerm); err != nil {
+	videoData := clipRequest.Video
+	if len(videoData) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "No video data provided",
+		})
+	}
+
+	// Obtener las claves y ordenarlas
+	keys := make([]int, 0, len(videoData))
+	for k := range videoData {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+
+	// Construir el slice de bytes basado en las claves ordenadas
+	var byteSlice []byte
+	for _, k := range keys {
+		byteSlice = append(byteSlice, videoData[k])
+	}
+	if err := ioutil.WriteFile(videoPath, byteSlice, os.ModePerm); err != nil {
 		return c.Status(fiber.StatusInsufficientStorage).JSON(fiber.Map{
 			"message": "Error al escribir el archivo de video",
 			"data":    err.Error(),
 		})
 	}
+
 	defer func() {
 
 		if _, err := os.Stat(videoDir); err == nil {
@@ -233,15 +270,6 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 		})
 	}
 
-	idValue := c.Context().UserValue("_id").(string)
-	nameUser := c.Context().UserValue("nameUser").(string)
-	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
-	if errorID != nil {
-		return c.Status(fiber.StatusNetworkAuthenticationRequired).JSON(fiber.Map{
-			"message": "StatusNetworkAuthenticationRequired",
-			"data":    err,
-		})
-	}
 	clipCreated, err := clip.ClipService.CreateClip(idValueObj, totalKey, nameUser, ClipTitle, outputFilePath)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

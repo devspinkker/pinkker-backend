@@ -1,16 +1,27 @@
-FROM golang:latest
+# Usar la imagen base de Go 1.20
+FROM golang:1.20-alpine as build
 
+# Establecer el directorio de trabajo
 WORKDIR /app
 
-COPY go.mod go.sum ./
-
-RUN go mod download
-
+# Copiar los archivos de la aplicación
 COPY . .
 
-COPY .env .
-RUN go build -o myapp ./cmd
+# Descargar las dependencias y construir la aplicación
+RUN go mod download
+RUN go build -o main .
 
-EXPOSE 8080
+# Crear una imagen mínima para ejecutar la aplicación
+FROM alpine:latest
 
-CMD ["./myapp"]
+# Copiar el ejecutable desde la fase de construcción
+COPY --from=build /app/main .
+
+# Copiar el archivo .env al contenedor
+COPY --from=build /app/.env .env
+
+# Exponer el puerto en el que se ejecutará la aplicación
+EXPOSE 8084
+
+# Definir el comando de inicio
+CMD ["./main"]
