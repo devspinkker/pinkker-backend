@@ -6,11 +6,12 @@ import (
 	clipdomain "PINKKER-BACKEND/internal/clip/clip-domain"
 	"PINKKER-BACKEND/pkg/helpers"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -161,6 +162,7 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
+
 	idValue := c.Context().UserValue("_id").(string)
 	nameUser := c.Context().UserValue("nameUser").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
@@ -170,20 +172,22 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			"data":    errorID,
 		})
 	}
-	errTimeOutClipCreate := clip.ClipService.TimeOutClipCreate(idValueObj)
 
+	errTimeOutClipCreate := clip.ClipService.TimeOutClipCreate(idValueObj)
 	if errTimeOutClipCreate != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 			"data":    errTimeOutClipCreate.Error(),
 		})
 	}
+
 	if err := clipRequest.ValidateClipRequest(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 			"data":    err.Error(),
 		})
 	}
+
 	ClipTitle := clipRequest.ClipTitle
 	totalKey := clipRequest.TotalKey
 
@@ -197,7 +201,7 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 
 	baseDir := filepath.Join(currentDir, "clips_recortes")
 	videoDir := filepath.Join(baseDir, uuid.NewString())
-	videoPath := filepath.Join(videoDir, "input.mp4")
+	concatenatedFilePath := filepath.Join(videoDir, "input.ts")
 	outputFilePath := filepath.Join(videoDir, "output.mp4")
 
 	if err := os.MkdirAll(videoDir, os.ModePerm); err != nil {
@@ -207,34 +211,44 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 		})
 	}
 
-	videoData := clipRequest.Video
+	// Obtener los datos de video
+	videoData := clipRequest.TsUrls
 	if len(videoData) == 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "No video data provided",
 		})
 	}
 
-	// Obtener las claves y ordenarlas
-	keys := make([]int, 0, len(videoData))
-	for k := range videoData {
-		keys = append(keys, k)
-	}
-	sort.Ints(keys)
-
-	// Construir el slice de bytes basado en las claves ordenadas
-	var byteSlice []byte
-	for _, k := range keys {
-		byteSlice = append(byteSlice, videoData[k])
-	}
-	if err := ioutil.WriteFile(videoPath, byteSlice, os.ModePerm); err != nil {
-		return c.Status(fiber.StatusInsufficientStorage).JSON(fiber.Map{
-			"message": "Error al escribir el archivo de video",
+	// Descargar y concatenar segmentos .ts
+	concatenatedFile, err := os.Create(concatenatedFilePath)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error al crear archivo concatenado",
 			"data":    err.Error(),
 		})
 	}
+	defer concatenatedFile.Close()
+
+	for _, tsURL := range videoData {
+		resp, err := http.Get(tsURL)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Error al descargar segmento de video",
+				"data":    err.Error(),
+			})
+		}
+		defer resp.Body.Close()
+
+		_, err = io.Copy(concatenatedFile, resp.Body)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Error al escribir segmento de video",
+				"data":    err.Error(),
+			})
+		}
+	}
 
 	defer func() {
-
 		if _, err := os.Stat(videoDir); err == nil {
 			err := os.RemoveAll(videoDir)
 			if err != nil {
@@ -244,16 +258,16 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			fmt.Println("Error checking directory:", err.Error())
 		}
 	}()
+
+	// Convertir el archivo .ts concatenado a .mp4 usando FFmpeg
 	FFmpegPath := config.FFmpegPath()
-	// cmdSS := strconv.Itoa(clipRequest.Start)
-	// cmdT := strconv.Itoa(clipRequest.End - clipRequest.Start)
 	cmdSS := "0"
 	cmdT := "30"
 	cmd := exec.Command(
 		FFmpegPath,
-		"-ss", cmdSS, // seek time
-		"-t", cmdT, // duration
-		"-i", videoPath, // input file
+		"-ss", cmdSS,
+		"-t", cmdT,
+		"-i", concatenatedFilePath,
 		"-c:v", "libx264",
 		"-c:a", "aac",
 		"-strict", "experimental",
@@ -277,12 +291,13 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
+
 	cloudinaryResponse, err := helpers.UploadVideo(outputFilePath)
 	if err != nil {
 		fmt.Printf("Error al subir el video a Cloudinary: %v\n", err)
 	}
-	go func() {
 
+	go func() {
 		clip.ClipService.UpdateClip(clipCreated, cloudinaryResponse)
 		if _, err := os.Stat(videoDir); err == nil {
 			err := os.RemoveAll(videoDir)
@@ -293,11 +308,13 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 			fmt.Println("Error checking directory:", err.Error())
 		}
 	}()
+
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message": "StatusCreated",
 		"data":    clipCreated.ID,
 	})
 }
+
 func (clip *ClipHandler) GetClipsNameUser(c *fiber.Ctx) error {
 
 	page, errpage := strconv.Atoi(c.Query("page", "1"))

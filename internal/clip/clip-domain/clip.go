@@ -54,11 +54,11 @@ type GetClip struct {
 }
 
 type ClipRequest struct {
-	Video     map[int]uint8 `json:"video"`
-	Start     int           `json:"start" validate:"required"`
-	End       int           `json:"end" validate:"required"`
-	ClipTitle string        `json:"clipTitle" validate:"required,min=2,max=100"`
-	TotalKey  string        `json:"totalKey" validate:"required"`
+	TsUrls    []string `json:"tsUrls"`
+	Start     int      `json:"start" validate:"required"`
+	End       int      `json:"end" validate:"required"`
+	ClipTitle string   `json:"clipTitle" validate:"required,min=2,max=100"`
+	TotalKey  string   `json:"totalKey" validate:"required"`
 }
 
 func (u *ClipRequest) ValidateClipRequest() error {
