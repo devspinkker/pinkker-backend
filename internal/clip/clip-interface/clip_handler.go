@@ -173,13 +173,13 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 		})
 	}
 
-	errTimeOutClipCreate := clip.ClipService.TimeOutClipCreate(idValueObj)
-	if errTimeOutClipCreate != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "StatusBadRequest",
-			"data":    errTimeOutClipCreate.Error(),
-		})
-	}
+	// errTimeOutClipCreate := clip.ClipService.TimeOutClipCreate(idValueObj)
+	// if errTimeOutClipCreate != nil {
+	// 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+	// 		"message": "StatusBadRequest",
+	// 		"data":    errTimeOutClipCreate.Error(),
+	// 	})
+	// }
 
 	if err := clipRequest.ValidateClipRequest(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -261,13 +261,11 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 
 	// Convertir el archivo .ts concatenado a .mp4 usando FFmpeg
 	FFmpegPath := config.FFmpegPath()
-	cmdSS := "0"
-	cmdT := "30"
+
 	cmd := exec.Command(
 		FFmpegPath,
-		"-ss", cmdSS,
-		"-t", cmdT,
 		"-i", concatenatedFilePath,
+		"-t", "70",
 		"-c:v", "libx264",
 		"-c:a", "aac",
 		"-strict", "experimental",

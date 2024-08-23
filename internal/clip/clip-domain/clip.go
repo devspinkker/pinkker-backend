@@ -56,18 +56,13 @@ type GetClip struct {
 
 type ClipRequest struct {
 	TsUrls    []string `json:"tsUrls"`
-	Start     int      `json:"start" validate:"required"`
-	End       int      `json:"end" validate:"required"`
 	ClipTitle string   `json:"clipTitle" validate:"required,min=2,max=100"`
 	TotalKey  string   `json:"totalKey" validate:"required"`
 }
 
 func (u *ClipRequest) ValidateClipRequest() error {
-	if err := validateDuration(u.Start, u.End); err != nil {
-		return err
-	}
 
-	if len(u.TsUrls) > 5 {
+	if len(u.TsUrls) > 8 || len(u.TsUrls) < 2 {
 		return errors.New("TsUrls cannot have more than 5 elements")
 	}
 
@@ -81,22 +76,6 @@ func (u *ClipRequest) ValidateClipRequest() error {
 	// Validar otros campos usando el validador estándar
 	validate := validator.New()
 	return validate.Struct(u)
-}
-
-// Función de ejemplo para validar la duración entre Start y End
-func validateDuration(start, end int) error {
-	if start < 0 || start > end || end < 10 {
-		return errors.New("start y end deben ser valores no negativos y start debe ser menor o igual que end, y end debe ser mayor o igual a 10")
-	}
-
-	duration := end - start
-	minDuration := 10
-	maxDuration := 60
-	if duration < minDuration || duration > maxDuration {
-		return errors.New("la duración del clip debe estar entre 10 y 60 segundos")
-	}
-
-	return nil
 }
 
 type GetClipId struct {
