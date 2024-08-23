@@ -2,6 +2,7 @@ package clipdomain
 
 import (
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator"
@@ -66,10 +67,23 @@ func (u *ClipRequest) ValidateClipRequest() error {
 		return err
 	}
 
+	if len(u.TsUrls) > 5 {
+		return errors.New("TsUrls cannot have more than 5 elements")
+	}
+
+	const urlPrefix = "https://www.pinkker.tv/8002/stream"
+	for _, url := range u.TsUrls {
+		if !strings.HasPrefix(url, urlPrefix) {
+			return errors.New("all TsUrls must start with " + urlPrefix)
+		}
+	}
+
+	// Validar otros campos usando el validador estándar
 	validate := validator.New()
 	return validate.Struct(u)
 }
 
+// Función de ejemplo para validar la duración entre Start y End
 func validateDuration(start, end int) error {
 	if start < 0 || start > end || end < 10 {
 		return errors.New("start y end deben ser valores no negativos y start debe ser menor o igual que end, y end debe ser mayor o igual a 10")
