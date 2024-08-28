@@ -61,3 +61,9 @@ type AddAds struct {
 type AverageViewers struct {
 	StreamerID primitive.ObjectID `json:"StreamerID" bson:"StreamerID"`
 }
+
+type Earnings struct {
+	Admoney            float64 `json:"Admoney"`
+	SubscriptionsMoney float64 `json:"SubscriptionsMoney"`
+	DonationsMoney     float64 `json:"DonationsMoney"`
+}

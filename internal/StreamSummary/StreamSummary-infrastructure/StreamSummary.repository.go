@@ -25,6 +25,238 @@ func NewStreamSummaryRepository(redisClient *redis.Client, mongoClient *mongo.Cl
 		mongoClient: mongoClient,
 	}
 }
+func (r *StreamSummaryRepository) GetEarningsByDay(streamerID primitive.ObjectID, day time.Time) (StreamSummarydomain.Earnings, error) {
+	ctx := context.Background()
+
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	startOfDay := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC)
+	endOfDay := startOfDay.Add(24 * time.Hour)
+
+	filter := bson.M{
+		"StreamerID": streamerID,
+		"StartOfStream": bson.M{
+			"$gte": startOfDay,
+			"$lt":  endOfDay,
+		},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: nil},
+			{Key: "TotalAdmoney", Value: bson.D{{Key: "$sum", Value: "$Admoney"}}},
+			{Key: "TotalSubscriptionsMoney", Value: bson.D{{Key: "$sum", Value: "$SubscriptionsMoney"}}},
+			{Key: "TotalDonationsMoney", Value: bson.D{{Key: "$sum", Value: "$DonationsMoney"}}},
+		}}},
+	}
+
+	opts := options.Aggregate()
+
+	cursor, err := collection.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return StreamSummarydomain.Earnings{}, err
+	}
+	defer cursor.Close(ctx)
+
+	var result []struct {
+		TotalAdmoney            float64 `bson:"TotalAdmoney"`
+		TotalSubscriptionsMoney float64 `bson:"TotalSubscriptionsMoney"`
+		TotalDonationsMoney     float64 `bson:"TotalDonationsMoney"`
+	}
+
+	if err := cursor.All(ctx, &result); err != nil {
+		return StreamSummarydomain.Earnings{}, err
+	}
+
+	if len(result) == 0 {
+		return StreamSummarydomain.Earnings{}, nil // or return an empty Earnings struct with zero values
+	}
+
+	earnings := StreamSummarydomain.Earnings{
+		Admoney:            result[0].TotalAdmoney,
+		SubscriptionsMoney: result[0].TotalSubscriptionsMoney,
+		DonationsMoney:     result[0].TotalDonationsMoney,
+	}
+
+	return earnings, nil
+}
+
+func (r *StreamSummaryRepository) GetEarningsByWeek(streamerID primitive.ObjectID, week time.Time) (StreamSummarydomain.Earnings, error) {
+	ctx := context.Background()
+
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	startOfWeek := week.AddDate(0, 0, -int(week.Weekday()))
+	endOfWeek := startOfWeek.Add(7 * 24 * time.Hour)
+
+	filter := bson.M{
+		"StreamerID": streamerID,
+		"StartOfStream": bson.M{
+			"$gte": startOfWeek,
+			"$lt":  endOfWeek,
+		},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: nil},
+			{Key: "TotalAdmoney", Value: bson.D{{Key: "$sum", Value: "$Admoney"}}},
+			{Key: "TotalSubscriptionsMoney", Value: bson.D{{Key: "$sum", Value: "$SubscriptionsMoney"}}},
+			{Key: "TotalDonationsMoney", Value: bson.D{{Key: "$sum", Value: "$DonationsMoney"}}},
+		}}},
+	}
+
+	opts := options.Aggregate()
+
+	cursor, err := collection.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return StreamSummarydomain.Earnings{}, err
+	}
+	defer cursor.Close(ctx)
+
+	var result []struct {
+		TotalAdmoney            float64 `bson:"TotalAdmoney"`
+		TotalSubscriptionsMoney float64 `bson:"TotalSubscriptionsMoney"`
+		TotalDonationsMoney     float64 `bson:"TotalDonationsMoney"`
+	}
+
+	if err := cursor.All(ctx, &result); err != nil {
+		return StreamSummarydomain.Earnings{}, err
+	}
+
+	if len(result) == 0 {
+		return StreamSummarydomain.Earnings{}, nil // or return an empty Earnings struct with zero values
+	}
+
+	earnings := StreamSummarydomain.Earnings{
+		Admoney:            result[0].TotalAdmoney,
+		SubscriptionsMoney: result[0].TotalSubscriptionsMoney,
+		DonationsMoney:     result[0].TotalDonationsMoney,
+	}
+
+	return earnings, nil
+}
+
+func (r *StreamSummaryRepository) GetEarningsByMonth(streamerID primitive.ObjectID, month time.Time) (StreamSummarydomain.Earnings, error) {
+	ctx := context.Background()
+
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	startOfMonth := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, time.UTC)
+	endOfMonth := startOfMonth.AddDate(0, 1, 0)
+
+	filter := bson.M{
+		"StreamerID": streamerID,
+		"StartOfStream": bson.M{
+			"$gte": startOfMonth,
+			"$lt":  endOfMonth,
+		},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: nil},
+			{Key: "TotalAdmoney", Value: bson.D{{Key: "$sum", Value: "$Admoney"}}},
+			{Key: "TotalSubscriptionsMoney", Value: bson.D{{Key: "$sum", Value: "$SubscriptionsMoney"}}},
+			{Key: "TotalDonationsMoney", Value: bson.D{{Key: "$sum", Value: "$DonationsMoney"}}},
+		}}},
+	}
+
+	opts := options.Aggregate()
+
+	cursor, err := collection.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return StreamSummarydomain.Earnings{}, err
+	}
+	defer cursor.Close(ctx)
+
+	var result []struct {
+		TotalAdmoney            float64 `bson:"TotalAdmoney"`
+		TotalSubscriptionsMoney float64 `bson:"TotalSubscriptionsMoney"`
+		TotalDonationsMoney     float64 `bson:"TotalDonationsMoney"`
+	}
+
+	if err := cursor.All(ctx, &result); err != nil {
+		return StreamSummarydomain.Earnings{}, err
+	}
+
+	if len(result) == 0 {
+		return StreamSummarydomain.Earnings{}, nil // or return an empty Earnings struct with zero values
+	}
+
+	earnings := StreamSummarydomain.Earnings{
+		Admoney:            result[0].TotalAdmoney,
+		SubscriptionsMoney: result[0].TotalSubscriptionsMoney,
+		DonationsMoney:     result[0].TotalDonationsMoney,
+	}
+
+	return earnings, nil
+}
+
+func (r *StreamSummaryRepository) GetEarningsByYear(streamerID primitive.ObjectID, year time.Time) (StreamSummarydomain.Earnings, error) {
+	ctx := context.Background()
+
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	startOfYear := time.Date(year.Year(), time.January, 1, 0, 0, 0, 0, time.UTC)
+	endOfYear := startOfYear.AddDate(1, 0, 0)
+
+	filter := bson.M{
+		"StreamerID": streamerID,
+		"StartOfStream": bson.M{
+			"$gte": startOfYear,
+			"$lt":  endOfYear,
+		},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: nil},
+			{Key: "TotalAdmoney", Value: bson.D{{Key: "$sum", Value: "$Admoney"}}},
+			{Key: "TotalSubscriptionsMoney", Value: bson.D{{Key: "$sum", Value: "$SubscriptionsMoney"}}},
+			{Key: "TotalDonationsMoney", Value: bson.D{{Key: "$sum", Value: "$DonationsMoney"}}},
+		}}},
+	}
+
+	opts := options.Aggregate()
+
+	cursor, err := collection.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return StreamSummarydomain.Earnings{}, err
+	}
+	defer cursor.Close(ctx)
+
+	var result []struct {
+		TotalAdmoney            float64 `bson:"TotalAdmoney"`
+		TotalSubscriptionsMoney float64 `bson:"TotalSubscriptionsMoney"`
+		TotalDonationsMoney     float64 `bson:"TotalDonationsMoney"`
+	}
+
+	if err := cursor.All(ctx, &result); err != nil {
+		return StreamSummarydomain.Earnings{}, err
+	}
+
+	if len(result) == 0 {
+		return StreamSummarydomain.Earnings{}, nil // or return an empty Earnings struct with zero values
+	}
+
+	earnings := StreamSummarydomain.Earnings{
+		Admoney:            result[0].TotalAdmoney,
+		SubscriptionsMoney: result[0].TotalSubscriptionsMoney,
+		DonationsMoney:     result[0].TotalDonationsMoney,
+	}
+
+	return earnings, nil
+}
+
 func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain.StreamSummaryGet, error) {
 	ctx := context.Background()
 

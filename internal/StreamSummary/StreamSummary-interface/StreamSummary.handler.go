@@ -20,6 +20,142 @@ func NewStreamSummaryService(StreamSummaryServise *StreamSummaryapplication.Stre
 	}
 }
 
+func (h *StreamSummaryHandler) GetEarningsByDay(c *fiber.Ctx) error {
+	dayStr := c.Query("day")
+	idValue := c.Context().UserValue("_id").(string)
+
+	streamerID, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	// Parse the day from the query parameter
+	day, err := time.Parse("2006-01-02", dayStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid day format, use YYYY-MM-DD",
+		})
+	}
+
+	// Get earnings by day from the service
+	earnings, err := h.StreamSummaryServise.GetEarningsByDay(streamerID, day)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get earnings by day",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    earnings,
+	})
+}
+
+// GetEarningsByWeek handles the request to get earnings for a specific week
+func (h *StreamSummaryHandler) GetEarningsByWeek(c *fiber.Ctx) error {
+	weekStr := c.Query("week")
+	idValue := c.Context().UserValue("_id").(string)
+	streamerID, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	// Parse the week start date from the query parameter
+	week, err := time.Parse("2006-01-02", weekStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid week format, use YYYY-MM-DD",
+		})
+	}
+
+	// Get earnings by week from the service
+	earnings, err := h.StreamSummaryServise.GetEarningsByWeek(streamerID, week)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get earnings by week",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    earnings,
+	})
+}
+
+// GetEarningsByMonth handles the request to get earnings for a specific month
+func (h *StreamSummaryHandler) GetEarningsByMonth(c *fiber.Ctx) error {
+	monthStr := c.Query("month")
+
+	idValue := c.Context().UserValue("_id").(string)
+
+	streamerID, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	// Parse the month from the query parameter
+	month, err := time.Parse("2006-01", monthStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid month format, use YYYY-MM",
+		})
+	}
+
+	// Get earnings by month from the service
+	earnings, err := h.StreamSummaryServise.GetEarningsByMonth(streamerID, month)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get earnings by month",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    earnings,
+	})
+}
+
+// GetEarningsByYear handles the request to get earnings for a specific year
+func (h *StreamSummaryHandler) GetEarningsByYear(c *fiber.Ctx) error {
+	yearStr := c.Query("year")
+
+	idValue := c.Context().UserValue("_id").(string)
+
+	streamerID, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	// Parse the year from the query parameter
+	year, err := time.Parse("2006", yearStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid year format, use YYYY",
+		})
+	}
+
+	// Get earnings by year from the service
+	earnings, err := h.StreamSummaryServise.GetEarningsByYear(streamerID, year)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get earnings by year",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    earnings,
+	})
+
+}
+
 func (s *StreamSummaryHandler) GeStreamSummaries(c *fiber.Ctx) error {
 	type ReqGetUserByNameUser struct {
 		ID primitive.ObjectID `json:"id" query:"id"`

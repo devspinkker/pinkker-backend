@@ -173,13 +173,13 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 		})
 	}
 
-	// errTimeOutClipCreate := clip.ClipService.TimeOutClipCreate(idValueObj)
-	// if errTimeOutClipCreate != nil {
-	// 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-	// 		"message": "StatusBadRequest",
-	// 		"data":    errTimeOutClipCreate.Error(),
-	// 	})
-	// }
+	errTimeOutClipCreate := clip.ClipService.TimeOutClipCreate(idValueObj)
+	if errTimeOutClipCreate != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errTimeOutClipCreate.Error(),
+		})
+	}
 
 	if err := clipRequest.ValidateClipRequest(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

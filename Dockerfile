@@ -7,12 +7,18 @@ WORKDIR /app
 # Copiar los archivos de la aplicación
 COPY . .
 
+# Instalar las dependencias necesarias (FFmpeg y otras)
+RUN apk add --no-cache ffmpeg
+
 # Descargar las dependencias y construir la aplicación
 RUN go mod download
 RUN go build -o main .
 
 # Crear una imagen mínima para ejecutar la aplicación
 FROM alpine:latest
+
+# Instalar FFmpeg en la imagen final
+RUN apk add --no-cache ffmpeg
 
 # Copiar el ejecutable desde la fase de construcción
 COPY --from=build /app/main .
