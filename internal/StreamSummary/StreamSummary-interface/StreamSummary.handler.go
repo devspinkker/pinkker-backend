@@ -20,6 +20,36 @@ func NewStreamSummaryService(StreamSummaryServise *StreamSummaryapplication.Stre
 	}
 }
 
+func (h *StreamSummaryHandler) GetEarningsByRange(c *fiber.Ctx) error {
+	startDateStr := c.Query("startDate")
+	endDateStr := c.Query("endDate")
+	idValue := c.Context().UserValue("_id").(string)
+
+	streamerID, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	startDate, err := time.Parse("2006-01-02", startDateStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid start date"})
+	}
+
+	endDate, err := time.Parse("2006-01-02", endDateStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid end date"})
+	}
+
+	earnings, err := h.StreamSummaryServise.GetEarningsByRange(streamerID, startDate, endDate)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get earnings"})
+	}
+
+	return c.JSON(earnings)
+}
+
 func (h *StreamSummaryHandler) GetEarningsByDay(c *fiber.Ctx) error {
 	dayStr := c.Query("day")
 	idValue := c.Context().UserValue("_id").(string)

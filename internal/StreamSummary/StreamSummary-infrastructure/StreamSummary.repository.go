@@ -25,6 +25,61 @@ func NewStreamSummaryRepository(redisClient *redis.Client, mongoClient *mongo.Cl
 		mongoClient: mongoClient,
 	}
 }
+func (r *StreamSummaryRepository) GetEarningsByRange(streamerID primitive.ObjectID, startDate, endDate time.Time) (StreamSummarydomain.Earnings, error) {
+	ctx := context.Background()
+
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	filter := bson.M{
+		"StreamerID": streamerID,
+		"StartOfStream": bson.M{
+			"$gte": startDate,
+			"$lt":  endDate,
+		},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: nil},
+			{Key: "TotalAdmoney", Value: bson.D{{Key: "$sum", Value: "$Admoney"}}},
+			{Key: "TotalSubscriptionsMoney", Value: bson.D{{Key: "$sum", Value: "$SubscriptionsMoney"}}},
+			{Key: "TotalDonationsMoney", Value: bson.D{{Key: "$sum", Value: "$DonationsMoney"}}},
+		}}},
+	}
+
+	opts := options.Aggregate()
+
+	cursor, err := collection.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return StreamSummarydomain.Earnings{}, err
+	}
+	defer cursor.Close(ctx)
+
+	var result []struct {
+		TotalAdmoney            float64 `bson:"TotalAdmoney"`
+		TotalSubscriptionsMoney float64 `bson:"TotalSubscriptionsMoney"`
+		TotalDonationsMoney     float64 `bson:"TotalDonationsMoney"`
+	}
+
+	if err := cursor.All(ctx, &result); err != nil {
+		return StreamSummarydomain.Earnings{}, err
+	}
+
+	if len(result) == 0 {
+		return StreamSummarydomain.Earnings{}, nil
+	}
+
+	earnings := StreamSummarydomain.Earnings{
+		Admoney:            result[0].TotalAdmoney,
+		SubscriptionsMoney: result[0].TotalSubscriptionsMoney,
+		DonationsMoney:     result[0].TotalDonationsMoney,
+	}
+
+	return earnings, nil
+}
+
 func (r *StreamSummaryRepository) GetEarningsByDay(streamerID primitive.ObjectID, day time.Time) (StreamSummarydomain.Earnings, error) {
 	ctx := context.Background()
 

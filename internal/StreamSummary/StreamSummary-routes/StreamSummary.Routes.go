@@ -34,5 +34,7 @@ func StreamSummaryRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *
 	App.Get("/streamers/earnings/week", middleware.UseExtractor(), StreamSummary.GetEarningsByWeek)
 	App.Get("/streamers/earnings/month", middleware.UseExtractor(), StreamSummary.GetEarningsByMonth)
 	App.Get("/streamers/earnings/year", middleware.UseExtractor(), StreamSummary.GetEarningsByYear)
+	App.Get("/streamers/earnings/year", middleware.UseExtractor(), StreamSummary.GetEarningsByYear)
+	App.Get("/streamers/earnings/range", middleware.UseExtractor(), StreamSummary.GetEarningsByRange)
 
 }

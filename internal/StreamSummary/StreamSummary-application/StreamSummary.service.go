@@ -17,6 +17,10 @@ func NewStreaSummaryService(StreamSummaryRepository *StreamSummaryinfrastructure
 		StreamSummaryRepository: StreamSummaryRepository,
 	}
 }
+func (s *StreamSummaryService) GetEarningsByRange(streamerID primitive.ObjectID, startDate time.Time, endDate time.Time) (StreamSummarydomain.Earnings, error) {
+	GetEarningsByRange, err := s.StreamSummaryRepository.GetEarningsByRange(streamerID, startDate, endDate)
+	return GetEarningsByRange, err
+}
 func (s *StreamSummaryService) GetEarningsByDay(streamerID primitive.ObjectID, Time time.Time) (StreamSummarydomain.Earnings, error) {
 	GetEarningsByDay, err := s.StreamSummaryRepository.GetEarningsByDay(streamerID, Time)
 	return GetEarningsByDay, err
