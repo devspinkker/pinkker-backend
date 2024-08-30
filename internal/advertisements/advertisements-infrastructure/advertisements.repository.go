@@ -146,7 +146,6 @@ func (r *AdvertisementsRepository) updatePinkkerProfitPerMonth(ctx context.Conte
 		},
 		"$setOnInsert": bson.M{
 			"timestamp": currentTime,
-			"total":     0,
 			"weeks":     map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
 		},
 	}

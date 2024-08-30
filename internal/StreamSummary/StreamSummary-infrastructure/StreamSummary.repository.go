@@ -760,12 +760,10 @@ func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Contex
 		},
 		"$setOnInsert": bson.M{
 			"timestamp": currentTime,
-			"total":     0,
 			"weeks":     map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
 		},
 	}
 
-	// Set the option to upsert, creating a new document if one doesn't exist
 	monthlyOpts := options.Update().SetUpsert(true)
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate, monthlyOpts)
 	if err != nil {
