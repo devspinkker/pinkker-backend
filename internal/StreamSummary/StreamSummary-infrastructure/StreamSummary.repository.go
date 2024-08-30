@@ -733,7 +733,7 @@ func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Contex
 	if err != nil {
 		log.Fatalf("error al convertir el valor: %v", err)
 	}
-	impressions := int(AdvertisementsPayPerPrintFloat) // Convert float64 to int for impressions
+	impressions := int(AdvertisementsPayPerPrintFloat)
 	currentTime := time.Now()
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
@@ -749,20 +749,22 @@ func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Contex
 		},
 	}
 
-	defaultWeek := PinkkerProfitPerMonthdomain.Week{
-		Impressions: 0,
-		Clicks:      0,
-		Pixels:      0.0,
-	}
-
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
-			"total":                                 impressions,
-			"weeks." + currentWeek + ".impressions": impressions,
+			"total":                                 AdvertisementsPayPerPrintFloat,
+			"weeks." + currentWeek + ".impressions": AdvertisementsPayPerPrintFloat,
+		},
+		"$set": bson.M{
+			"timestamp": currentTime,
 		},
 		"$setOnInsert": bson.M{
-			"timestamp": currentTime,
-			"weeks":     map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
+			"weeks": map[string]PinkkerProfitPerMonthdomain.Week{
+				currentWeek: {
+					Impressions: impressions,
+					Clicks:      0,
+					Pixels:      0.0,
+				},
+			},
 		},
 	}
 
@@ -781,7 +783,6 @@ func getWeekOfMonth(t time.Time) string {
 	dayOfWeek := int(startOfMonth.Weekday())
 	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
 
-	// Limitar el número de semanas a un máximo de 4
 	if weekNumber > 4 {
 		weekNumber = 4
 	}

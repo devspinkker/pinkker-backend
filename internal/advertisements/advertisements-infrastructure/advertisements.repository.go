@@ -114,10 +114,12 @@ func (r *AdvertisementsRepository) updatePinkkerProfitPerMonth(ctx context.Conte
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
 	AdvertisementsPayPerPrint := config.AdvertisementsPayClicks()
+
 	AdvertisementsClicks, err := strconv.ParseFloat(AdvertisementsPayPerPrint, 64)
 	if err != nil {
-		log.Fatalf("error al convertir el valor")
+		log.Fatalf("error al convertir el valor: %v", err)
 	}
+
 	currentTime := time.Now()
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
@@ -139,15 +141,18 @@ func (r *AdvertisementsRepository) updatePinkkerProfitPerMonth(ctx context.Conte
 		Pixels:      0.0,
 	}
 
-	// Combined update operation
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
 			"total":                            AdvertisementsClicks,
 			"weeks." + currentWeek + ".clicks": AdvertisementsClicks,
 		},
-		"$setOnInsert": bson.M{
+		"$set": bson.M{
 			"timestamp": currentTime,
-			"weeks":     map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
+		},
+		"$setOnInsert": bson.M{
+			"weeks": map[string]PinkkerProfitPerMonthdomain.Week{
+				currentWeek: defaultWeek,
+			},
 		},
 	}
 
@@ -166,7 +171,6 @@ func getWeekOfMonth(t time.Time) string {
 	dayOfWeek := int(startOfMonth.Weekday())
 	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
 
-	// Limitar el número de semanas a un máximo de 4
 	if weekNumber > 4 {
 		weekNumber = 4
 	}
