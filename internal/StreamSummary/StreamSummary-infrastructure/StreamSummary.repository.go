@@ -731,9 +731,9 @@ func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Contex
 
 	AdvertisementsPayPerPrintFloat, err := strconv.ParseFloat(AdvertisementsPayPerPrint, 64)
 	if err != nil {
-		log.Fatalf("error al convertir el valor")
+		log.Fatalf("error al convertir el valor: %v", err)
 	}
-	impressions := int(AdvertisementsPayPerPrintFloat)
+	impressions := int(AdvertisementsPayPerPrintFloat) // Convert float64 to int for impressions
 	currentTime := time.Now()
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
@@ -749,42 +749,27 @@ func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Contex
 		},
 	}
 
-	// Check if document exists
-	var existingDoc bson.M
-	err = GoMongoDBCollMonthly.FindOne(ctx, monthlyFilter).Decode(&existingDoc)
-	if err != nil && err != mongo.ErrNoDocuments {
-		return err
+	defaultWeek := PinkkerProfitPerMonthdomain.Week{
+		Impressions: 0,
+		Clicks:      0,
+		Pixels:      0.0,
 	}
 
-	if existingDoc == nil {
-		// Insert the document if it doesn't exist
-		newDoc := bson.M{
+	monthlyUpdate := bson.M{
+		"$inc": bson.M{
+			"total":                                 impressions,
+			"weeks." + currentWeek + ".impressions": impressions,
+		},
+		"$setOnInsert": bson.M{
 			"timestamp": currentTime,
-			"total":     AdvertisementsPayPerPrintFloat,
-			"weeks": map[string]PinkkerProfitPerMonthdomain.Week{
-				currentWeek: {
-					Impressions: impressions,
-					Clicks:      0,
-					Pixels:      0.0,
-				},
-			},
-		}
-		_, err = GoMongoDBCollMonthly.InsertOne(ctx, newDoc)
-		if err != nil {
-			return err
-		}
-	} else {
-		// Update the document if it exists
-		monthlyUpdate := bson.M{
-			"$inc": bson.M{
-				"total":                                 AdvertisementsPayPerPrintFloat,
-				"weeks." + currentWeek + ".impressions": AdvertisementsPayPerPrintFloat,
-			},
-		}
-		_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
-		if err != nil {
-			return err
-		}
+			"weeks":     map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
+		},
+	}
+
+	monthlyOpts := options.Update().SetUpsert(true)
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate, monthlyOpts)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -795,6 +780,12 @@ func getWeekOfMonth(t time.Time) string {
 	dayOfMonth := t.Day()
 	dayOfWeek := int(startOfMonth.Weekday())
 	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
+
+	// Limitar el número de semanas a un máximo de 4
+	if weekNumber > 4 {
+		weekNumber = 4
+	}
+
 	return "week_" + strconv.Itoa(weekNumber)
 }
 

@@ -139,28 +139,20 @@ func (r *AdvertisementsRepository) updatePinkkerProfitPerMonth(ctx context.Conte
 		Pixels:      0.0,
 	}
 
-	// First try to increment, if the document doesn't exist it will be created
+	// Combined update operation
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
 			"total":                            AdvertisementsClicks,
 			"weeks." + currentWeek + ".clicks": AdvertisementsClicks,
 		},
-		"$set": bson.M{
+		"$setOnInsert": bson.M{
 			"timestamp": currentTime,
+			"weeks":     map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
 		},
 	}
 
 	monthlyOpts := options.Update().SetUpsert(true)
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate, monthlyOpts)
-	if err != nil {
-		return err
-	}
-
-	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
-		"$setOnInsert": bson.M{
-			"weeks": map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
-		},
-	}, monthlyOpts)
 	if err != nil {
 		return err
 	}
@@ -173,6 +165,12 @@ func getWeekOfMonth(t time.Time) string {
 	dayOfMonth := t.Day()
 	dayOfWeek := int(startOfMonth.Weekday())
 	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
+
+	// Limitar el número de semanas a un máximo de 4
+	if weekNumber > 4 {
+		weekNumber = 4
+	}
+
 	return "week_" + strconv.Itoa(weekNumber)
 }
 
