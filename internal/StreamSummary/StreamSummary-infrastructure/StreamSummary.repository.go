@@ -316,14 +316,21 @@ func (r *StreamSummaryRepository) GetDailyEarningsForMonth(streamerID primitive.
 		return nil, err
 	}
 
-	var earningsPerDay []StreamSummarydomain.EarningsPerDay
+	earningsMap := make(map[int]StreamSummarydomain.Earnings)
+
 	for _, result := range results {
-		date := time.Date(result.ID.Year, time.Month(result.ID.Month), result.ID.Day, 0, 0, 0, 0, time.UTC)
-		earnings := StreamSummarydomain.Earnings{
+		earningsMap[result.ID.Day] = StreamSummarydomain.Earnings{
 			Admoney:            result.TotalAdmoney,
 			SubscriptionsMoney: result.TotalSubscriptionsMoney,
 			DonationsMoney:     result.TotalDonationsMoney,
 		}
+	}
+
+	var earningsPerDay []StreamSummarydomain.EarningsPerDay
+
+	for day := 1; day <= endOfMonth.AddDate(0, 0, -1).Day(); day++ {
+		date := time.Date(month.Year(), month.Month(), day, 0, 0, 0, 0, time.UTC)
+		earnings := earningsMap[day] // Recoge las ganancias del mapa
 		earningsPerDay = append(earningsPerDay, StreamSummarydomain.EarningsPerDay{
 			Date:     date,
 			Earnings: earnings,
