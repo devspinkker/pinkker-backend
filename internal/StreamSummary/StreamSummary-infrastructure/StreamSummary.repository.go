@@ -257,6 +257,81 @@ func (r *StreamSummaryRepository) GetEarningsByMonth(streamerID primitive.Object
 
 	return earnings, nil
 }
+func (r *StreamSummaryRepository) GetDailyEarningsForMonth(streamerID primitive.ObjectID, month time.Time) ([]StreamSummarydomain.EarningsPerDay, error) {
+	ctx := context.Background()
+
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	startOfMonth := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, time.UTC)
+	endOfMonth := startOfMonth.AddDate(0, 1, 0)
+
+	filter := bson.M{
+		"StreamerID": streamerID,
+		"StartOfStream": bson.M{
+			"$gte": startOfMonth,
+			"$lt":  endOfMonth,
+		},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: filter}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: bson.D{
+				{Key: "year", Value: bson.D{{Key: "$year", Value: "$StartOfStream"}}},
+				{Key: "month", Value: bson.D{{Key: "$month", Value: "$StartOfStream"}}},
+				{Key: "day", Value: bson.D{{Key: "$dayOfMonth", Value: "$StartOfStream"}}},
+			}},
+			{Key: "TotalAdmoney", Value: bson.D{{Key: "$sum", Value: "$Admoney"}}},
+			{Key: "TotalSubscriptionsMoney", Value: bson.D{{Key: "$sum", Value: "$SubscriptionsMoney"}}},
+			{Key: "TotalDonationsMoney", Value: bson.D{{Key: "$sum", Value: "$DonationsMoney"}}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "_id.year", Value: 1},
+			{Key: "_id.month", Value: 1},
+			{Key: "_id.day", Value: 1},
+		}}},
+	}
+
+	opts := options.Aggregate()
+
+	cursor, err := collection.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var results []struct {
+		ID struct {
+			Year  int `bson:"year"`
+			Month int `bson:"month"`
+			Day   int `bson:"day"`
+		} `bson:"_id"`
+		TotalAdmoney            float64 `bson:"TotalAdmoney"`
+		TotalSubscriptionsMoney float64 `bson:"TotalSubscriptionsMoney"`
+		TotalDonationsMoney     float64 `bson:"TotalDonationsMoney"`
+	}
+
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	var earningsPerDay []StreamSummarydomain.EarningsPerDay
+	for _, result := range results {
+		date := time.Date(result.ID.Year, time.Month(result.ID.Month), result.ID.Day, 0, 0, 0, 0, time.UTC)
+		earnings := StreamSummarydomain.Earnings{
+			Admoney:            result.TotalAdmoney,
+			SubscriptionsMoney: result.TotalSubscriptionsMoney,
+			DonationsMoney:     result.TotalDonationsMoney,
+		}
+		earningsPerDay = append(earningsPerDay, StreamSummarydomain.EarningsPerDay{
+			Date:     date,
+			Earnings: earnings,
+		})
+	}
+
+	return earningsPerDay, nil
+}
 
 func (r *StreamSummaryRepository) GetEarningsByYear(streamerID primitive.ObjectID, year time.Time) (StreamSummarydomain.Earnings, error) {
 	ctx := context.Background()

@@ -150,6 +150,38 @@ func (h *StreamSummaryHandler) GetEarningsByMonth(c *fiber.Ctx) error {
 		"data":    earnings,
 	})
 }
+func (h *StreamSummaryHandler) GetDailyEarningsForMonth(c *fiber.Ctx) error {
+	monthStr := c.Query("month")
+
+	idValue := c.Context().UserValue("_id").(string)
+
+	streamerID, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	month, err := time.Parse("2006-01", monthStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid month format, use YYYY-MM",
+		})
+	}
+
+	// Get earnings by month from the service
+	earnings, err := h.StreamSummaryServise.GetDailyEarningsForMonth(streamerID, month)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get earnings by month",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    earnings,
+	})
+}
 
 // GetEarningsByYear handles the request to get earnings for a specific year
 func (h *StreamSummaryHandler) GetEarningsByYear(c *fiber.Ctx) error {

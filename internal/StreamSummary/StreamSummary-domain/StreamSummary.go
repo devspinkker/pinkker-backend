@@ -67,3 +67,7 @@ type Earnings struct {
 	SubscriptionsMoney float64 `json:"SubscriptionsMoney"`
 	DonationsMoney     float64 `json:"DonationsMoney"`
 }
+type EarningsPerDay struct {
+	Date     time.Time
+	Earnings Earnings
+}
