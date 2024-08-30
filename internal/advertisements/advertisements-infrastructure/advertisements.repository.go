@@ -139,20 +139,28 @@ func (r *AdvertisementsRepository) updatePinkkerProfitPerMonth(ctx context.Conte
 		Pixels:      0.0,
 	}
 
+	// First try to increment, if the document doesn't exist it will be created
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
 			"total":                            AdvertisementsClicks,
 			"weeks." + currentWeek + ".clicks": AdvertisementsClicks,
 		},
-		"$setOnInsert": bson.M{
+		"$set": bson.M{
 			"timestamp": currentTime,
-			"weeks":     map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
 		},
 	}
 
-	// Set the option to upsert, creating a new document if one doesn't exist
 	monthlyOpts := options.Update().SetUpsert(true)
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate, monthlyOpts)
+	if err != nil {
+		return err
+	}
+
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
+		"$setOnInsert": bson.M{
+			"weeks": map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
+		},
+	}, monthlyOpts)
 	if err != nil {
 		return err
 	}

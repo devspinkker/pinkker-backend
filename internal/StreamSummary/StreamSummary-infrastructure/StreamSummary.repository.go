@@ -728,10 +728,12 @@ func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Contex
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
 	AdvertisementsPayPerPrint := config.AdvertisementsPayPerPrint()
+
 	AdvertisementsPayPerPrintFloat, err := strconv.ParseFloat(AdvertisementsPayPerPrint, 64)
 	if err != nil {
 		log.Fatalf("error al convertir el valor")
 	}
+	impressions := int(AdvertisementsPayPerPrintFloat)
 	currentTime := time.Now()
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
@@ -747,27 +749,42 @@ func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Contex
 		},
 	}
 
-	defaultWeek := PinkkerProfitPerMonthdomain.Week{
-		Impressions: 0,
-		Clicks:      0,
-		Pixels:      0.0,
-	}
-
-	monthlyUpdate := bson.M{
-		"$inc": bson.M{
-			"total":                                 AdvertisementsPayPerPrintFloat,
-			"weeks." + currentWeek + ".impressions": AdvertisementsPayPerPrintFloat,
-		},
-		"$setOnInsert": bson.M{
-			"timestamp": currentTime,
-			"weeks":     map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
-		},
-	}
-
-	monthlyOpts := options.Update().SetUpsert(true)
-	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate, monthlyOpts)
-	if err != nil {
+	// Check if document exists
+	var existingDoc bson.M
+	err = GoMongoDBCollMonthly.FindOne(ctx, monthlyFilter).Decode(&existingDoc)
+	if err != nil && err != mongo.ErrNoDocuments {
 		return err
+	}
+
+	if existingDoc == nil {
+		// Insert the document if it doesn't exist
+		newDoc := bson.M{
+			"timestamp": currentTime,
+			"total":     AdvertisementsPayPerPrintFloat,
+			"weeks": map[string]PinkkerProfitPerMonthdomain.Week{
+				currentWeek: {
+					Impressions: impressions,
+					Clicks:      0,
+					Pixels:      0.0,
+				},
+			},
+		}
+		_, err = GoMongoDBCollMonthly.InsertOne(ctx, newDoc)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Update the document if it exists
+		monthlyUpdate := bson.M{
+			"$inc": bson.M{
+				"total":                                 AdvertisementsPayPerPrintFloat,
+				"weeks." + currentWeek + ".impressions": AdvertisementsPayPerPrintFloat,
+			},
+		}
+		_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
