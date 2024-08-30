@@ -2,6 +2,7 @@ package advertisementsinfrastructure
 
 import (
 	"PINKKER-BACKEND/config"
+	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
@@ -44,7 +45,7 @@ func (r *AdvertisementsRepository) IdOfTheUsersWhoClicked(IdU primitive.ObjectID
 	if err != nil {
 		return err
 	}
-
+	// si el count es 0 signnifica que ese anuncio ya lo vio ese usuario por lo que hay que retornar
 	if count == 0 {
 		return nil
 	}
@@ -65,7 +66,10 @@ func (r *AdvertisementsRepository) IdOfTheUsersWhoClicked(IdU primitive.ObjectID
 	if err != nil {
 		return err
 	}
-
+	err = r.updatePinkkerProfitPerMonth(ctx)
+	if err != nil {
+		return err
+	}
 	updatePerDay := bson.M{
 		"$inc": bson.M{
 			"ClicksPerDay.$[elem].Clicks": 1,
@@ -104,6 +108,65 @@ func (r *AdvertisementsRepository) IdOfTheUsersWhoClicked(IdU primitive.ObjectID
 	}
 
 	return nil
+}
+
+func (r *AdvertisementsRepository) updatePinkkerProfitPerMonth(ctx context.Context) error {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
+	AdvertisementsPayPerPrint := config.AdvertisementsPayClicks()
+	AdvertisementsClicks, err := strconv.ParseFloat(AdvertisementsPayPerPrint, 64)
+	if err != nil {
+		log.Fatalf("error al convertir el valor")
+	}
+	currentTime := time.Now()
+	currentMonth := int(currentTime.Month())
+	currentYear := currentTime.Year()
+	currentWeek := getWeekOfMonth(currentTime)
+
+	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
+	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
+
+	monthlyFilter := bson.M{
+		"timestamp": bson.M{
+			"$gte": startOfMonth,
+			"$lt":  startOfNextMonth,
+		},
+	}
+
+	defaultWeek := PinkkerProfitPerMonthdomain.Week{
+		Impressions: 0,
+		Clicks:      0,
+		Pixels:      0.0,
+	}
+
+	monthlyUpdate := bson.M{
+		"$inc": bson.M{
+			"total":                            AdvertisementsClicks,
+			"weeks." + currentWeek + ".clicks": AdvertisementsClicks,
+		},
+		"$setOnInsert": bson.M{
+			"timestamp": currentTime,
+			"total":     0,
+			"weeks":     map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
+		},
+	}
+
+	// Set the option to upsert, creating a new document if one doesn't exist
+	monthlyOpts := options.Update().SetUpsert(true)
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate, monthlyOpts)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getWeekOfMonth(t time.Time) string {
+	startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+	dayOfMonth := t.Day()
+	dayOfWeek := int(startOfMonth.Weekday())
+	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
+	return "week_" + strconv.Itoa(weekNumber)
 }
 
 func (r *AdvertisementsRepository) AdvertisementsGet(page int64) ([]advertisements.Advertisements, error) {
@@ -206,6 +269,7 @@ func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateA
 	documento.IdOfTheUsersWhoClicked = []primitive.ObjectID{}
 	documento.ClicksPerDay = []advertisements.ClicksPerDay{}
 	documento.ImpressionsPerDay = []advertisements.ImpressionsPerDay{}
+	documento.Timestamp = time.Now()
 
 	_, err = collection.InsertOne(context.Background(), documento)
 	if err != nil {

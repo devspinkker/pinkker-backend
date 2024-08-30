@@ -112,6 +112,12 @@ func AdvertisementsPayPerPrint() string {
 	}
 	return os.Getenv("AdvertisementsPayPerPrint")
 }
+func AdvertisementsPayClicks() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("AdvertisementsPayClicks")
+}
 func SubsPayPerPrint() string {
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("godotenv.Load error")

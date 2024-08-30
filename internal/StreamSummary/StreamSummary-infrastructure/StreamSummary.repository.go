@@ -1,9 +1,13 @@
 package StreamSummaryinfrastructure
 
 import (
+	"PINKKER-BACKEND/config"
+	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	"context"
+	"log"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -624,6 +628,10 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 			return err
 		}
 	}
+	err = r.updatePinkkerProfitPerMonth(ctx)
+	if err != nil {
+		return err
+	}
 
 	// Establecer el valor en Redis
 	err = r.redisClient.Set(ctx, key, "true", time.Minute*10).Err()
@@ -632,6 +640,65 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 	}
 
 	return nil
+}
+
+func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Context) error {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
+	AdvertisementsPayPerPrint := config.AdvertisementsPayPerPrint()
+	AdvertisementsPayPerPrintFloat, err := strconv.ParseFloat(AdvertisementsPayPerPrint, 64)
+	if err != nil {
+		log.Fatalf("error al convertir el valor")
+	}
+	currentTime := time.Now()
+	currentMonth := int(currentTime.Month())
+	currentYear := currentTime.Year()
+	currentWeek := getWeekOfMonth(currentTime)
+
+	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
+	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
+
+	monthlyFilter := bson.M{
+		"timestamp": bson.M{
+			"$gte": startOfMonth,
+			"$lt":  startOfNextMonth,
+		},
+	}
+
+	defaultWeek := PinkkerProfitPerMonthdomain.Week{
+		Impressions: 0,
+		Clicks:      0,
+		Pixels:      0.0,
+	}
+
+	monthlyUpdate := bson.M{
+		"$inc": bson.M{
+			"total":                                 AdvertisementsPayPerPrintFloat,
+			"weeks." + currentWeek + ".impressions": AdvertisementsPayPerPrintFloat,
+		},
+		"$setOnInsert": bson.M{
+			"timestamp": currentTime,
+			"total":     0,
+			"weeks":     map[string]PinkkerProfitPerMonthdomain.Week{currentWeek: defaultWeek},
+		},
+	}
+
+	// Set the option to upsert, creating a new document if one doesn't exist
+	monthlyOpts := options.Update().SetUpsert(true)
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate, monthlyOpts)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getWeekOfMonth(t time.Time) string {
+	startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+	dayOfMonth := t.Day()
+	dayOfWeek := int(startOfMonth.Weekday())
+	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
+	return "week_" + strconv.Itoa(weekNumber)
 }
 
 func (r *StreamSummaryRepository) AverageViewers(StreamerID primitive.ObjectID) error {

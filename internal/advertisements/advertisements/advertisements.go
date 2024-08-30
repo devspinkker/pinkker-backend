@@ -1,6 +1,8 @@
 package advertisements
 
 import (
+	"time"
+
 	"github.com/go-playground/validator"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -25,6 +27,7 @@ type Advertisements struct {
 	IdOfTheUsersWhoClicked []primitive.ObjectID `json:"IdOfTheUsersWhoClicked" bson:"IdOfTheUsersWhoClicked"`
 	ClicksPerDay           []ClicksPerDay       `json:"ClicksPerDay" bson:"ClicksPerDay"`
 	ImpressionsPerDay      []ImpressionsPerDay  `json:"ImpressionsPerDay" bson:"ImpressionsPerDay"`
+	Timestamp              time.Time            `json:"Timestamp" bson:"Timestamp"`
 }
 
 type ClicksPerDay struct {
