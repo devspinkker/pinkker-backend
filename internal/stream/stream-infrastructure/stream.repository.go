@@ -218,7 +218,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 				{Key: "StreamThumbnail", Value: StreamFind.StreamThumbnail},
 				{Key: "StreamCategory", Value: StreamFind.StreamCategory},
 				{Key: "Admoney", Value: AverageAdPaymentInStreams},
-				{Key: "SubscriptionsMoney", Value: moneySubs},
+				{Key: "SubscriptionsMoney", Value: TotalSubsSummaryMoney},
 			}},
 			{Key: "$inc", Value: bson.D{
 				{Key: "TotalMoney", Value: incTotalMoney},

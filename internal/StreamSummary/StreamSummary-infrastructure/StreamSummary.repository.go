@@ -750,10 +750,13 @@ func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Contex
 	}
 
 	// Paso 1: Inserta el documento si no existe con una estructura básica
-	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
+	monthlyUpdate := bson.M{
+		"$inc": bson.M{
+			"total":                                 AdvertisementsPayPerPrintFloat,
+			"weeks." + currentWeek + ".impressions": impressions,
+		},
 		"$setOnInsert": bson.M{
 			"timestamp": currentTime,
-			"total":     0.0, // o un valor inicial adecuado
 			"weeks": map[string]PinkkerProfitPerMonthdomain.Week{
 				currentWeek: {
 					Impressions: impressions,
@@ -762,23 +765,11 @@ func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Contex
 				},
 			},
 		},
-	}, options.Update().SetUpsert(true))
-	if err != nil {
-		return err
 	}
 
-	// Paso 2: Actualiza el campo anidado 'weeks'
-	monthlyUpdate := bson.M{
-		"$inc": bson.M{
-			"total":                                 AdvertisementsPayPerPrintFloat,
-			"weeks." + currentWeek + ".impressions": AdvertisementsPayPerPrintFloat,
-		},
-		"$set": bson.M{
-			"timestamp": currentTime,
-		},
-	}
+	monthlyOpts := options.Update().SetUpsert(true)
 
-	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate, monthlyOpts)
 	if err != nil {
 		return err
 	}

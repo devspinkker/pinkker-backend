@@ -109,7 +109,6 @@ func (r *AdvertisementsRepository) IdOfTheUsersWhoClicked(IdU primitive.ObjectID
 
 	return nil
 }
-
 func (r *AdvertisementsRepository) updatePinkkerProfitPerMonth(ctx context.Context) error {
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
@@ -135,36 +134,26 @@ func (r *AdvertisementsRepository) updatePinkkerProfitPerMonth(ctx context.Conte
 		},
 	}
 
-	defaultWeek := PinkkerProfitPerMonthdomain.Week{
-		Impressions: 0,
-		Clicks:      0,
-		Pixels:      0.0,
-	}
-
-	// Primero, asegurarse de que el campo 'weeks' existe con un valor predeterminado
-	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
-		"$setOnInsert": bson.M{
-			"weeks": map[string]PinkkerProfitPerMonthdomain.Week{
-				currentWeek: defaultWeek,
-			},
-		},
-	}, options.Update().SetUpsert(true))
-	if err != nil {
-		return err
-	}
-
-	// Luego, realiza la actualización en el campo anidado
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
 			"total":                            AdvertisementsClicks,
 			"weeks." + currentWeek + ".clicks": AdvertisementsClicks,
 		},
-		"$set": bson.M{
+		"$setOnInsert": bson.M{
 			"timestamp": currentTime,
+			"weeks": map[string]PinkkerProfitPerMonthdomain.Week{
+				currentWeek: {
+					Impressions: 0,
+					Clicks:      0,
+					Pixels:      0.0,
+				},
+			},
 		},
 	}
 
-	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
+	monthlyOpts := options.Update().SetUpsert(true)
+
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate, monthlyOpts)
 	if err != nil {
 		return err
 	}
@@ -184,7 +173,6 @@ func getWeekOfMonth(t time.Time) string {
 
 	return "week_" + strconv.Itoa(weekNumber)
 }
-
 func (r *AdvertisementsRepository) AdvertisementsGet(page int64) ([]advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	Advertisements := db.Collection("Advertisements")
