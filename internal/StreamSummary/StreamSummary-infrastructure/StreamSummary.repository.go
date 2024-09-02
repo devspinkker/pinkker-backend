@@ -723,7 +723,6 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 
 	return nil
 }
-
 func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Context) error {
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
@@ -749,27 +748,30 @@ func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Contex
 		},
 	}
 
-	// Paso 1: Inserta el documento si no existe con una estructura básica
+	// Paso 1: Inserta el documento si no existe con la estructura básica
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
+		"$setOnInsert": bson.M{
+			"timestamp": currentTime,
+			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.Week{
+				Impressions: 0,
+				Clicks:      0,
+				Pixels:      0.0,
+			},
+		},
+	}, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+
+	// Paso 2: Incrementa los valores en 'weeks.week_x'
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
 			"total":                                 AdvertisementsPayPerPrintFloat,
 			"weeks." + currentWeek + ".impressions": impressions,
 		},
-		"$setOnInsert": bson.M{
-			"timestamp": currentTime,
-			"weeks": map[string]PinkkerProfitPerMonthdomain.Week{
-				currentWeek: {
-					Impressions: impressions,
-					Clicks:      0,
-					Pixels:      0.0,
-				},
-			},
-		},
 	}
 
-	monthlyOpts := options.Update().SetUpsert(true)
-
-	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate, monthlyOpts)
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
 	if err != nil {
 		return err
 	}
