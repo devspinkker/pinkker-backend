@@ -26,6 +26,7 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 	App.Get("/stream/GetAllsStreamsOnline", streamHandler.GetAllsStreamsOnline)
 	App.Get("/stream/GetStreamsMostViewed", streamHandler.GetStreamsMostViewed)
 	App.Get("/stream/GetAllsStreamsOnlineThatUserFollows", middleware.UseExtractor(), streamHandler.GetAllsStreamsOnlineThatUserFollows)
+	App.Get("/stream/RecommendationStreams", streamHandler.RecommendationStreams)
 
 	App.Get("/stream/Recommendation", middleware.UseExtractor(), streamHandler.GetAllsStreamsOnlineThatUserFollows)
 
