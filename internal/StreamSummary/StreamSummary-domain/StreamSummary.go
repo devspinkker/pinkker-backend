@@ -19,6 +19,7 @@ type StreamSummary struct {
 	Advertisements       int                `json:"Advertisements" bson:"Advertisements"`
 	StartOfStream        time.Time          `json:"StartOfStream" bson:"StartOfStream"`
 	StreamerID           primitive.ObjectID `json:"StreamerID" bson:"StreamerID"`
+	StreamDocumentID     primitive.ObjectID `json:"StreamDocumentID" bson:"StreamDocumentID"`
 	StartFollowersCount  int                `json:"StartFollowersCount" bson:"StartFollowersCount"`
 	StartSubsCount       int                `json:"StartSubsCount" bson:"StartSubsCount"`
 	StreamCategory       string             `json:"stream_category" bson:"StreamCategory"`
@@ -26,6 +27,9 @@ type StreamSummary struct {
 	SubscriptionsMoney   float64            `json:"SubscriptionsMoney" bson:"SubscriptionsMoney"`
 	DonationsMoney       float64            `json:"DonationsMoney" bson:"DonationsMoney"`
 	TotalMoney           float64            `json:"TotalMoney" bson:"TotalMoney"`
+	Online               bool               `json:"Online" bson:"Online"`
+	UniqueInteractions   int                `json:"UniqueInteractions" bson:"UniqueInteractions"`
+	RecommendationScore  int                `json:"RecommendationScore" bson:"RecommendationScore"`
 }
 type StreamSummaryGet struct {
 	Title               string             `json:"Title" bson:"Title"`

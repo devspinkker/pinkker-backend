@@ -22,6 +22,39 @@ func NewStreamService(StreamServise *streamapplication.StreamService) *StreamHan
 		StreamServise: StreamServise,
 	}
 }
+func (s *StreamHandler) RecommendationStreams(c *fiber.Ctx) error {
+	// Leer parámetros de paginación de la consulta
+	page := c.Query("page", "1")    // Valor por defecto de la página es 1
+	limit := c.Query("limit", "10") // Valor por defecto del límite es 10
+
+	// Convertir parámetros a enteros
+	pageInt, err := strconv.Atoi(page)
+	if err != nil || pageInt < 1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid page number",
+		})
+	}
+
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil || limitInt < 1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid limit",
+		})
+	}
+
+	// Llamar al servicio con parámetros de paginación
+	stream, err := s.StreamServise.RecommendationStreams(pageInt)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    stream,
+	})
+}
 
 type IDStream struct {
 	IdStream primitive.ObjectID `json:"IdStream" `

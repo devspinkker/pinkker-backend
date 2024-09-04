@@ -32,6 +32,33 @@ func NewStreamRepository(redisClient *redis.Client, mongoClient *mongo.Client) *
 		mongoClient: mongoClient,
 	}
 }
+func (r *StreamRepository) RecommendStreams(limit int, page int) ([]streamdomain.Stream, error) {
+	ctx := context.Background()
+
+	// Obtener la colección Stream
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
+
+	skip := (page - 1) * limit
+
+	pipeline := bson.A{
+		bson.M{"$sort": bson.M{"RecommendationScore": -1}},
+		bson.M{"$skip": skip},
+		bson.M{"$limit": limit},
+	}
+	cursor, err := GoMongoDBCollStreams.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var recommendedStreams []streamdomain.Stream
+	if err = cursor.All(ctx, &recommendedStreams); err != nil {
+		return nil, err
+	}
+
+	return recommendedStreams, nil
+}
 
 func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.ObjectID, error) {
 
@@ -71,6 +98,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 		{Key: "$set", Value: bson.D{
 			{Key: "Online", Value: state},
 			{Key: "StartDate", Value: time.Now()},
+			{Key: "RecommendationScore", Value: 0},
 		}},
 	}
 	var StreamFind streamdomain.Stream
@@ -139,6 +167,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			StartOfStream:        time.Now(),
 			StreamerID:           userFind.ID,
 			StartFollowersCount:  startFollowersCount,
+			StreamDocumentID:     StreamFind.ID,
 			StartSubsCount:       startSubsCount,
 			Title:                StreamFind.StreamTitle,
 			StreamThumbnail:      StreamFind.StreamThumbnail,
@@ -147,6 +176,8 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			SubscriptionsMoney:   0,
 			DonationsMoney:       0,
 			TotalMoney:           0,
+			Online:               true,
+			RecommendationScore:  0,
 		}
 
 		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
@@ -154,7 +185,14 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			return LastStreamSummary, err
 		}
 	} else {
-		_, err := r.redisClient.Del(context.Background(), StreamFind.ID.Hex()).Result()
+
+		err := r.RedisCacheDeleteRoomMessagesAndUserInfo(StreamFind.ID, StreamFind.Streamer)
+		if err != nil {
+			fmt.Println("RedisCacheDeleteRoomMessagesAndUserInfo")
+
+			fmt.Println(err)
+		}
+		_, err = r.redisClient.Del(context.Background(), StreamFind.ID.Hex()).Result()
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -219,6 +257,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 				{Key: "StreamCategory", Value: StreamFind.StreamCategory},
 				{Key: "Admoney", Value: AverageAdPaymentInStreams},
 				{Key: "SubscriptionsMoney", Value: TotalSubsSummaryMoney},
+				{Key: "Online", Value: false},
 			}},
 			{Key: "$inc", Value: bson.D{
 				{Key: "TotalMoney", Value: incTotalMoney},
@@ -255,6 +294,31 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 
 	return LastStreamSummary, nil
 }
+
+func (r *StreamRepository) RedisCacheDeleteRoomMessagesAndUserInfo(Room primitive.ObjectID, NameUser string) error {
+	// Inicia una transacción en Redis usando Pipeline
+	pipeline := r.redisClient.Pipeline()
+
+	// Borra la lista de mensajes en la sala
+	pipeline.Del(context.Background(), Room.Hex()+"LastMessages")
+
+	// Borra la información del usuario en la sala
+	userHashKey := "userInformation:" + NameUser + ":inTheRoom:" + Room.Hex()
+	pipeline.Del(context.Background(), userHashKey)
+
+	// Borra la lista de interacciones únicas en la sala
+	uniqueInteractionsKey := Room.Hex() + ":uniqueinteractions"
+	pipeline.Del(context.Background(), uniqueInteractionsKey)
+
+	// Ejecuta la transacción
+	_, err := pipeline.Exec(context.Background())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *StreamRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
 	GoMongoDBCollUsers := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
@@ -722,14 +786,22 @@ func (r *StreamRepository) GetAllStreamsOnlineThatUserFollows(idValueObj primiti
 	GoMongoDBCollUsers := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 
-	var user userdomain.User
-	if err := GoMongoDBCollUsers.FindOne(context.Background(), bson.D{{Key: "_id", Value: idValueObj}}).Decode(&user); err != nil {
+	// Estructura para recibir el campo Following
+	var user struct {
+		Following map[primitive.ObjectID]userdomain.FollowInfo `bson:"Following"`
+	}
+
+	// Buscar solo el campo Following
+	filter := bson.D{{Key: "_id", Value: idValueObj}}
+	projection := bson.D{{Key: "Following", Value: 1}}
+
+	if err := GoMongoDBCollUsers.FindOne(context.Background(), filter, options.FindOne().SetProjection(projection)).Decode(&user); err != nil {
 		return nil, err
 	}
-	var followingIDs []primitive.ObjectID
 
-	for ids := range user.Following {
-		followingIDs = append(followingIDs, ids)
+	var followingIDs []primitive.ObjectID
+	for id := range user.Following {
+		followingIDs = append(followingIDs, id)
 	}
 
 	cursor, err := GoMongoDBCollStreams.Find(

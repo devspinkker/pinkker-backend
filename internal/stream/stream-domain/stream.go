@@ -29,6 +29,8 @@ type Stream struct {
 	ModSlowMode        int                `json:"ModSlowMode" bson:"ModSlowMode"`
 	Banned             bool               `json:"Banned" bson:"Banned"`
 	TotalTimeOnline    float64            `json:"TotalTimeOnline" bson:"TotalTimeOnline"`
+
+	RecommendationScore int `json:"RecommendationScore" bson:"RecommendationScore"`
 }
 
 type UpdateStreamInfo struct {

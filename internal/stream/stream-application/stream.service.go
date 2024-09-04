@@ -67,6 +67,13 @@ func (s *StreamService) GetAllsStreamsOnlineThatUserFollows(idValueObj primitive
 	stream, err := s.StreamRepository.GetAllStreamsOnlineThatUserFollows(idValueObj)
 	return stream, err
 }
+
+func (s *StreamService) RecommendationStreams(page int) ([]streamdomain.Stream, error) {
+	limit := 10
+	stream, err := s.StreamRepository.RecommendStreams(limit, page)
+	return stream, err
+}
+
 func (s *StreamService) GetStreamsIdsStreamer(idsUsersF []primitive.ObjectID) ([]streamdomain.Stream, error) {
 	stream, err := s.StreamRepository.GetStreamsIdsStreamer(idsUsersF)
 	return stream, err

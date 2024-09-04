@@ -792,22 +792,23 @@ func getWeekOfMonth(t time.Time) string {
 	return "week_" + strconv.Itoa(weekNumber)
 }
 
-func (r *StreamSummaryRepository) AverageViewers(StreamerID primitive.ObjectID) error {
+func (r *StreamSummaryRepository) UpdateInfoStreamSummary(StreamerID primitive.ObjectID) error {
 	ctx := context.Background()
 
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
-	GoMongoDBColl := GoMongoDB.Collection("Streams")
+	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
 
+	// Obtener el Stream
 	filter := bson.M{"StreamerID": StreamerID}
-	Stream := streamdomain.Stream{}
-	result := GoMongoDBColl.FindOne(ctx, filter).Decode(&Stream)
+	var Stream streamdomain.Stream
+	result := GoMongoDBCollStreams.FindOne(ctx, filter).Decode(&Stream)
 	if result != nil {
 		return result
 	}
 
+	// Obtener el último StreamSummary para el Streamer
 	filter = bson.M{"StreamerID": StreamerID}
-
 	opts := options.FindOne().SetSort(bson.D{{Key: "StartOfStream", Value: -1}})
 
 	var streamSummary StreamSummarydomain.StreamSummary
@@ -815,20 +816,75 @@ func (r *StreamSummaryRepository) AverageViewers(StreamerID primitive.ObjectID) 
 	if err != nil {
 		return err
 	}
-	currentDateTime := time.Now().Format("2006-01-02 15:04:05")
 
-	update := bson.M{
+	currentDateTime := time.Now().Format("2006-01-02 15:04:05")
+	UniqueUserinRoom, err := r.AddUniqueUserInteractionInStreamSummary(Stream.ID)
+	if err != nil {
+		return err
+	}
+
+	// Calcular la puntuación de recomendación
+	topAverageViewers := sumTopViewers(streamSummary.AverageViewersByTime)
+	recommendationScore := 0.7*float64(topAverageViewers) + 0.3*float64(UniqueUserinRoom)
+
+	// Actualizar el StreamSummary
+	updateSummary := bson.M{
 		"$set": bson.M{
+			"UniqueInteractions":                      UniqueUserinRoom,
 			"AverageViewersByTime." + currentDateTime: Stream.ViewerCount,
+			"RecommendationScore":                     recommendationScore,
 		},
 	}
-	filterUpdate := bson.M{"_id": streamSummary.ID}
-	_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, filterUpdate, update)
+	filterUpdateSummary := bson.M{"_id": streamSummary.ID}
+	_, err = GoMongoDBCollStreamSummary.UpdateOne(ctx, filterUpdateSummary, updateSummary)
+	if err != nil {
+		return err
+	}
+
+	// Actualizar el Stream con el mismo RecommendationScore
+	updateStream := bson.M{
+		"$set": bson.M{
+			"RecommendationScore": recommendationScore,
+		},
+	}
+	filterUpdateStream := bson.M{"_id": Stream.ID}
+	_, err = GoMongoDBCollStreams.UpdateOne(ctx, filterUpdateStream, updateStream)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (r *StreamSummaryRepository) AddUniqueUserInteractionInStreamSummary(Room primitive.ObjectID) (int64, error) {
+	key := Room.Hex() + ":uniqueinteractions"
+
+	setSize, err := r.redisClient.SCard(context.Background(), key).Result()
+
+	if err != nil {
+		if err != redis.Nil {
+			return 0, err
+		}
+		return 0, nil
+	}
+
+	return setSize, nil
+}
+
+func sumTopViewers(averageViewersByTime map[string]int) int {
+	viewerCounts := []int{}
+	for _, viewers := range averageViewersByTime {
+		viewerCounts = append(viewerCounts, viewers)
+		if len(viewerCounts) == 5 {
+			break
+		}
+	}
+
+	total := 0
+	for _, count := range viewerCounts {
+		total += count
+	}
+	return total
 }
 func (r *StreamSummaryRepository) GetLastSixStreamSummariesBeforeDate(StreamerID primitive.ObjectID, date time.Time) ([]StreamSummarydomain.StreamSummary, error) {
 	ctx := context.Background()
