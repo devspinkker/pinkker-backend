@@ -23,11 +23,9 @@ func NewStreamService(StreamServise *streamapplication.StreamService) *StreamHan
 	}
 }
 func (s *StreamHandler) RecommendationStreams(c *fiber.Ctx) error {
-	// Leer parámetros de paginación de la consulta
-	page := c.Query("page", "1")    // Valor por defecto de la página es 1
-	limit := c.Query("limit", "10") // Valor por defecto del límite es 10
+	page := c.Query("page", "1")
+	limit := c.Query("limit", "10")
 
-	// Convertir parámetros a enteros
 	pageInt, err := strconv.Atoi(page)
 	if err != nil || pageInt < 1 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
