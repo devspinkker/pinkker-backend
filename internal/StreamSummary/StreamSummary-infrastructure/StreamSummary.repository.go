@@ -6,6 +6,7 @@ import (
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	"context"
+	"errors"
 	"log"
 	"strconv"
 	"time"
@@ -29,6 +30,60 @@ func NewStreamSummaryRepository(redisClient *redis.Client, mongoClient *mongo.Cl
 		mongoClient: mongoClient,
 	}
 }
+func (r *StreamSummaryRepository) DeleteStreamSummaryByIDAndStreamerID(id primitive.ObjectID, streamerID primitive.ObjectID) error {
+	ctx := context.Background()
+
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	filter := bson.M{
+		"_id":        id,
+		"StreamerID": streamerID,
+	}
+
+	result, err := collection.DeleteOne(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return errors.New("no se encontró ningún resumen de stream con el ID o no pertenece al streamer")
+	}
+
+	return nil
+}
+
+func (r *StreamSummaryRepository) UpdateStreamSummaryByIDAndStreamerID(id primitive.ObjectID, streamerID primitive.ObjectID, newTitle string) error {
+	ctx := context.Background()
+
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("StreamSummary")
+
+	filter := bson.M{
+		"_id":        id,
+		"StreamerID": streamerID,
+	}
+
+	// Definir los campos a actualizar
+	update := bson.M{
+		"$set": bson.M{
+			"Title": newTitle,
+		},
+	}
+
+	opts := options.Update().SetUpsert(false)
+	result, err := collection.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		return errors.New("no se encontró ningún resumen de stream con el ID o no pertenece al streamer")
+	}
+
+	return nil
+}
+
 func (r *StreamSummaryRepository) GetEarningsByRange(streamerID primitive.ObjectID, startDate, endDate time.Time) (StreamSummarydomain.Earnings, error) {
 	ctx := context.Background()
 

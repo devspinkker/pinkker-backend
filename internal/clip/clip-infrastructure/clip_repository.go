@@ -29,6 +29,55 @@ func NewClipRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Cl
 		mongoClient: mongoClient,
 	}
 }
+func (c *ClipRepository) DeleteClipByIDAndUserID(clipID, userID primitive.ObjectID) error {
+	// Definir los criterios de búsqueda
+	ctx := context.Background()
+	filter := bson.M{
+		"_id":    clipID,
+		"UserID": userID,
+	}
+
+	Database := c.mongoClient.Database("PINKKER-BACKEND")
+	result, err := Database.Collection("Clips").DeleteOne(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return errors.New("no se encontró ningún clip con el ID y UserID especificados")
+	}
+
+	return nil
+}
+
+// Actualizar el título de un clip por ID y UserID
+func (c *ClipRepository) UpdateClipTitle(clipID, userID primitive.ObjectID, newTitle string) error {
+
+	ctx := context.Background()
+	filter := bson.M{
+		"_id":    clipID,
+		"UserID": userID,
+	}
+
+	// Definir los datos a actualizar
+	update := bson.M{
+		"$set": bson.M{
+			"ClipTitle": newTitle,
+		},
+	}
+
+	result, err := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips").UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		return errors.New("no se encontró ningún clip con el ID y UserID especificados")
+	}
+
+	return nil
+}
+
 func (c *ClipRepository) TimeOutClipCreate(id primitive.ObjectID) error {
 	key := "ClipCreate" + id.Hex()
 	value := id.Hex()
@@ -44,6 +93,7 @@ func (c *ClipRepository) TimeOutClipCreate(id primitive.ObjectID) error {
 
 	return nil
 }
+
 func (c *ClipRepository) GetClipsByTitle(title string, limit int) ([]clipdomain.GetClip, error) {
 	ctx := context.Background()
 	clipsDB := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")

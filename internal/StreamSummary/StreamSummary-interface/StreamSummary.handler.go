@@ -19,6 +19,84 @@ func NewStreamSummaryService(StreamSummaryServise *StreamSummaryapplication.Stre
 		StreamSummaryServise: StreamSummaryServise,
 	}
 }
+func (h *StreamSummaryHandler) DeleteStreamSummaryByIDAndStreamerID(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errorID.Error(),
+		})
+	}
+
+	Idvod := c.Query("Idvod", "")
+	if Idvod == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "IdClip parameter is required",
+		})
+	}
+
+	IdvodPr, err := primitive.ObjectIDFromHex(Idvod)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid IdClip parameter",
+		})
+	}
+
+	err = h.StreamSummaryServise.DeleteStreamSummaryByIDAndStreamerID(IdvodPr, idValueToken)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
+
+func (h *StreamSummaryHandler) UpdateStreamSummaryByIDAndStreamerID(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errorID.Error(),
+		})
+	}
+
+	title := c.Query("title", "")
+	if title == "" || len(title) > 100 || len(title) < 2 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "title bad request",
+		})
+	}
+
+	Idvodstr := c.Query("Idvod", "")
+	if Idvodstr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "IdClip parameter is required",
+		})
+	}
+
+	IdvodPr, err := primitive.ObjectIDFromHex(Idvodstr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid IdClip parameter",
+		})
+	}
+
+	err = h.StreamSummaryServise.UpdateStreamSummaryByIDAndStreamerID(IdvodPr, idValueToken, title)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
 
 func (h *StreamSummaryHandler) GetEarningsByRange(c *fiber.Ctx) error {
 	startDateStr := c.Query("startDate")

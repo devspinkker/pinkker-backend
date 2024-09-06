@@ -18,6 +18,14 @@ func NewStreaSummaryService(StreamSummaryRepository *StreamSummaryinfrastructure
 	}
 }
 
+func (s *StreamSummaryService) UpdateStreamSummaryByIDAndStreamerID(id primitive.ObjectID, streamerID primitive.ObjectID, newTitle string) error {
+	return s.StreamSummaryRepository.UpdateStreamSummaryByIDAndStreamerID(id, streamerID, newTitle)
+}
+func (s *StreamSummaryService) DeleteStreamSummaryByIDAndStreamerID(id primitive.ObjectID, streamerID primitive.ObjectID) error {
+	return s.StreamSummaryRepository.DeleteStreamSummaryByIDAndStreamerID(streamerID, streamerID)
+
+}
+
 func (s *StreamSummaryService) GetDailyEarningsForMonth(streamerID primitive.ObjectID, Time time.Time) ([]StreamSummarydomain.EarningsPerDay, error) {
 	GetEarningsByRange, err := s.StreamSummaryRepository.GetDailyEarningsForMonth(streamerID, Time)
 	return GetEarningsByRange, err

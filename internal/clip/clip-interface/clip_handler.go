@@ -29,6 +29,84 @@ func NewClipHandler(ClipService *clipapplication.ClipService) *ClipHandler {
 		ClipService: ClipService,
 	}
 }
+func (clip *ClipHandler) DeleteClipByIDAndUserID(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errorID.Error(),
+		})
+	}
+
+	IdClipStr := c.Query("IdClip", "")
+	if IdClipStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "IdClip parameter is required",
+		})
+	}
+
+	IdClip, err := primitive.ObjectIDFromHex(IdClipStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid IdClip parameter",
+		})
+	}
+
+	err = clip.ClipService.DeleteClipByIDAndUserID(IdClip, idValueToken)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
+
+func (clip *ClipHandler) UpdateClipTitle(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errorID.Error(),
+		})
+	}
+
+	title := c.Query("title", "")
+	if title == "" || len(title) > 100 || len(title) < 2 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "title bad request",
+		})
+	}
+
+	IdClipStr := c.Query("IdClip", "")
+	if IdClipStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "IdClip parameter is required",
+		})
+	}
+
+	IdClip, err := primitive.ObjectIDFromHex(IdClipStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid IdClip parameter",
+		})
+	}
+
+	err = clip.ClipService.UpdateClipTitle(IdClip, idValueToken, title)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Internal Server Error",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
 func (clip *ClipHandler) TimeOutClipCreate(c *fiber.Ctx) error {
 
 	idValue := c.Context().UserValue("_id").(string)

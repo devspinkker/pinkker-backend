@@ -18,6 +18,15 @@ func NewClipService(ClipRepository *clipinfrastructure.ClipRepository) *ClipServ
 		ClipRepository: ClipRepository,
 	}
 }
+
+func (u *ClipService) DeleteClipByIDAndUserID(clipID, userID primitive.ObjectID) error {
+	return u.ClipRepository.DeleteClipByIDAndUserID(clipID, userID)
+}
+
+func (u *ClipService) UpdateClipTitle(clipID, userID primitive.ObjectID, title string) error {
+	return u.ClipRepository.UpdateClipTitle(clipID, userID, title)
+}
+
 func (u *ClipService) TimeOutClipCreate(idClip primitive.ObjectID) error {
 	err := u.ClipRepository.TimeOutClipCreate(idClip)
 	return err

@@ -40,4 +40,9 @@ func ClipRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Get("/clips/GetClipCommentsLoguedo", middleware.UseExtractor(), clipHandler.GetClipCommentsLoguedo)
 	App.Get("/clips/TimeOutClipCreate", middleware.UseExtractor(), clipHandler.TimeOutClipCreate)
 
+	App.Get("/clips/TimeOutClipCreate", middleware.UseExtractor(), clipHandler.TimeOutClipCreate)
+
+	App.Get("/clips/DeleteClipByIDAndUserID", middleware.UseExtractor(), clipHandler.DeleteClipByIDAndUserID)
+	App.Get("/clips/UpdateClipTitle", middleware.UseExtractor(), clipHandler.UpdateClipTitle)
+
 }
