@@ -75,14 +75,14 @@ func (h *StreamSummaryHandler) UpdateStreamSummaryByIDAndStreamerID(c *fiber.Ctx
 	Idvodstr := c.Query("Idvod", "")
 	if Idvodstr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "IdClip parameter is required",
+			"message": "Idvod parameter is required",
 		})
 	}
 
 	IdvodPr, err := primitive.ObjectIDFromHex(Idvodstr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid IdClip parameter",
+			"message": "Invalid IdvodPr parameter",
 		})
 	}
 
