@@ -144,7 +144,7 @@ func (u *UserRepository) ChangeNameUserCodeAdmin(changeNameUser domain.ChangeNam
 		return fmt.Errorf("NameUserNew already exists")
 	}
 
-	err = u.updateUserNames(ctx, db, changeNameUser)
+	err = u.updateUserNamesAdmin(ctx, db, changeNameUser)
 	if err != nil {
 		return err
 	}
@@ -191,6 +191,45 @@ func (u *UserRepository) updateUserInformationInAllRooms(ctx context.Context, db
 func (u *UserRepository) updateUserNames(ctx context.Context, db *mongo.Database, changeNameUser domain.ChangeNameUser) error {
 	GoMongoDBCollUsers := db.Collection("Users")
 
+	// Estructura que contiene la propiedad NameUser en EditProfiile
+	var existingUser struct {
+		EditProfiile struct {
+			NameUser time.Time `bson:"NameUser,omitempty"`
+		} `bson:"EditProfiile"`
+	}
+
+	// Filtrar el usuario por su nombre de usuario actual
+	userFilterTemp := bson.M{"NameUser": changeNameUser.NameUserRemove}
+	err := GoMongoDBCollUsers.FindOne(ctx, userFilterTemp).Decode(&existingUser)
+	if err != nil {
+		return fmt.Errorf("error finding user with NameUser: %v", err)
+	}
+
+	// Verificar si han pasado más de 60 días desde la última actualización del nombre de usuario
+	timeSinceLastChange := time.Since(existingUser.EditProfiile.NameUser)
+	if timeSinceLastChange < 60*24*time.Hour {
+		return fmt.Errorf("no puedes actualizar el nombre de usuario hasta que pasen 60 días desde el último cambio")
+	}
+
+	// Si han pasado más de 60 días, actualizamos el nombre de usuario y la fecha de actualización
+	updateTemp := bson.M{
+		"$set": bson.M{
+			"NameUser":              changeNameUser.NameUserNew,
+			"EditProfiile.NameUser": time.Now(), // Actualizamos la fecha de la última modificación del nombre de usuario
+		},
+	}
+
+	_, err = GoMongoDBCollUsers.UpdateOne(ctx, userFilterTemp, updateTemp)
+	if err != nil {
+		return fmt.Errorf("error updating user collection to NameUserNew: %v", err)
+	}
+
+	return nil
+}
+
+func (u *UserRepository) updateUserNamesAdmin(ctx context.Context, db *mongo.Database, changeNameUser domain.ChangeNameUser) error {
+	GoMongoDBCollUsers := db.Collection("Users")
+
 	userFilterTemp := bson.M{"NameUser": changeNameUser.NameUserRemove}
 	updateTemp := bson.M{"$set": bson.M{"NameUser": changeNameUser.NameUserNew}}
 	_, err := GoMongoDBCollUsers.UpdateOne(ctx, userFilterTemp, updateTemp)
@@ -200,6 +239,7 @@ func (u *UserRepository) updateUserNames(ctx context.Context, db *mongo.Database
 
 	return nil
 }
+
 func (u *UserRepository) updateClips(ctx context.Context, db *mongo.Database, changeNameUser domain.ChangeNameUser) error {
 	GoMongoDBCollUsers := db.Collection("Clips")
 
@@ -946,22 +986,42 @@ func (u *UserRepository) FindEmailForOauth2Updata(user *domain.Google_callback_C
 }
 func (u *UserRepository) EditProfile(profile domain.EditProfile, id primitive.ObjectID) error {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	var existingUser struct {
+		EditProfiile struct {
+			Biography time.Time `bson:"Biography,omitempty"`
+		} `bson:"EditProfiile"`
+	}
+
 	filter := bson.M{"_id": id}
+	err := GoMongoDBCollUsers.FindOne(context.TODO(), filter).Decode(&existingUser)
+	if err != nil {
+		return err
+	}
+
+	timeSinceLastChange := time.Since(existingUser.EditProfiile.Biography)
+	if timeSinceLastChange < 60*24*time.Hour {
+		return fmt.Errorf("no puedes actualizar la biografía hasta que pasen 60 días desde el último cambio")
+	}
+
 	update := bson.M{
 		"$set": bson.M{
-			"Pais":       profile.Pais,
-			"Ciudad":     profile.Ciudad,
-			"Biography":  profile.Biography,
-			"HeadImage":  profile.HeadImage,
-			"BirthDate":  profile.BirthDateTime,
-			"Sex":        profile.Sex,
-			"Situation":  profile.Situation,
-			"ZodiacSign": profile.ZodiacSign,
+			"Pais":                   profile.Pais,
+			"Ciudad":                 profile.Ciudad,
+			"Biography":              profile.Biography,
+			"EditProfiile.Biography": time.Now(),
+			"HeadImage":              profile.HeadImage,
+			"BirthDate":              profile.BirthDateTime,
+			"Sex":                    profile.Sex,
+			"Situation":              profile.Situation,
+			"ZodiacSign":             profile.ZodiacSign,
 		},
 	}
-	_, err := GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
+
+	_, err = GoMongoDBCollUsers.UpdateOne(context.TODO(), filter, update)
 	return err
 }
+
 func (u *UserRepository) EditPasswordHast(passwordHash string, id primitive.ObjectID) error {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	filter := bson.M{"_id": id}

@@ -38,6 +38,10 @@ type User struct {
 		Active bool      `json:"active,omitempty" bson:"Active,omitempty"`
 		Date   time.Time `json:"date,omitempty" bson:"Date,omitempty"`
 	} `json:"Partner,omitempty" bson:"Partner"`
+	EditProfiile struct {
+		NameUser  time.Time `json:"NameUser,omitempty" bson:"NameUser,omitempty"`
+		Biography time.Time `json:"Biography,omitempty" bson:"Biography,omitempty"`
+	} `json:"EditProfiile,omitempty" bson:"EditProfiile"`
 	SocialNetwork struct {
 		Facebook  string `json:"facebook,omitempty" bson:"facebook"`
 		Twitter   string `json:"twitter,omitempty" bson:"twitter"`

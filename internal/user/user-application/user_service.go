@@ -86,6 +86,8 @@ func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avat
 	modelNewUser.PanelAdminPinkker.Code = ""
 	modelNewUser.Banned = false
 	modelNewUser.CategoryPreferences = make(map[string]float64)
+	modelNewUser.EditProfiile.Biography = time.Now()
+	modelNewUser.EditProfiile.NameUser = time.Now()
 
 	return &modelNewUser
 }
