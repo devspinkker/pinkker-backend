@@ -232,6 +232,7 @@ type GetUser struct {
 	LookImage       string                 `json:"lookImage" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"LookImage"`
 	Banner          string                 `json:"Banner" default:"https://res.cloudinary.com/dcj8krp42/image/upload/v1712283573/categorias/logo_trazado_pndioh.png" bson:"Banner"`
 	HeadImage       string                 `json:"headImage" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"headImage"`
+	Online          bool                   `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
 	Color           string                 `json:"color" bson:"Color"`
 	BirthDate       time.Time              `json:"birthDate" bson:"BirthDate"`
 	CustomAvatar    bool                   `json:"customAvatar,omitempty" bson:"CustomAvatar"`
@@ -261,7 +262,6 @@ type GetUser struct {
 	Timestamp        time.Time `json:"Timestamp" bson:"Timestamp"`
 	// Likes                    []primitive.ObjectID              `json:"Likes" bson:"Likes"`
 	Wallet string `json:"Wallet" bson:"Wallet"`
-	Online bool   `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
 	// ClipsComment             []primitive.ObjectID              `json:"ClipsComment" bson:"ClipsComment"`
 	CategoryPreferences map[string]float64 `json:"categoryPreferences" bson:"categoryPreferences"`
 	Banned              bool               `json:"Banned" bson:"Banned"`
