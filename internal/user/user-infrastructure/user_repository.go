@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +34,54 @@ func NewUserRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Us
 		mongoClient: mongoClient,
 	}
 }
+
+func (u *UserRepository) IsUserBlocked(nameUser string) (bool, error) {
+	blockKey := fmt.Sprintf("login_blocked:%s", nameUser)
+
+	_, err := u.redisClient.Get(context.Background(), blockKey).Result()
+	if err == redis.Nil {
+		return false, nil
+	} else if err != nil {
+		return false, fmt.Errorf("error checking if user is blocked in Redis: %v", err)
+	}
+
+	return true, nil
+}
+func (u *UserRepository) HandleLoginFailure(nameUser string) error {
+	key := fmt.Sprintf("login_failures:%s", nameUser)
+
+	failures, err := u.redisClient.Get(context.Background(), key).Result()
+	if err != nil && err != redis.Nil {
+		return fmt.Errorf("error getting login failures from Redis: %v", err)
+	}
+
+	failureCount := 0
+	if failures != "" {
+		failureCount, err = strconv.Atoi(failures)
+		if err != nil {
+			return fmt.Errorf("error converting login failures to integer: %v", err)
+		}
+	}
+
+	failureCount++
+
+	if failureCount >= 5 {
+		// Set a block expiration for 15 minutes
+		blockKey := fmt.Sprintf("login_blocked:%s", nameUser)
+		_, err = u.redisClient.Set(context.Background(), blockKey, "blocked", 15*time.Minute).Result()
+		if err != nil {
+			return fmt.Errorf("error setting block key in Redis: %v", err)
+		}
+	} else {
+		_, err = u.redisClient.Set(context.Background(), key, failureCount, 15*time.Minute).Result()
+		if err != nil {
+			return fmt.Errorf("error setting login failures in Redis: %v", err)
+		}
+	}
+
+	return nil
+}
+
 func (u *UserRepository) SetTOTPSecret(ctx context.Context, userID primitive.ObjectID, secret string) error {
 	existingSecret, err := u.GetTOTPSecret(ctx, userID)
 	if err != nil {

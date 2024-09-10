@@ -127,6 +127,17 @@ func (u *UserService) ConfirmationEmailToken(nameUser string) error {
 }
 
 // find
+
+func (u *UserService) IsUserBlocked(NameUser string) (bool, error) {
+
+	user, err := u.roomRepository.IsUserBlocked(NameUser)
+	return user, err
+}
+func (u *UserService) HandleLoginFailure(NameUser string) error {
+
+	return u.roomRepository.HandleLoginFailure(NameUser)
+
+}
 func (u *UserService) FindNameUser(NameUser string, Email string) (*domain.User, error) {
 
 	user, err := u.roomRepository.FindNameUser(NameUser, Email)

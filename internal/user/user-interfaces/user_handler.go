@@ -455,9 +455,22 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 			})
 		}
 	}
-	if err := helpers.DecodePassword(user.PasswordHash, DataForLogin.Password); err != nil {
+
+	IsUserBlocked, err := h.userService.IsUserBlocked(DataForLogin.NameUser)
+	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"message": "Unauthorized",
+			"message": "login failed",
+		})
+	}
+	if IsUserBlocked {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"message": "Too many failed login attempts. Please try again late",
+		})
+	}
+	if err := helpers.DecodePassword(user.PasswordHash, DataForLogin.Password); err != nil {
+		h.userService.HandleLoginFailure(DataForLogin.NameUser)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "login failed",
 		})
 	}
 	token, err := jwt.CreateToken(user)
