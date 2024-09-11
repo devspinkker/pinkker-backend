@@ -1187,7 +1187,6 @@ func (u *UserRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "Followers", Value: 0},
 			{Key: "Subscribers", Value: 0},
-			{Key: "Online", Value: 1},
 		}}},
 	}
 
