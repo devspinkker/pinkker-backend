@@ -232,7 +232,7 @@ type GetUser struct {
 	LookImage       string                 `json:"lookImage" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"LookImage"`
 	Banner          string                 `json:"Banner" default:"https://res.cloudinary.com/dcj8krp42/image/upload/v1712283573/categorias/logo_trazado_pndioh.png" bson:"Banner"`
 	HeadImage       string                 `json:"headImage" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"headImage"`
-	Online          bool                   `json:"Online,omitempty" bson:"Online,omitempty" default:"false"`
+	Online          bool                   `json:"Online" bson:"Online" `
 	Color           string                 `json:"color" bson:"Color"`
 	BirthDate       time.Time              `json:"birthDate" bson:"BirthDate"`
 	CustomAvatar    bool                   `json:"customAvatar,omitempty" bson:"CustomAvatar"`

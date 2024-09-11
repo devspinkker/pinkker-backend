@@ -1049,7 +1049,7 @@ func (u *UserRepository) EditProfile(profile domain.EditProfile, id primitive.Ob
 	}
 
 	timeSinceLastChange := time.Since(existingUser.EditProfiile.Biography)
-	if timeSinceLastChange < 60*24*time.Hour {
+	if timeSinceLastChange < 15*24*time.Hour {
 		return fmt.Errorf("no puedes actualizar la biografía hasta que pasen 60 días desde el último cambio")
 	}
 
@@ -1185,8 +1185,9 @@ func (u *UserRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
 			}},
 		}}},
 		bson.D{{Key: "$project", Value: bson.D{
-			{Key: "Followers", Value: 0},   // Excluir el campo Followers si es necesario
-			{Key: "Subscribers", Value: 0}, // Excluir el campo Subscribers si es necesario
+			{Key: "Followers", Value: 0},
+			{Key: "Subscribers", Value: 0},
+			{Key: "Online", Value: 1},
 		}}},
 	}
 
