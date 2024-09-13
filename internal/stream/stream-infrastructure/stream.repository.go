@@ -309,6 +309,9 @@ func (r *StreamRepository) RedisCacheDeleteRoomMessagesAndUserInfo(Room primitiv
 	// Borra la lista de interacciones únicas en la sala
 	uniqueInteractionsKey := Room.Hex() + ":uniqueinteractions"
 	pipeline.Del(context.Background(), uniqueInteractionsKey)
+	// Borra el historial de mensajesdel vod
+	MensajesParaElVod := "MensajesParaElVod" + Room.Hex()
+	pipeline.Del(context.Background(), MensajesParaElVod)
 
 	// Ejecuta la transacción
 	_, err := pipeline.Exec(context.Background())
