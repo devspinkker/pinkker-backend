@@ -408,6 +408,8 @@ func (s *StreamSummaryHandler) UpdateStreamSummary(c *fiber.Ctx) error {
 
 func (s *StreamSummaryHandler) AddAds(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
+	nameUser := c.Context().UserValue("nameUser").(string)
+
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
 	if errorID != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -423,7 +425,7 @@ func (s *StreamSummaryHandler) AddAds(c *fiber.Ctx) error {
 		})
 	}
 
-	err := s.StreamSummaryServise.AddAds(idValueObj, req)
+	err := s.StreamSummaryServise.AddAds(idValueObj, nameUser, req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),

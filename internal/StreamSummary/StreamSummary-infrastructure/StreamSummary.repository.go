@@ -672,7 +672,7 @@ func (r *StreamSummaryRepository) UpdateStreamSummary(StreamerID primitive.Objec
 
 	return nil
 }
-func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds StreamSummarydomain.AddAds) error {
+func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, nameUser string, AddAds StreamSummarydomain.AddAds) error {
 	ctx := context.Background()
 
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
@@ -703,6 +703,10 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 		return err
 	}
 
+	connected, err := r.RedisIsUserInRoom(ctx, streamSummary.StreamDocumentID.Hex(), nameUser)
+	if err != nil || !connected {
+		return errors.New("usuario no activo en la sala")
+	}
 	// Actualización del conteo de anuncios en el resumen del stream
 	updateStream := bson.M{
 		"$inc": bson.M{"Advertisements": 1},
@@ -778,6 +782,18 @@ func (r *StreamSummaryRepository) AddAds(idValueObj primitive.ObjectID, AddAds S
 
 	return nil
 }
+
+func (r *StreamSummaryRepository) RedisIsUserInRoom(ctx context.Context, roomID, nameUser string) (bool, error) {
+	userKey := "ActiveUserRooms:" + nameUser
+
+	isActive, err := r.redisClient.SIsMember(ctx, userKey, roomID).Result()
+	if err != nil {
+		return false, err
+	}
+
+	return isActive, nil
+}
+
 func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Context) error {
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
