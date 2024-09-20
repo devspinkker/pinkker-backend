@@ -1178,6 +1178,14 @@ func (u *UserRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
 					}},
 				}},
 			}},
+			{Key: "FollowingCount", Value: bson.D{
+				{Key: "$size", Value: bson.D{
+					{Key: "$ifNull", Value: bson.A{
+						bson.D{{Key: "$objectToArray", Value: "$Following"}},
+						bson.A{},
+					}},
+				}},
+			}},
 			{Key: "SubscribersCount", Value: bson.D{
 				{Key: "$size", Value: bson.D{
 					{Key: "$ifNull", Value: bson.A{"$Subscribers", bson.A{}}},
