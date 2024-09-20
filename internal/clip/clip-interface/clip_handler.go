@@ -32,15 +32,13 @@ func NewClipHandler(ClipService *clipapplication.ClipService) *ClipHandler {
 }
 
 // Handler para obtener clips filtrados
-func (clip *ClipHandler) GetClipsByStreamer(c *fiber.Ctx) error {
-	// Obtén los parámetros necesarios desde la URL
+func (clip *ClipHandler) GetClipsByNameUserIDOrdenación(c *fiber.Ctx) error {
 	UserIDStr := c.Query("UserID", "")
-	filter := c.Query("filter", "recent") // El filtro por defecto es "recent"
-	dateRange := c.Query("dateRange", "") // Rango de fechas opcional
+	filter := c.Query("filter", "recent")
+	dateRange := c.Query("dateRange", "")
 	pageStr := c.Query("page", "1")
 	limitStr := c.Query("limit", "10")
 
-	// Convierte el ID del streamer a ObjectID
 	UserID, err := primitive.ObjectIDFromHex(UserIDStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -48,7 +46,6 @@ func (clip *ClipHandler) GetClipsByStreamer(c *fiber.Ctx) error {
 		})
 	}
 
-	// Convierte el parámetro de página a un entero
 	page, err := strconv.Atoi(pageStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -56,7 +53,6 @@ func (clip *ClipHandler) GetClipsByStreamer(c *fiber.Ctx) error {
 		})
 	}
 
-	// Convierte el parámetro de límite (cantidad de clips por página)
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -64,7 +60,6 @@ func (clip *ClipHandler) GetClipsByStreamer(c *fiber.Ctx) error {
 		})
 	}
 
-	// Si no se proporciona `dateRange`, se utilizará un valor por defecto según el filtro
 	if dateRange == "" {
 		var startDate time.Time
 
@@ -76,13 +71,11 @@ func (clip *ClipHandler) GetClipsByStreamer(c *fiber.Ctx) error {
 			startDate = time.Now().AddDate(-1, 0, 0)
 		}
 
-		// Formateamos el rango de fechas en un formato legible si corresponde
 		if !startDate.IsZero() {
 			dateRange = startDate.Format("2006-01-02")
 		}
 	}
 
-	// Llama al servicio ClipService para obtener los clips filtrados
 	clips, err := clip.ClipService.GetClipsByNameUserIDOrdenación(UserID, filter, dateRange, page, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
