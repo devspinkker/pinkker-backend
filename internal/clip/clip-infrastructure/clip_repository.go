@@ -31,13 +31,12 @@ func NewClipRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Cl
 }
 
 // Función principal para obtener clips con ordenación, filtrado por fechas y StreamerID
-func (c *ClipRepository) GetClipsByStreamer(StreamerID string, filterType string, dateRange string, page int, limit int) ([]clipdomain.GetClip, error) {
+func (c *ClipRepository) GetClipsByNameUserIDOrdenación(UserID primitive.ObjectID, filterType string, dateRange string, page int, limit int) ([]clipdomain.GetClip, error) {
 	clipCollection := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
 	pipeline := mongo.Pipeline{}
 
-	// Filtro por StreamerID
-	pipeline = append(pipeline, bson.D{{Key: "$match", Value: bson.D{{Key: "StreamerID", Value: StreamerID}}}})
+	pipeline = append(pipeline, bson.D{{Key: "$match", Value: bson.D{{Key: "UserID", Value: UserID}}}})
 
 	// Filtro por rango de fechas (si se especifica)
 	if dateRange != "" {
