@@ -29,6 +29,86 @@ func NewClipRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Cl
 		mongoClient: mongoClient,
 	}
 }
+
+// Función principal para obtener clips con ordenación, filtrado por fechas y StreamerID
+func (c *ClipRepository) GetClipsByStreamer(StreamerID string, filterType string, dateRange string, page int, limit int) ([]clipdomain.GetClip, error) {
+	clipCollection := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+
+	pipeline := mongo.Pipeline{}
+
+	// Filtro por StreamerID
+	pipeline = append(pipeline, bson.D{{Key: "$match", Value: bson.D{{Key: "StreamerID", Value: StreamerID}}}})
+
+	// Filtro por rango de fechas (si se especifica)
+	if dateRange != "" {
+		dateFilter := c.getDateFilter(dateRange)
+		pipeline = append(pipeline, bson.D{{Key: "$match", Value: dateFilter}})
+	}
+
+	// Ordenar los clips dependiendo del filtro (más vistos, recientes, aleatorios)
+	sortStage := c.getSortStage(filterType)
+	pipeline = append(pipeline, sortStage)
+
+	// Saltar y limitar los resultados para paginación
+	pipeline = append(pipeline,
+		bson.D{{Key: "$skip", Value: (page - 1) * limit}},
+		bson.D{{Key: "$limit", Value: limit}},
+	)
+
+	// Campos adicionales
+	pipeline = append(pipeline, bson.D{{Key: "$addFields", Value: bson.D{
+		{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+		{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+	}}})
+
+	cursor, err := clipCollection.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var clips []clipdomain.GetClip
+	if err := cursor.All(context.Background(), &clips); err != nil {
+		return nil, err
+	}
+
+	return clips, nil
+}
+
+// Función para determinar el filtro de rango de fechas
+func (c *ClipRepository) getDateFilter(dateRange string) bson.D {
+	currentTime := time.Now()
+	switch dateRange {
+	case "day":
+		oneDayAgo := currentTime.Add(-24 * time.Hour)
+		return bson.D{{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: oneDayAgo}}}}
+	case "week":
+		oneWeekAgo := currentTime.AddDate(0, 0, -7)
+		return bson.D{{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: oneWeekAgo}}}}
+	case "month":
+		oneMonthAgo := currentTime.AddDate(0, -1, 0)
+		return bson.D{{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: oneMonthAgo}}}}
+	case "year":
+		oneYearAgo := currentTime.AddDate(-1, 0, 0)
+		return bson.D{{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: oneYearAgo}}}}
+	default:
+		return bson.D{} // Sin filtro de fecha
+	}
+}
+
+// Función para obtener la etapa de ordenación
+func (c *ClipRepository) getSortStage(filterType string) bson.D {
+	switch filterType {
+	case "most_viewed":
+		return bson.D{{Key: "$sort", Value: bson.D{{Key: "views", Value: -1}}}}
+	case "recent":
+		return bson.D{{Key: "$sort", Value: bson.D{{Key: "TimeStamp", Value: -1}}}}
+	case "random":
+		return bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: 1}}}} // Muestra aleatoria
+	default:
+		return bson.D{{Key: "$sort", Value: bson.D{{Key: "TimeStamp", Value: -1}}}} // Por defecto: más recientes
+	}
+}
 func (c *ClipRepository) DeleteClipByIDAndUserID(clipID, userID primitive.ObjectID) error {
 	// Definir los criterios de búsqueda
 	ctx := context.Background()

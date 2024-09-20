@@ -22,9 +22,11 @@ func NewClipService(ClipRepository *clipinfrastructure.ClipRepository) *ClipServ
 func (u *ClipService) DeleteClipByIDAndUserID(clipID, userID primitive.ObjectID) error {
 	return u.ClipRepository.DeleteClipByIDAndUserID(clipID, userID)
 }
-
 func (u *ClipService) UpdateClipTitle(clipID, userID primitive.ObjectID, title string) error {
 	return u.ClipRepository.UpdateClipTitle(clipID, userID, title)
+}
+func (u *ClipService) GetClipsByNameUserIDOrdenación(UserID primitive.ObjectID, filterType string, dateRange string, page int, limit int) ([]clipdomain.GetClip, error) {
+	return u.ClipRepository.GetClipsByNameUserIDOrdenación(UserID, filterType, dateRange, page, limit)
 }
 
 func (u *ClipService) TimeOutClipCreate(idClip primitive.ObjectID) error {

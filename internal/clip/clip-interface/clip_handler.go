@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -29,6 +30,74 @@ func NewClipHandler(ClipService *clipapplication.ClipService) *ClipHandler {
 		ClipService: ClipService,
 	}
 }
+
+// Handler para obtener clips filtrados
+func (clip *ClipHandler) GetClipsByStreamer(c *fiber.Ctx) error {
+	// Obtén los parámetros necesarios desde la URL
+	UserIDStr := c.Query("UserID", "")
+	filter := c.Query("filter", "recent") // El filtro por defecto es "recent"
+	dateRange := c.Query("dateRange", "") // Rango de fechas opcional
+	pageStr := c.Query("page", "1")
+	limitStr := c.Query("limit", "10")
+
+	// Convierte el ID del streamer a ObjectID
+	UserID, err := primitive.ObjectIDFromHex(UserIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid StreamerID",
+		})
+	}
+
+	// Convierte el parámetro de página a un entero
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid page parameter",
+		})
+	}
+
+	// Convierte el parámetro de límite (cantidad de clips por página)
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid limit parameter",
+		})
+	}
+
+	// Si no se proporciona `dateRange`, se utilizará un valor por defecto según el filtro
+	if dateRange == "" {
+		var startDate time.Time
+
+		if filter == "week" {
+			startDate = time.Now().AddDate(0, 0, -7)
+		} else if filter == "month" {
+			startDate = time.Now().AddDate(0, -1, 0)
+		} else if filter == "year" {
+			startDate = time.Now().AddDate(-1, 0, 0)
+		}
+
+		// Formateamos el rango de fechas en un formato legible si corresponde
+		if !startDate.IsZero() {
+			dateRange = startDate.Format("2006-01-02")
+		}
+	}
+
+	// Llama al servicio ClipService para obtener los clips filtrados
+	clips, err := clip.ClipService.GetClipsByNameUserIDOrdenación(UserID, filter, dateRange, page, limit)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error fetching clips",
+			"error":   err.Error(),
+		})
+	}
+
+	// Devuelve los clips en la respuesta
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Clips fetched successfully",
+		"data":    clips,
+	})
+}
+
 func (clip *ClipHandler) DeleteClipByIDAndUserID(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
 	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
