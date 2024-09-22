@@ -45,6 +45,11 @@ type ImpressionsPerDay struct {
 type AdvertisementGet struct {
 	Code string `json:"Code"`
 }
+type AcceptPendingAds struct {
+	Code     string `json:"Code"`
+	NameUser string `json:"NameUser"`
+}
+
 type GetAdsUserCode struct {
 	Code     string `json:"Code"`
 	NameUser string `json:"NameUser" bson:"NameUser"`

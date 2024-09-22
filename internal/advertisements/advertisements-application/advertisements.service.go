@@ -24,12 +24,12 @@ func (s *AdvertisementsService) GetAdvertisements(StreamerID primitive.ObjectID,
 	advertisementsGet, err := s.AdvertisementsRepository.AdvertisementsGet(page)
 	return advertisementsGet, err
 }
-func (s *AdvertisementsService) AcceptPendingAds(StreamerID primitive.ObjectID, data advertisements.AdvertisementGet, nameUser string) error {
+func (s *AdvertisementsService) AcceptPendingAds(StreamerID primitive.ObjectID, data advertisements.AcceptPendingAds) error {
 	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
 	if err != nil {
 		return err
 	}
-	return s.AdvertisementsRepository.AcceptPendingAds(nameUser)
+	return s.AdvertisementsRepository.AcceptPendingAds(data.NameUser)
 }
 
 func (s *AdvertisementsService) GetAllPendingAds(StreamerID primitive.ObjectID, data advertisements.AdvertisementGet, page int64) ([]advertisements.Advertisements, error) {
@@ -39,12 +39,12 @@ func (s *AdvertisementsService) GetAllPendingAds(StreamerID primitive.ObjectID, 
 	}
 	return s.AdvertisementsRepository.GetAllPendingAds(page)
 }
-func (s *AdvertisementsService) RemovePendingAds(StreamerID primitive.ObjectID, data advertisements.AdvertisementGet, nameUser string) error {
+func (s *AdvertisementsService) RemovePendingAds(StreamerID primitive.ObjectID, data advertisements.AcceptPendingAds) error {
 	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
 	if err != nil {
 		return err
 	}
-	return s.AdvertisementsRepository.RemovePendingAds(nameUser)
+	return s.AdvertisementsRepository.RemovePendingAds(data.NameUser)
 }
 func (s *AdvertisementsService) GetAdsUser(NameUser string) ([]advertisements.Advertisements, error) {
 
