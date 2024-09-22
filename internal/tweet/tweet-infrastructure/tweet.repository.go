@@ -433,11 +433,34 @@ func (t *TweetRepository) GetAdsMuro() (advertisements.Advertisements, error) {
 
 	return advertisements.Advertisements{}, errors.New("no advertisements found")
 }
+func (t *TweetRepository) IsUserBanned(userId primitive.ObjectID) (bool, error) {
+	// Conexión a la colección de Usuarios
+	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	// Buscar al usuario por su ID
+	var user struct {
+		Banned bool `bson:"Banned"`
+	}
+	err := GoMongoDBCollUsers.FindOne(context.Background(), bson.D{{Key: "_id", Value: userId}}).Decode(&user)
+	if err != nil {
+		return false, fmt.Errorf("no se pudo encontrar al usuario: %v", err)
+	}
+
+	// Devolver el estado de baneado
+	return user.Banned, nil
+}
 
 // Save
 func (t *TweetRepository) TweetSave(Tweet tweetdomain.Post) (primitive.ObjectID, error) {
-	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	banned, err := t.IsUserBanned(Tweet.UserID)
+	if err != nil {
+		return primitive.ObjectID{}, err
+	}
+	if banned {
+		return primitive.ObjectID{}, errors.New("without permission")
 
+	}
+	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 	result, errInsertOne := GoMongoDBCollUsers.InsertOne(context.Background(), Tweet)
 	if errInsertOne != nil {
 		return primitive.ObjectID{}, errInsertOne
@@ -477,6 +500,14 @@ func (t *TweetRepository) UpdateTrends(hashtags []string) error {
 	return nil
 }
 func (t *TweetRepository) SaveComment(tweetComment *tweetdomain.PostComment) (primitive.ObjectID, error) {
+	banned, err := t.IsUserBanned(tweetComment.UserID)
+	if err != nil {
+		return primitive.ObjectID{}, err
+	}
+	if banned {
+		return primitive.ObjectID{}, errors.New("without permission")
+
+	}
 	GoMongoDBCollComments := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
 	res, errInsertOne := GoMongoDBCollComments.InsertOne(context.Background(), tweetComment)
@@ -489,7 +520,7 @@ func (t *TweetRepository) SaveComment(tweetComment *tweetdomain.PostComment) (pr
 	filter := bson.M{"_id": tweetComment.OriginalPost}
 	update := bson.M{"$push": bson.M{"Comments": insertedID}}
 
-	_, err := GoMongoDBCollTweets.UpdateOne(context.Background(), filter, update)
+	_, err = GoMongoDBCollTweets.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		return insertedID, err
 	}

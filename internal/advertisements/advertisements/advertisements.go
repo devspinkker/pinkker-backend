@@ -1,6 +1,7 @@
 package advertisements
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-playground/validator"
@@ -28,6 +29,7 @@ type Advertisements struct {
 	ClicksPerDay           []ClicksPerDay       `json:"ClicksPerDay" bson:"ClicksPerDay"`
 	ImpressionsPerDay      []ImpressionsPerDay  `json:"ImpressionsPerDay" bson:"ImpressionsPerDay"`
 	Timestamp              time.Time            `json:"Timestamp" bson:"Timestamp"`
+	State                  string               `json:"State"  bson:"State"`
 }
 
 type ClicksPerDay struct {
@@ -52,7 +54,7 @@ type UpdateAdvertisement struct {
 	ID                    primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Name                  string             `json:"Name" bson:"Name"`
 	NameUser              string             `json:"NameUser" bson:"NameUser"`
-	Destination           string             `json:"Destination" bson:"Destination"` // para stream o para muro o que
+	Destination           string             `json:"Destination" bson:"Destination"`
 	Categorie             string             `json:"Categorie" bson:"Categorie"`
 	ImpressionsMax        int                `json:"ImpressionsMax" bson:"ImpressionsMax"`
 	UrlVideo              string             `json:"UrlVideo" bson:"UrlVideo"`
@@ -64,7 +66,26 @@ type UpdateAdvertisement struct {
 
 func (u *UpdateAdvertisement) Validate() error {
 	validate := validator.New()
-	return validate.Struct(u)
+
+	validate.RegisterValidation("nonnegative", func(fl validator.FieldLevel) bool {
+		value := fl.Field().Int()
+		return value >= 0
+	})
+
+	// Validate struct
+	err := validate.Struct(u)
+	if err != nil {
+		return err
+	}
+
+	if u.ImpressionsMax < 0 {
+		return fmt.Errorf("ImpressionsMax must be non-negative")
+	}
+	if u.ClicksMax < 0 {
+		return fmt.Errorf("ClicksMax must be non-negative")
+	}
+
+	return nil
 }
 
 type DeleteAdvertisement struct {

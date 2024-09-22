@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
@@ -32,14 +33,23 @@ func NewSubscriptionRepository(redisClient *redis.Client, mongoClient *mongo.Cli
 }
 func (r *SubscriptionRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {
 	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	filter := bson.M{"_id": userID}
-	var user userdomain.User
-	err := usersCollection.FindOne(ctx, filter).Decode(&user)
+	var result struct {
+		TOTPSecret string `bson:"TOTPSecret"`
+	}
+
+	err := usersCollection.FindOne(
+		ctx,
+		bson.M{"_id": userID},
+		options.FindOne().SetProjection(bson.M{"TOTPSecret": 1}),
+	).Decode(&result)
 	if err != nil {
 		return "", err
 	}
-	return user.TOTPSecret, nil
+
+	return result.TOTPSecret, nil
+
 }
+
 func (r *SubscriptionRepository) GetWebSocketClientsInRoom(roomID string) ([]*websocket.Conn, error) {
 	clients, err := utils.NewChatService().GetWebSocketClientsInRoom(roomID)
 
@@ -111,26 +121,48 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 }
 
 func (r *SubscriptionRepository) findUsersBy_ids(ctx context.Context, source_id, dest_id primitive.ObjectID, usersCollection *mongo.Collection) (*userdomain.User, *userdomain.User, error) {
-	var sourceUser userdomain.User
-	filtersourceWallet := bson.M{
-		"_id": source_id,
+	var sourceUser struct {
+		ID       primitive.ObjectID `bson:"_id"`
+		NameUser string             `bson:"NameUser"`
+		Pixeles  float64            `bson:"Pixeles"`
 	}
-	err := usersCollection.FindOne(ctx, filtersourceWallet).Decode(&sourceUser)
+	var destUser struct {
+		ID       primitive.ObjectID `bson:"_id"`
+		NameUser string             `bson:"NameUser"`
+	}
+
+	// Fetch source user with necessary fields
+	err := usersCollection.FindOne(
+		ctx,
+		bson.M{"_id": source_id},
+		options.FindOne().SetProjection(bson.M{"_id": 1, "NameUser": 1, "Pixeles": 1}),
+	).Decode(&sourceUser)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var destUser userdomain.User
-	filterdestUserWallet := bson.M{
-		"_id": dest_id,
-	}
-
-	err = usersCollection.FindOne(ctx, filterdestUserWallet).Decode(&destUser)
+	// Fetch destination user with necessary fields
+	err = usersCollection.FindOne(
+		ctx,
+		bson.M{"_id": dest_id},
+		options.FindOne().SetProjection(bson.M{"_id": 1, "NameUser": 1}),
+	).Decode(&destUser)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return &sourceUser, &destUser, nil
+	// Convert simplified structs to full user domain objects
+	sourceUserDomain := &userdomain.User{
+		ID:       sourceUser.ID,
+		NameUser: sourceUser.NameUser,
+		Pixeles:  sourceUser.Pixeles,
+	}
+	destUserDomain := &userdomain.User{
+		ID:       destUser.ID,
+		NameUser: destUser.NameUser,
+	}
+
+	return sourceUserDomain, destUserDomain, nil
 }
 
 func (r *SubscriptionRepository) addSubscription(sourceUser *userdomain.User, destUser *userdomain.User, subscriptionStart, subscriptionEnd time.Time, text string) (primitive.ObjectID, error) {
@@ -466,27 +498,38 @@ func (r *SubscriptionRepository) GetSubsAct(Source, Destination primitive.Object
 }
 
 func (u *SubscriptionRepository) DeleteRedisUserChatInOneRoom(userToDelete, IdRoom primitive.ObjectID) error {
-	GoMongoDBColl := u.mongoClient.Database("PINKKER-BACKEND")
-	GoMongoDBCollStreams := GoMongoDBColl.Collection("Streams")
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	collectionStreams := db.Collection("Streams")
 	filter := bson.M{"StreamerID": IdRoom}
 	var stream streamdomain.Stream
-	err := GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&stream)
+
+	// Obtener el stream usando el ID de la habitación
+	err := collectionStreams.FindOne(context.Background(), filter).Decode(&stream)
 	if err != nil {
 		return err
 	}
-	GoMongoDBCollUsers := GoMongoDBColl.Collection("Users")
 
-	filter = bson.M{"_id": userToDelete}
+	collectionUsers := db.Collection("Users")
 
-	var userFolloer userdomain.User
-	err = GoMongoDBCollUsers.FindOne(context.Background(), filter).Decode(&userFolloer)
+	userFilter := bson.M{"_id": userToDelete}
+	var userFolloer struct {
+		NameUser string `bson:"NameUser"`
+	}
+
+	err = collectionUsers.FindOne(
+		context.Background(),
+		userFilter,
+		options.FindOne().SetProjection(bson.M{"NameUser": 1}),
+	).Decode(&userFolloer)
 	if err != nil {
 		return err
 	}
+
 	userHashKey := "userInformation:" + userFolloer.NameUser + ":inTheRoom:" + stream.ID.Hex()
 	_, err = u.redisClient.Del(context.Background(), userHashKey).Result()
 	return err
 }
+
 func (u *SubscriptionRepository) GetStreamByStreamerID(user primitive.ObjectID) (streamdomain.Stream, error) {
 	GoMongoDBColl := u.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollStreams := GoMongoDBColl.Collection("Streams")
@@ -549,8 +592,15 @@ func (u *SubscriptionRepository) StateTheUserInChat(Donado primitive.ObjectID, D
 func (u *SubscriptionRepository) GetUserID(ctx context.Context, db *mongo.Database, userID primitive.ObjectID) (string, error) {
 	usersCollection := db.Collection("Users")
 	filter := bson.M{"_id": userID}
-	var user userdomain.User
-	err := usersCollection.FindOne(ctx, filter).Decode(&user)
+	var user struct {
+		NameUser string `bson:"NameUser"`
+	}
+
+	err := usersCollection.FindOne(
+		ctx,
+		filter,
+		options.FindOne().SetProjection(bson.M{"NameUser": 1}),
+	).Decode(&user)
 	if err != nil {
 		return "", err
 	}

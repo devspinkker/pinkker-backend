@@ -6,6 +6,7 @@ import (
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -321,4 +322,301 @@ func (r *AdvertisementsRepository) DeleteAdvertisement(id primitive.ObjectID) er
 	filter := bson.M{"_id": id}
 	_, err := collection.DeleteOne(context.Background(), filter)
 	return err
+}
+
+func (r *AdvertisementsRepository) BuyadCreate(ad advertisements.UpdateAdvertisement, idUser primitive.ObjectID) (advertisements.Advertisements, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Advertisements")
+	collectionUsers := db.Collection("Users")
+
+	ctx := context.Background()
+	AdvertisementsPayPerPrint := config.AdvertisementsPayPerPrint()
+	floatValuePayPerPrint, err := strconv.ParseFloat(AdvertisementsPayPerPrint, 64)
+	if err != nil {
+		log.Fatalf("error al convertir el valor")
+	}
+	floatValuePayPerPrint *= 2
+	AdvertisementsPayClicks := config.AdvertisementsPayClicks()
+	floatValuePayClicks, err := strconv.ParseFloat(AdvertisementsPayClicks, 64)
+	if err != nil {
+		log.Fatalf("error al convertir el valor")
+	}
+
+	// Buscar solo los Pixeles del usuario
+	userPixeles, err := r.findPixelesByUserId(ctx, idUser, collectionUsers)
+	if err != nil {
+		log.Fatalf("error al encontrar los pixeles del usuario")
+		return advertisements.Advertisements{}, err
+	}
+
+	// Calcular los pixeles necesarios
+	var PixelesUserNeed float64
+	if ad.Destination == "muro" {
+		PixelesUserNeed = floatValuePayClicks * float64(ad.ClicksMax)
+	} else if ad.Destination == "stream" {
+		PixelesUserNeed = floatValuePayPerPrint * float64(ad.ImpressionsMax)
+	} else {
+		return advertisements.Advertisements{}, errors.New("destination undefined")
+	}
+
+	// Verificar si el usuario tiene suficientes pixeles
+	if PixelesUserNeed > userPixeles || PixelesUserNeed >= 50000 {
+		return advertisements.Advertisements{}, errors.New("insufficient Pixeles")
+	}
+
+	// Restar los pixeles del usuario
+	userPixeles -= PixelesUserNeed
+
+	// Actualizar la cantidad de pixeles del usuario en la base de datos
+	update := bson.M{
+		"$inc": bson.M{
+			"Pixeles": -PixelesUserNeed,
+		},
+	}
+	_, err = collectionUsers.UpdateOne(ctx, bson.M{"_id": idUser}, update)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+
+	// Crear el documento del anuncio
+	var documento advertisements.Advertisements
+	documento.Name = ad.Name
+	documento.NameUser = ad.NameUser
+	documento.Destination = ad.Destination
+	documento.Categorie = ad.Categorie
+	documento.UrlVideo = ad.UrlVideo
+	documento.ReferenceLink = ad.ReferenceLink
+	documento.ImpressionsMax = ad.ImpressionsMax
+	documento.PayPerPrint = floatValuePayPerPrint
+	documento.Impressions = 0
+	documento.ClicksMax = ad.ClicksMax
+	documento.DocumentToBeAnnounced = ad.DocumentToBeAnnounced
+	documento.IdOfTheUsersWhoClicked = []primitive.ObjectID{}
+	documento.ClicksPerDay = []advertisements.ClicksPerDay{}
+	documento.ImpressionsPerDay = []advertisements.ImpressionsPerDay{}
+	documento.Timestamp = time.Now()
+	documento.State = "pending"
+
+	// Insertar el anuncio en la base de datos
+	_, err = collection.InsertOne(ctx, documento)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+
+	// Devolver el anuncio creado
+	return documento, nil
+}
+func (r *AdvertisementsRepository) findPixelesByUserId(ctx context.Context, source_id primitive.ObjectID, usersCollection *mongo.Collection) (float64, error) {
+	// Proyección para solo obtener el campo 'Pixeles'
+	projection := bson.M{
+		"Pixeles": 1, // Solo queremos el campo 'Pixeles'
+	}
+
+	var result struct {
+		Pixeles float64 `bson:"Pixeles"` // Definimos solo el campo que queremos
+	}
+
+	// Filtro para buscar por ID
+	filter := bson.M{
+		"_id": source_id,
+	}
+
+	// Ejecutar la consulta con la proyección
+	err := usersCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
+	if err != nil {
+		return 0, err
+	}
+
+	// Retornar solo los Pixeles
+	return result.Pixeles, nil
+}
+func (u *AdvertisementsRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {
+	usersCollection := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	filter := bson.M{"_id": userID}
+
+	projection := bson.M{"TOTPSecret": 1, "_id": 0}
+
+	var result struct {
+		TOTPSecret string `bson:"TOTPSecret"`
+	}
+
+	err := usersCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
+	if err != nil {
+		return "", err
+	}
+
+	return result.TOTPSecret, nil
+}
+
+func (r *AdvertisementsRepository) AcceptPendingAdByID(adID string) (int64, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	Advertisements := db.Collection("Advertisements")
+
+	ctx := context.TODO()
+
+	// Convertir el ID de string a ObjectID
+	id, err := primitive.ObjectIDFromHex(adID)
+	if err != nil {
+		return 0, err
+	}
+
+	filter := bson.M{
+		"_id":   id,
+		"state": "pending",
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"state": "accepted",
+		},
+	}
+
+	// Ejecutar la actualización y obtener el número de documentos modificados
+	result, err := Advertisements.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.ModifiedCount, nil
+}
+func (r *AdvertisementsRepository) AcceptPendingAds(NameUser string) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	Advertisements := db.Collection("Advertisements")
+
+	ctx := context.TODO()
+
+	// Filtro para seleccionar anuncios pendientes para el usuario especificado
+	filter := bson.M{
+		"NameUser": NameUser,
+		"state":    "pending",
+	}
+
+	// Actualización para cambiar el estado a aceptado
+	update := bson.M{
+		"$set": bson.M{
+			"state": "accepted",
+		},
+	}
+
+	// Ejecutar la actualización y obtener el número de documentos modificados
+	_, err := Advertisements.UpdateMany(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (r *AdvertisementsRepository) RemovePendingAds(NameUser string) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	Advertisements := db.Collection("Advertisements")
+	Users := db.Collection("Users")
+
+	ctx := context.TODO()
+
+	// Obtener los anuncios pendientes para el usuario
+	filter := bson.M{
+		"NameUser": NameUser,
+		"state":    "pending",
+	}
+
+	cursor, err := Advertisements.Find(ctx, filter)
+	if err != nil {
+		return err
+	}
+	defer cursor.Close(ctx)
+
+	var ads []advertisements.Advertisements
+	for cursor.Next(ctx) {
+		var ad advertisements.Advertisements
+		if err := cursor.Decode(&ad); err != nil {
+			return err
+		}
+		ads = append(ads, ad)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return err
+	}
+	AdvertisementsPayPerPrint := config.AdvertisementsPayPerPrint()
+	floatValuePayPerPrint, err := strconv.ParseFloat(AdvertisementsPayPerPrint, 64)
+	if err != nil {
+		log.Fatalf("error al convertir el valor")
+	}
+	floatValuePayPerPrint *= 2
+	AdvertisementsPayClicks := config.AdvertisementsPayClicks()
+	floatValuePayClicks, err := strconv.ParseFloat(AdvertisementsPayClicks, 64)
+	if err != nil {
+		log.Fatalf("error al convertir el valor")
+	}
+
+	var totalPixeles float64
+	for _, ad := range ads {
+		var pixelesUserNeed float64
+		if ad.Destination == "muro" {
+			pixelesUserNeed = float64(ad.ClicksMax) * float64(floatValuePayClicks)
+		} else if ad.Destination == "stream" {
+			pixelesUserNeed = float64(ad.ImpressionsMax) * float64(floatValuePayPerPrint)
+		} else {
+			return errors.New("destination undefined")
+		}
+
+		totalPixeles += pixelesUserNeed
+	}
+
+	// Eliminar los anuncios pendientes
+	_, err = Advertisements.DeleteMany(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	update := bson.M{
+		"$inc": bson.M{
+			"Pixeles": totalPixeles,
+		},
+	}
+	_, err = Users.UpdateOne(ctx, bson.M{"NameUser": NameUser}, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (r *AdvertisementsRepository) GetAllPendingAds(page int64) ([]advertisements.Advertisements, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	Advertisements := db.Collection("Advertisements")
+
+	ctx := context.TODO()
+
+	limit := int64(10)
+	skip := int64((page - 1) * 10)
+
+	filter := bson.M{
+		"state": "pending",
+	}
+
+	options := options.Find()
+	options.SetLimit(limit)
+	options.SetSkip(skip)
+
+	cursor, err := Advertisements.Find(ctx, filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var pendingAds []advertisements.Advertisements
+	for cursor.Next(ctx) {
+		var ad advertisements.Advertisements
+		if err := cursor.Decode(&ad); err != nil {
+			return nil, err
+		}
+		pendingAds = append(pendingAds, ad)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return pendingAds, nil
 }

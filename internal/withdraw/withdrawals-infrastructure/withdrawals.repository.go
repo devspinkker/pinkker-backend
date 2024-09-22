@@ -48,13 +48,16 @@ func (r *WithdrawalsRepository) WithdrawalRequest(id primitive.ObjectID, nameUse
 		return err
 	}
 
-	var user userdomain.User
-	err = GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": id}).Decode(&user)
+	var result struct {
+		Pixeles float64 `bson:"Pixeles"`
+	}
+
+	err = GoMongoDBCollUsers.FindOne(context.Background(), bson.M{"_id": id}, options.FindOne().SetProjection(bson.M{"Pixeles": 1})).Decode(&result)
 	if err != nil {
 		return err
 	}
 
-	if user.Pixeles < amount || user.Pixeles < 1000 {
+	if result.Pixeles < amount || result.Pixeles < 1000 {
 		return errors.New("insufficient pixels")
 	}
 	var existingRequest withdrawalsdomain.WithdrawalRequests
@@ -88,6 +91,7 @@ func (r *WithdrawalsRepository) WithdrawalRequest(id primitive.ObjectID, nameUse
 
 	return nil
 }
+
 func (r *WithdrawalsRepository) GetPendingUnnotifiedWithdrawals(data withdrawalsdomain.WithdrawalRequestGet) ([]withdrawalsdomain.WithdrawalRequests, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")
@@ -121,18 +125,30 @@ func (r *WithdrawalsRepository) GetPendingUnnotifiedWithdrawals(data withdrawals
 func (r *WithdrawalsRepository) AutCode(id primitive.ObjectID, code string) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collectionUsers := db.Collection("Users")
-	var User userdomain.User
+	var result struct {
+		PanelAdminPinkker struct {
+			Level int    `bson:"Level"`
+			Asset bool   `bson:"Asset"`
+			Code  string `bson:"Code"`
+		} `bson:"PanelAdminPinkker"`
+	}
 
-	err := collectionUsers.FindOne(context.Background(), bson.M{"_id": id}).Decode(&User)
+	err := collectionUsers.FindOne(
+		context.Background(),
+		bson.M{"_id": id},
+		options.FindOne().SetProjection(bson.M{"PanelAdminPinkker.Level": 1, "PanelAdminPinkker.Asset": 1, "PanelAdminPinkker.Code": 1}),
+	).Decode(&result)
 	if err != nil {
 		return err
 	}
 
-	if User.PanelAdminPinkker.Level != 1 || !User.PanelAdminPinkker.Asset || User.PanelAdminPinkker.Code != code {
+	if result.PanelAdminPinkker.Level != 1 || !result.PanelAdminPinkker.Asset || result.PanelAdminPinkker.Code != code {
 		return fmt.Errorf("usuario no autorizado")
 	}
+
 	return nil
 }
+
 func (r *WithdrawalsRepository) AcceptWithdrawal(id primitive.ObjectID, data withdrawalsdomain.AcceptWithdrawal) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollWithdrawals := db.Collection("WithdrawalRequests")

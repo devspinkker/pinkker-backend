@@ -24,7 +24,28 @@ func (s *AdvertisementsService) GetAdvertisements(StreamerID primitive.ObjectID,
 	advertisementsGet, err := s.AdvertisementsRepository.AdvertisementsGet(page)
 	return advertisementsGet, err
 }
+func (s *AdvertisementsService) AcceptPendingAds(StreamerID primitive.ObjectID, data advertisements.AdvertisementGet, nameUser string) error {
+	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
+	if err != nil {
+		return err
+	}
+	return s.AdvertisementsRepository.AcceptPendingAds(nameUser)
+}
 
+func (s *AdvertisementsService) GetAllPendingAds(StreamerID primitive.ObjectID, data advertisements.AdvertisementGet, page int64) ([]advertisements.Advertisements, error) {
+	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
+	if err != nil {
+		return []advertisements.Advertisements{}, err
+	}
+	return s.AdvertisementsRepository.GetAllPendingAds(page)
+}
+func (s *AdvertisementsService) RemovePendingAds(StreamerID primitive.ObjectID, data advertisements.AdvertisementGet, nameUser string) error {
+	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
+	if err != nil {
+		return err
+	}
+	return s.AdvertisementsRepository.RemovePendingAds(nameUser)
+}
 func (s *AdvertisementsService) GetAdsUser(NameUser string) ([]advertisements.Advertisements, error) {
 
 	advertisementsGet, err := s.AdvertisementsRepository.GetAdsUser(NameUser)
@@ -46,6 +67,10 @@ func (s *AdvertisementsService) CreateAdvertisement(StreamerID primitive.ObjectI
 		return advertisements.Advertisements{}, err
 	}
 	advertisementsGet, err := s.AdvertisementsRepository.CreateAdvertisement(data)
+	return advertisementsGet, err
+}
+func (s *AdvertisementsService) BuyadCreate(StreamerID primitive.ObjectID, data advertisements.UpdateAdvertisement) (advertisements.Advertisements, error) {
+	advertisementsGet, err := s.AdvertisementsRepository.BuyadCreate(data, StreamerID)
 	return advertisementsGet, err
 }
 func (s *AdvertisementsService) UpdateAdvertisement(StreamerID primitive.ObjectID, data advertisements.UpdateAdvertisement) (advertisements.Advertisements, error) {

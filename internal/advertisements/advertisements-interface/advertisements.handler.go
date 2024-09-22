@@ -19,6 +19,44 @@ func NewwithdrawService(Servise *advertisementsapplication.AdvertisementsService
 	}
 }
 
+func (s *AdvertisementsRepository) BuyadCreate(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	nameUser := c.Context().UserValue("nameUser").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var req advertisements.UpdateAdvertisement
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"err":     err.Error(),
+		})
+	}
+	req.NameUser = nameUser
+	if err := req.Validate(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"err":     err.Error(),
+		})
+	}
+
+	advertisementsGet, err := s.Servise.BuyadCreate(idValueObj, req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    advertisementsGet,
+	})
+}
+
 func (s *AdvertisementsRepository) GetAdvertisements(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
@@ -54,6 +92,104 @@ func (s *AdvertisementsRepository) GetAdvertisements(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 		"data":    advertisementsGet,
+	})
+}
+func (s *AdvertisementsRepository) AcceptPendingAds(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	var req advertisements.AdvertisementGet
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"err":     err.Error(),
+		})
+	}
+
+	nameUser := c.Query("nameUser", "1")
+
+	err := s.Servise.AcceptPendingAds(idValueObj, req, nameUser)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
+func (s *AdvertisementsRepository) GetAllPendingAds(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	var req advertisements.AdvertisementGet
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"err":     err.Error(),
+		})
+	}
+
+	page, err := strconv.ParseInt(c.Query("page", "1"), 10, 64)
+	if err != nil || page < 1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "InvalidPageNumber",
+		})
+	}
+
+	pendings, err := s.Servise.GetAllPendingAds(idValueObj, req, page)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    pendings,
+	})
+}
+func (s *AdvertisementsRepository) RemovePendingAds(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	var req advertisements.AdvertisementGet
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"err":     err.Error(),
+		})
+	}
+
+	nameUser := c.Query("nameUser", "1")
+	err := s.Servise.RemovePendingAds(idValueObj, req, nameUser)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
 	})
 }
 

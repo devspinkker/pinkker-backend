@@ -68,13 +68,21 @@ func (D *DonationRepository) StateTheUserInChat(Donado primitive.ObjectID, Donan
 
 func (u *DonationRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {
 	usersCollection := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
 	filter := bson.M{"_id": userID}
-	var user userdomain.User
-	err := usersCollection.FindOne(ctx, filter).Decode(&user)
+
+	projection := bson.M{"TOTPSecret": 1, "_id": 0}
+
+	var result struct {
+		TOTPSecret string `bson:"TOTPSecret"`
+	}
+
+	err := usersCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
 	if err != nil {
 		return "", err
 	}
-	return user.TOTPSecret, nil
+
+	return result.TOTPSecret, nil
 }
 
 func (d *DonationRepository) UserHasNumberPikels(FromUser primitive.ObjectID, Pixeles float64) error {
@@ -134,13 +142,24 @@ func (D *DonationRepository) GetStreamByStreamerID(user primitive.ObjectID) (str
 }
 func (u *DonationRepository) GetUserID(ctx context.Context, db *mongo.Database, userID primitive.ObjectID) (string, error) {
 	usersCollection := db.Collection("Users")
+
+	// Filtro para buscar el usuario por ID
 	filter := bson.M{"_id": userID}
-	var user userdomain.User
-	err := usersCollection.FindOne(ctx, filter).Decode(&user)
+
+	// Proyección para solo obtener la propiedad NameUser
+	projection := bson.M{"NameUser": 1, "_id": 0}
+
+	var result struct {
+		NameUser string `bson:"NameUser"`
+	}
+
+	// Consulta con proyección para obtener solo NameUser
+	err := usersCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
 	if err != nil {
 		return "", err
 	}
-	return user.NameUser, nil
+
+	return result.NameUser, nil
 }
 
 func (D *DonationRepository) PublishNotification(roomID string, noty map[string]interface{}) error {
