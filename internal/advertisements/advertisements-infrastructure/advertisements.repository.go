@@ -351,9 +351,9 @@ func (r *AdvertisementsRepository) BuyadCreate(ad advertisements.UpdateAdvertise
 
 	// Calcular los pixeles necesarios
 	var PixelesUserNeed float64
-	if ad.Destination == "muro" {
+	if ad.Destination == "Muro" {
 		PixelesUserNeed = floatValuePayClicks * float64(ad.ClicksMax)
-	} else if ad.Destination == "stream" {
+	} else if ad.Destination == "Streams" {
 		PixelesUserNeed = floatValuePayPerPrint * float64(ad.ImpressionsMax)
 	} else {
 		return advertisements.Advertisements{}, errors.New("destination undefined")
