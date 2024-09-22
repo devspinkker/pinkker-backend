@@ -463,12 +463,12 @@ func (r *AdvertisementsRepository) AcceptPendingAdByID(adID string) (int64, erro
 
 	filter := bson.M{
 		"_id":   id,
-		"state": "pending",
+		"State": "pending",
 	}
 
 	update := bson.M{
 		"$set": bson.M{
-			"state": "accepted",
+			"State": "accepted",
 		},
 	}
 
@@ -489,13 +489,13 @@ func (r *AdvertisementsRepository) AcceptPendingAds(NameUser string) error {
 	// Filtro para seleccionar anuncios pendientes para el usuario especificado
 	filter := bson.M{
 		"NameUser": NameUser,
-		"state":    "pending",
+		"State":    "pending",
 	}
 
 	// Actualización para cambiar el estado a aceptado
 	update := bson.M{
 		"$set": bson.M{
-			"state": "accepted",
+			"State": "accepted",
 		},
 	}
 
@@ -517,7 +517,7 @@ func (r *AdvertisementsRepository) RemovePendingAds(NameUser string) error {
 	// Obtener los anuncios pendientes para el usuario
 	filter := bson.M{
 		"NameUser": NameUser,
-		"state":    "pending",
+		"State":    "pending",
 	}
 
 	cursor, err := Advertisements.Find(ctx, filter)
