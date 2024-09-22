@@ -169,7 +169,7 @@ func (s *AdvertisementsRepository) RemovePendingAds(c *fiber.Ctx) error {
 		})
 	}
 
-	var req advertisements.AdvertisementGet
+	var req advertisements.AcceptPendingAds
 
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -178,8 +178,7 @@ func (s *AdvertisementsRepository) RemovePendingAds(c *fiber.Ctx) error {
 		})
 	}
 
-	nameUser := c.Query("nameUser", "1")
-	err := s.Servise.RemovePendingAds(idValueObj, req, nameUser)
+	err := s.Servise.RemovePendingAds(idValueObj, req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
