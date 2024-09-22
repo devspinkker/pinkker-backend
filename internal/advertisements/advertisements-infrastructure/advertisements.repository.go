@@ -507,6 +507,7 @@ func (r *AdvertisementsRepository) AcceptPendingAds(NameUser string) error {
 
 	return nil
 }
+
 func (r *AdvertisementsRepository) RemovePendingAds(NameUser string) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	Advertisements := db.Collection("Advertisements")
@@ -593,6 +594,45 @@ func (r *AdvertisementsRepository) GetAllPendingAds(page int64) ([]advertisement
 
 	filter := bson.M{
 		"State": "pending",
+	}
+
+	options := options.Find()
+	options.SetLimit(limit)
+	options.SetSkip(skip)
+
+	cursor, err := Advertisements.Find(ctx, filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var pendingAds []advertisements.Advertisements
+	for cursor.Next(ctx) {
+		var ad advertisements.Advertisements
+		if err := cursor.Decode(&ad); err != nil {
+			return nil, err
+		}
+		pendingAds = append(pendingAds, ad)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return pendingAds, nil
+}
+func (r *AdvertisementsRepository) GetAllPendingNameUserAds(page int64, nameuser string) ([]advertisements.Advertisements, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	Advertisements := db.Collection("Advertisements")
+
+	ctx := context.TODO()
+
+	limit := int64(10)
+	skip := int64((page - 1) * 10)
+
+	filter := bson.M{
+		"State":    "pending",
+		"NameUser": nameuser,
 	}
 
 	options := options.Find()

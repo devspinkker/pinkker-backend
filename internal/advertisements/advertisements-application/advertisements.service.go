@@ -39,6 +39,15 @@ func (s *AdvertisementsService) GetAllPendingAds(StreamerID primitive.ObjectID, 
 	}
 	return s.AdvertisementsRepository.GetAllPendingAds(page)
 }
+
+func (s *AdvertisementsService) GetAllPendingNameUserAds(StreamerID primitive.ObjectID, data advertisements.AcceptPendingAds, page int64) ([]advertisements.Advertisements, error) {
+	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
+	if err != nil {
+		return []advertisements.Advertisements{}, err
+	}
+	return s.AdvertisementsRepository.GetAllPendingNameUserAds(page, data.NameUser)
+}
+
 func (s *AdvertisementsService) RemovePendingAds(StreamerID primitive.ObjectID, data advertisements.AcceptPendingAds) error {
 	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
 	if err != nil {
