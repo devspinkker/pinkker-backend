@@ -553,9 +553,9 @@ func (r *AdvertisementsRepository) RemovePendingAds(NameUser string) error {
 	var totalPixeles float64
 	for _, ad := range ads {
 		var pixelesUserNeed float64
-		if ad.Destination == "muro" {
+		if ad.Destination == "Muro" {
 			pixelesUserNeed = float64(ad.ClicksMax) * float64(floatValuePayClicks)
-		} else if ad.Destination == "stream" {
+		} else if ad.Destination == "Streams" {
 			pixelesUserNeed = float64(ad.ImpressionsMax) * float64(floatValuePayPerPrint)
 		} else {
 			return errors.New("destination undefined")
