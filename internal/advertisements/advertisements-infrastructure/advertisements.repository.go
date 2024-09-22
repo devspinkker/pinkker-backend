@@ -360,7 +360,7 @@ func (r *AdvertisementsRepository) BuyadCreate(ad advertisements.UpdateAdvertise
 	}
 
 	// Verificar si el usuario tiene suficientes pixeles
-	if PixelesUserNeed > userPixeles || PixelesUserNeed >= 50000 {
+	if PixelesUserNeed > userPixeles || PixelesUserNeed <= 50000 {
 		return advertisements.Advertisements{}, errors.New("insufficient Pixeles")
 	}
 
@@ -592,7 +592,7 @@ func (r *AdvertisementsRepository) GetAllPendingAds(page int64) ([]advertisement
 	skip := int64((page - 1) * 10)
 
 	filter := bson.M{
-		"state": "pending",
+		"State": "pending",
 	}
 
 	options := options.Find()
