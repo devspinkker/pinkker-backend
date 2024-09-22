@@ -405,6 +405,7 @@ func (t *TweetRepository) GetAdsMuro() (advertisements.Advertisements, error) {
 	pipelineRandom := bson.A{
 		bson.M{"$match": bson.M{
 			"Destination": "Muro",
+			"State":       "accepted",
 			"$expr": bson.M{
 				"$lte": bson.A{"$Clicks", "$ClicksMax"},
 			},

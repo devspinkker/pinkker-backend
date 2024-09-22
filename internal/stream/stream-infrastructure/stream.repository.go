@@ -448,6 +448,7 @@ func (r *StreamRepository) CommercialInStreamSelectAdvertisements(StreamCategory
 		bson.M{"$match": bson.M{
 			"Categorie":   StreamCategory,
 			"Destination": "Streams",
+			"State":       "accepted",
 			"$expr":       bson.M{"$lte": bson.A{bson.M{"$add": bson.A{"$Impressions", ViewerCount}}, "$ImpressionsMax"}},
 		}},
 		bson.M{"$sample": bson.M{"size": 1}},
@@ -457,6 +458,7 @@ func (r *StreamRepository) CommercialInStreamSelectAdvertisements(StreamCategory
 	pipelineRandom := bson.A{
 		bson.M{"$match": bson.M{
 			"Destination": "Streams",
+			"State":       "accepted",
 			"$expr":       bson.M{"$lte": bson.A{bson.M{"$add": bson.A{"$Impressions", ViewerCount}}, "$ImpressionsMax"}},
 		}},
 		bson.M{"$sample": bson.M{"size": 1}},

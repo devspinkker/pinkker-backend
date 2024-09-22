@@ -15,7 +15,7 @@ type Advertisements struct {
 	ID                     primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
 	Name                   string               `json:"Name" bson:"Name"`
 	NameUser               string               `json:"NameUser" bson:"NameUser"`
-	Destination            string               `json:"Destination" bson:"Destination"` // para stream o para muro o que
+	Destination            string               `json:"Destination" bson:"Destination"` // para Streams o para Muro o que
 	Categorie              string               `json:"Categorie" bson:"Categorie"`
 	Impressions            int                  `json:"Impressions" bson:"Impressions"`
 	ImpressionsMax         int                  `json:"ImpressionsMax" bson:"ImpressionsMax"`
