@@ -1166,9 +1166,12 @@ func (u *UserRepository) RedisGetChangeGoogleAuthenticatorCode(code string) (*do
 
 func (u *UserRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	currentTime := time.Now()
 
 	pipeline := mongo.Pipeline{
+		// Filtra el usuario basado en el filtro proporcionado
 		bson.D{{Key: "$match", Value: filter}},
+		// Agrega campos adicionales como FollowersCount, FollowingCount, SubscribersCount
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "FollowersCount", Value: bson.D{
 				{Key: "$size", Value: bson.D{
@@ -1192,9 +1195,37 @@ func (u *UserRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
 				}},
 			}},
 		}}},
+		// Realiza un lookup en la colección de suscripciones
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Subscriptions"},
+			{Key: "let", Value: bson.D{{Key: "userID", Value: "$_id"}}}, // Pasa el ID del usuario actual
+			{Key: "pipeline", Value: mongo.Pipeline{
+				bson.D{{Key: "$match", Value: bson.D{
+					{Key: "$expr", Value: bson.D{
+						{Key: "$and", Value: bson.A{
+							bson.D{{Key: "$eq", Value: bson.A{"$destinationUserID", "$$userID"}}}, // Coincide el userID con el destinationUserID
+							bson.D{{Key: "$gt", Value: bson.A{"$SubscriptionEnd", currentTime}}},  // Verifica que la suscripción esté activa
+						}},
+					}},
+				}}},
+				bson.D{{Key: "$count", Value: "activeSubscriptionsCount"}},
+			}},
+			{Key: "as", Value: "SubscriptionData"},
+		}}},
+		// Agrega el SubscriptionCount desde SubscriptionData
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "SubscriptionCount", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{
+					bson.D{{Key: "$arrayElemAt", Value: bson.A{"$SubscriptionData.activeSubscriptionsCount", 0}}},
+					0,
+				}},
+			}},
+		}}},
+		// Proyección para excluir campos innecesarios
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "Followers", Value: 0},
 			{Key: "Subscribers", Value: 0},
+			{Key: "SubscriptionData", Value: 0}, // Excluir los datos de lookup
 		}}},
 	}
 
@@ -1247,4 +1278,42 @@ func (u *UserRepository) getFullUser(filter bson.D) (*domain.User, error) {
 	}
 
 	return &user, nil
+}
+func (u *UserRepository) getActiveSubscriptions(userID primitive.ObjectID) (int, error) {
+	GoMongoDBCollSubscriptions := u.mongoClient.Database("PINKKER-BACKEND").Collection("Subscriptions")
+
+	currentTime := time.Now()
+
+	pipeline := mongo.Pipeline{
+		bson.D{
+			{Key: "$match", Value: bson.D{
+				{Key: "destinationUserID", Value: userID},
+				{Key: "SubscriptionEnd", Value: bson.D{{Key: "$gt", Value: currentTime}}}, // Filtra solo suscripciones activas
+			}},
+		},
+		bson.D{
+			{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: nil},
+				{Key: "activeSubscriptionsCount", Value: bson.D{{Key: "$sum", Value: 1}}},
+			}},
+		},
+	}
+
+	cursor, err := GoMongoDBCollSubscriptions.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return 0, err
+	}
+	defer cursor.Close(context.Background())
+
+	var result struct {
+		ActiveSubscriptionsCount int `bson:"activeSubscriptionsCount"`
+	}
+
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&result); err != nil {
+			return 0, err
+		}
+	}
+
+	return result.ActiveSubscriptionsCount, nil
 }
