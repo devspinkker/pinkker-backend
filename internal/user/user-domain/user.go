@@ -197,6 +197,11 @@ type LoginValidatorStruct struct {
 	NameUser string `json:"NameUser" validate:"required,max=70"`
 	Password string `json:"password" validate:"required,min=8"`
 }
+type LoginTOTPSecret struct {
+	NameUser  string `json:"NameUser" validate:"required,max=70"`
+	Password  string `json:"password" validate:"required,min=8"`
+	Totp_code string `json:"totp_code" validate:"totp_code"`
+}
 type Req_Recover_lost_password struct {
 	Mail string `json:"mail" validate:"required,max=70"`
 }
@@ -209,6 +214,10 @@ type DeleteGoogleAuthenticator struct {
 }
 
 func (L *LoginValidatorStruct) LoginValidator() error {
+	validate := validator.New()
+	return validate.Struct(L)
+}
+func (L *LoginTOTPSecret) LoginValidator() error {
 	validate := validator.New()
 	return validate.Struct(L)
 }

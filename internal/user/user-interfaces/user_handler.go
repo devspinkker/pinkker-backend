@@ -6,6 +6,7 @@ import (
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	oauth2 "PINKKER-BACKEND/pkg/OAuth2"
 	configoauth2 "PINKKER-BACKEND/pkg/OAuth2/configOAuth2"
+	"PINKKER-BACKEND/pkg/auth"
 	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/jwt"
 	"context"
@@ -473,9 +474,79 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 			"message": "login failed",
 		})
 	}
+	if user.TOTPSecret != "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "TOTPSecret",
+		})
+	}
 	token, err := jwt.CreateToken(user)
 	if err != nil {
 		log.Fatal("Login,CreateTokenError", err)
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":         "token",
+		"data":            token,
+		"_id":             user.ID,
+		"avatar":          user.Avatar,
+		"keyTransmission": user.KeyTransmission,
+	})
+}
+func (h *UserHandler) LoginTOTPSecret(c *fiber.Ctx) error {
+	var DataForLogin domain.LoginTOTPSecret
+
+	if err := c.BodyParser(&DataForLogin); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request",
+		})
+	}
+	if err := DataForLogin.LoginValidator(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request",
+			"error":   err.Error(),
+		})
+	}
+	user, errGoMongoDBCollUsers := h.userService.FindNameUser(DataForLogin.NameUser, "")
+	if errGoMongoDBCollUsers != nil {
+		if errGoMongoDBCollUsers == mongo.ErrNoDocuments {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": "User not found",
+			})
+		} else {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Internal Server Error",
+			})
+		}
+	}
+
+	IsUserBlocked, err := h.userService.IsUserBlocked(DataForLogin.NameUser)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "login failed",
+		})
+	}
+	if IsUserBlocked {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"message": "Too many failed login attempts. Please try again late",
+		})
+	}
+	if err := helpers.DecodePassword(user.PasswordHash, DataForLogin.Password); err != nil {
+		h.userService.HandleLoginFailure(DataForLogin.NameUser)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "login failed",
+		})
+	}
+	valid, err := auth.TOTPAuthMiddlewareLogin(user.TOTPSecret, DataForLogin.Totp_code)
+	if !valid || err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "invalid",
+			"data":    err,
+		})
+	}
+	token, err := jwt.CreateToken(user)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "CreateToken err",
+		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message":         "token",

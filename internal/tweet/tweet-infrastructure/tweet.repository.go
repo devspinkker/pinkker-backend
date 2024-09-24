@@ -1240,6 +1240,7 @@ func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, li
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{
 			{Key: "UserID", Value: id},
+			{Key: "Type", Value: bson.M{"$in": []string{"Post", "CitaPost"}}},
 			{Key: "PostImage", Value: bson.D{{Key: "$ne", Value: ""}}},
 		}}},
 		// Realizar lookup para obtener datos de usuario

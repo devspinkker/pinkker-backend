@@ -101,12 +101,15 @@ func (u *UserRepository) SetTOTPSecret(ctx context.Context, userID primitive.Obj
 func (u *UserRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {
 	usersCollection := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	filter := bson.M{"_id": userID}
-	var user domain.User
-	err := usersCollection.FindOne(ctx, filter).Decode(&user)
+	projection := bson.M{"TOTPSecret": 1, "_id": 0}
+	var result struct {
+		TOTPSecret string `bson:"TOTPSecret"`
+	}
+	err := usersCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
 	if err != nil {
 		return "", err
 	}
-	return user.TOTPSecret, nil
+	return result.TOTPSecret, nil
 }
 
 func (u *UserRepository) ValidateTOTPCode(ctx context.Context, userID primitive.ObjectID, code string) (bool, error) {
