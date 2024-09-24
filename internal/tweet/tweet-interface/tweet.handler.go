@@ -323,6 +323,35 @@ func (th *TweetHandler) GetPostuser(c *fiber.Ctx) error {
 		"data":    Tweets,
 	})
 }
+
+func (th *TweetHandler) GetPostsWithImages(c *fiber.Ctx) error {
+
+	page, errpage := strconv.Atoi(c.Query("page", "1"))
+	if errpage != nil || page < 1 {
+		page = 1
+	}
+	idStr := c.Query("id", "")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    "name error",
+		})
+	}
+
+	Tweets, errTweetGetFollow := th.TweetServise.GetPostsWithImages(page, id)
+	if errTweetGetFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errTweetGetFollow.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Tweets,
+	})
+}
+
 func (th *TweetHandler) GetPostuserLogueado(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)

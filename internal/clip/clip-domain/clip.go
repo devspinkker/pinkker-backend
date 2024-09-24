@@ -31,6 +31,10 @@ type Clip struct {
 		UpdatedAt time.Time `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
 	} `json:"timestamps,omitempty" bson:"timestamps,omitempty"`
 }
+type ClipCategoryInfo struct {
+	Category string `bson:"Category"`
+}
+
 type GetClip struct {
 	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	NameUserCreator string             `json:"nameUserCreator" bson:"NameUserCreator"`

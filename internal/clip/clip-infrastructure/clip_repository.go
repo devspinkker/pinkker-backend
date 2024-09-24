@@ -8,7 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
+	"math/rand"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -295,18 +295,43 @@ func (t *ClipRepository) getExcludedIDs(excludeIDs []primitive.ObjectID) []inter
 	return excludedIDs
 }
 
-// getFirstFourCategories obtiene las primeras cuatro categorías de preferencias del usuario
 func (c *ClipRepository) getFirstFourCategories(user *userdomain.GetUser) []string {
 	var categories []string
+
+	// Obtener las categorías ordenadas
 	for category := range user.CategoryPreferences {
 		categories = append(categories, category)
 		if len(categories) == 4 {
 			break
 		}
 	}
-	if len(categories) == 0 {
-		categories = append(categories, "nothing")
+
+	if len(categories) < 5 {
+		for len(categories) < 5 {
+			categories = append(categories, "nothing")
+		}
 	}
+
+	// Elegir una categoría aleatoria si hay al menos una categoría
+	var randomCategory string
+	if len(user.CategoryPreferences) > 0 {
+		rand.Seed(time.Now().UnixNano()) // Inicializar el generador de números aleatorios
+		allCategories := make([]string, 0, len(user.CategoryPreferences))
+		for category := range user.CategoryPreferences {
+			allCategories = append(allCategories, category)
+		}
+		randomCategory = allCategories[rand.Intn(len(allCategories))]
+	} else {
+		randomCategory = "nothing"
+	}
+
+	// Añadir la categoría aleatoria a la lista
+	if len(categories) > 0 {
+		categories = append(categories[:len(categories)-1], randomCategory)
+	} else {
+		categories = append(categories, randomCategory)
+	}
+
 	return categories
 }
 
@@ -849,6 +874,7 @@ func (c *ClipRepository) LikeClip(clipID, userID primitive.ObjectID) error {
 	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollClips := GoMongoDB.Collection("Clips")
 
+	// Verificar si el clip existe
 	var clip clipdomain.Clip
 	err := GoMongoDBCollClips.FindOne(ctx, bson.M{"_id": clipID}).Decode(&clip)
 	if err != nil {
@@ -857,18 +883,17 @@ func (c *ClipRepository) LikeClip(clipID, userID primitive.ObjectID) error {
 
 	// Incrementar el contador de likes del clip
 	filter := bson.M{"_id": clipID}
-	update := bson.M{"$addToSet": bson.M{"Likes": userID}}
+	update := bson.M{"$addToSet": bson.M{"Likes": userID}} // Evita duplicados
 	_, err = GoMongoDBCollClips.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}
 
-	// Incrementar el puntaje de la categoría del usuario y sumarle el like dado
+	// Agregar el clip a la lista de likes del usuario
 	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
 	userFilter := bson.M{"_id": userID}
 	userUpdate := bson.M{
-		"$inc":      bson.M{"categoryPreferences." + clip.Category: 0.01},
-		"$addToSet": bson.M{"ClipsLikes": clipID},
+		"$addToSet": bson.M{"ClipsLikes": clipID}, // Evitar duplicados
 	}
 
 	_, err = GoMongoDBCollUsers.UpdateOne(ctx, userFilter, userUpdate)
@@ -876,8 +901,90 @@ func (c *ClipRepository) LikeClip(clipID, userID primitive.ObjectID) error {
 		return err
 	}
 
-	// Actualizar las categoryPreferences del usuario para que estén ordenadas según los puntajes
-	err = updateCategoryPreferences(ctx, GoMongoDBCollUsers, userID)
+	return nil
+}
+func (c *ClipRepository) UpdateUserCategoryPreference(userID primitive.ObjectID, clipCategory string) error {
+	ctx := context.Background()
+	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
+
+	// Obtener solo las preferencias de categorías del usuario
+	var result struct {
+		CategoryPreferences map[string]float64 `bson:"categoryPreferences"`
+	}
+	err := GoMongoDBCollUsers.FindOne(ctx, bson.M{"_id": userID}, options.FindOne().SetProjection(bson.M{"categoryPreferences": 1})).Decode(&result)
+	if err != nil {
+		return err
+	}
+
+	// Obtener el puntaje actual de la categoría del clip
+	categoryPreferences := result.CategoryPreferences
+	currentScore, exists := categoryPreferences[clipCategory]
+	if !exists {
+		// Si la categoría no existe en las preferencias, inicializarla con 0
+		currentScore = 0
+	}
+
+	// Incrementar el puntaje de la categoría
+	currentScore += 1.0
+
+	// Reordenar categorías si el puntaje alcanza 3
+	if currentScore >= 3.0 {
+		// Reiniciar el puntaje de la categoría
+		currentScore = 0.0
+
+		// Crear una lista de categorías con puntajes
+		type CategoryScore struct {
+			Category string
+			Score    float64
+		}
+
+		categoryScores := []CategoryScore{}
+		for cat, score := range categoryPreferences {
+			categoryScores = append(categoryScores, CategoryScore{Category: cat, Score: score})
+		}
+
+		// Encontrar la posición actual de la categoría que recibió el like
+		var currentPos int
+		for i, cs := range categoryScores {
+			if cs.Category == clipCategory {
+				currentPos = i
+				break
+			}
+		}
+
+		// Mover la categoría un puesto hacia arriba si no está ya en el primer puesto
+		if currentPos > 0 {
+			// Intercambiar la categoría con la categoría anterior
+			categoryScores[currentPos], categoryScores[currentPos-1] = categoryScores[currentPos-1], categoryScores[currentPos]
+		}
+
+		// Actualizar el mapa de preferencias basado en el nuevo orden
+		newPreferences := make(map[string]float64)
+		for i, cs := range categoryScores {
+			newPreferences[cs.Category] = float64(i) // Asignar posición como el nuevo puntaje
+		}
+
+		// Actualizar en la base de datos
+		update := bson.M{
+			"$set": bson.M{"categoryPreferences": newPreferences},
+		}
+		_, err = GoMongoDBCollUsers.UpdateOne(ctx, bson.M{"_id": userID}, update)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	// Actualizar el valor en CategoryPreferences si no se realiza un reordenamiento
+	update := bson.M{
+		"$set": bson.M{
+			"categoryPreferences." + clipCategory: currentScore,
+		},
+	}
+
+	_, err = GoMongoDBCollUsers.UpdateOne(ctx, bson.M{"_id": userID}, update)
 	if err != nil {
 		return err
 	}
@@ -885,26 +992,36 @@ func (c *ClipRepository) LikeClip(clipID, userID primitive.ObjectID) error {
 	return nil
 }
 
-func updateCategoryPreferences(ctx context.Context, collection *mongo.Collection, userID primitive.ObjectID) error {
-	// Obtener el usuario
-	var user userdomain.User
-	err := collection.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
+func (c *ClipRepository) GetClipByID(clipID primitive.ObjectID) (*clipdomain.ClipCategoryInfo, error) {
+	ctx := context.Background()
+	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollClips := GoMongoDB.Collection("Clips")
+
+	projection := bson.M{
+		"Category": 1,
+	}
+
+	var clipCategoryInfo clipdomain.ClipCategoryInfo
+	err := GoMongoDBCollClips.FindOne(ctx, bson.M{"_id": clipID}, options.FindOne().SetProjection(projection)).Decode(&clipCategoryInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &clipCategoryInfo, nil
+}
+
+func (c *ClipRepository) LikeAndUpdateCategory(clipID, userID primitive.ObjectID) error {
+	err := c.LikeClip(clipID, userID)
 	if err != nil {
 		return err
 	}
 
-	// Ordenar las categorías en la propiedad categoryPreferences
-	sortedCategories := make([]string, 0, len(user.CategoryPreferences))
-	for category := range user.CategoryPreferences {
-		sortedCategories = append(sortedCategories, category)
+	clip, err := c.GetClipByID(clipID)
+	if err != nil {
+		return err
 	}
-	sort.Slice(sortedCategories, func(i, j int) bool {
-		return user.CategoryPreferences[sortedCategories[i]] > user.CategoryPreferences[sortedCategories[j]]
-	})
 
-	// Actualizar la propiedad categoryPreferences con las categorías ordenadas
-	update := bson.M{"$set": bson.M{"categoryPreferences": user.CategoryPreferences}}
-	_, err = collection.UpdateOne(ctx, bson.M{"_id": userID}, update)
+	err = c.UpdateUserCategoryPreference(userID, clip.Category)
 	if err != nil {
 		return err
 	}

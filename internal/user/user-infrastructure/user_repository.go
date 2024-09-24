@@ -592,7 +592,6 @@ func (u *UserRepository) SaveUser(User *domain.User) (primitive.ObjectID, error)
 	return insertedID, nil
 }
 func (u *UserRepository) FindNameUser(NameUser string, Email string) (*domain.User, error) {
-	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	var FindUserInDb primitive.D
 	if Email == "" {
 		FindUserInDb = bson.D{
@@ -612,9 +611,8 @@ func (u *UserRepository) FindNameUser(NameUser string, Email string) (*domain.Us
 			},
 		}
 	}
-	var findUserInDbExist *domain.User
-	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&findUserInDbExist)
-	return findUserInDbExist, errCollUsers
+
+	return u.getFullUser(FindUserInDb)
 }
 
 func (u *UserRepository) GetUserByNameUserIndex(NameUser string) ([]*domain.GetUser, error) {
@@ -1261,6 +1259,15 @@ func (u *UserRepository) getFullUser(filter bson.D) (*domain.User, error) {
 		}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "Followers", Value: 0}, // Excluir el campo Followers si es necesario
+
+			{Key: "Subscribers", Value: 0}, //new
+			{Key: "PasswordHash", Value: 0},
+
+			{Key: "TOTPSecret", Value: 0},
+			{Key: "ClipsComment", Value: 0},
+			{Key: "Following", Value: 0},
+			{Key: "ClipsLikes", Value: 0},
+			{Key: "Subscriptions", Value: 0},
 		}}},
 	}
 
