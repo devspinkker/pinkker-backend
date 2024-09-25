@@ -537,7 +537,7 @@ func (h *UserHandler) LoginTOTPSecret(c *fiber.Ctx) error {
 			"message": "login failed",
 		})
 	}
-	valid, err := auth.TOTPAutheLogin(user.TOTPSecret, DataForLogin.Totpcode)
+	valid, err := auth.TOTPAutheLogin(DataForLogin.Totpcode, user.TOTPSecret)
 	if !valid || err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"message": "invalid",

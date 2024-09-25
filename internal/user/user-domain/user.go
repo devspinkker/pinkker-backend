@@ -200,7 +200,7 @@ type LoginValidatorStruct struct {
 type LoginTOTPSecret struct {
 	NameUser string `json:"NameUser" validate:"required,max=70"`
 	Password string `json:"password" validate:"required,min=8"`
-	Totpcode string `json:"totp_code" validate:"totp_code"`
+	Totpcode string `json:"totp_code" `
 }
 
 func (L *LoginTOTPSecret) LoginTOTPSecret() error {
