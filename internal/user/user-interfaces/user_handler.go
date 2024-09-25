@@ -501,7 +501,7 @@ func (h *UserHandler) LoginTOTPSecret(c *fiber.Ctx) error {
 			"message": "Bad Request",
 		})
 	}
-	if err := DataForLogin.LoginValidator(); err != nil {
+	if err := DataForLogin.LoginTOTPSecret(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad Request",
 			"error":   err.Error(),
@@ -537,7 +537,7 @@ func (h *UserHandler) LoginTOTPSecret(c *fiber.Ctx) error {
 			"message": "login failed",
 		})
 	}
-	valid, err := auth.TOTPAuthMiddlewareLogin(user.TOTPSecret, DataForLogin.Totp_code)
+	valid, err := auth.TOTPAutheLogin(user.TOTPSecret, DataForLogin.Totpcode)
 	if !valid || err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"message": "invalid",
