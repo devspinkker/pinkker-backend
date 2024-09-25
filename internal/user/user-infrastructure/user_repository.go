@@ -617,7 +617,29 @@ func (u *UserRepository) FindNameUser(NameUser string, Email string) (*domain.Us
 
 	return u.getFullUser(FindUserInDb)
 }
+func (u *UserRepository) FindNameUserInternalOperation(NameUser string, Email string) (*domain.User, error) {
+	var FindUserInDb primitive.D
+	if Email == "" {
+		FindUserInDb = bson.D{
+			{Key: "$or", Value: bson.A{
+				bson.D{{Key: "NameUser", Value: NameUser}},
+				bson.D{{Key: "NameUser", Value: primitive.Regex{Pattern: NameUser, Options: "i"}}},
+			}},
+		}
+	} else {
+		FindUserInDb = bson.D{
+			{
+				Key: "$or",
+				Value: bson.A{
+					bson.D{{Key: "NameUser", Value: NameUser}},
+					bson.D{{Key: "Email", Value: Email}},
+				},
+			},
+		}
+	}
 
+	return u.getFullUserInternalOperations(FindUserInDb)
+}
 func (u *UserRepository) GetUserByNameUserIndex(NameUser string) ([]*domain.GetUser, error) {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
@@ -1245,7 +1267,45 @@ func (u *UserRepository) getUser(filter bson.D) (*userdomain.GetUser, error) {
 
 	return &user, nil
 }
+func (u *UserRepository) getFullUserInternalOperations(filter bson.D) (*domain.User, error) {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
+		// bson.D{{Key: "$addFields", Value: bson.D{
+		// 	{Key: "FollowersCount", Value: bson.D{
+		// 		{Key: "$size", Value: bson.D{
+		// 			{Key: "$objectToArray", Value: bson.D{
+		// 				{Key: "$ifNull", Value: bson.A{"$Followers", bson.D{}}},
+		// 			}},
+		// 		}},
+		// 	}},
+		// }}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Followers", Value: 0},   // Excluir el campo Followers si es necesario
+			{Key: "Subscribers", Value: 0}, //new
+			{Key: "ClipsComment", Value: 0},
+			{Key: "Following", Value: 0},
+			{Key: "ClipsLikes", Value: 0},
+			{Key: "Subscriptions", Value: 0},
+		}}},
+	}
+
+	cursor, err := GoMongoDBCollUsers.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var user domain.User
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+	}
+
+	return &user, nil
+}
 func (u *UserRepository) getFullUser(filter bson.D) (*domain.User, error) {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 

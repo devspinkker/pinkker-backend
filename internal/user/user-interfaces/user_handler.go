@@ -444,7 +444,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 			"error":   err.Error(),
 		})
 	}
-	user, errGoMongoDBCollUsers := h.userService.FindNameUser(DataForLogin.NameUser, "")
+	user, errGoMongoDBCollUsers := h.userService.FindNameUserInternalOperation(DataForLogin.NameUser, "")
 	if errGoMongoDBCollUsers != nil {
 		if errGoMongoDBCollUsers == mongo.ErrNoDocuments {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -459,11 +459,13 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 
 	IsUserBlocked, err := h.userService.IsUserBlocked(DataForLogin.NameUser)
 	if err != nil {
+
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"message": "login failed",
 		})
 	}
 	if IsUserBlocked {
+
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"message": "Too many failed login attempts. Please try again late",
 		})
@@ -505,7 +507,7 @@ func (h *UserHandler) LoginTOTPSecret(c *fiber.Ctx) error {
 			"error":   err.Error(),
 		})
 	}
-	user, errGoMongoDBCollUsers := h.userService.FindNameUser(DataForLogin.NameUser, "")
+	user, errGoMongoDBCollUsers := h.userService.FindNameUserInternalOperation(DataForLogin.NameUser, "")
 	if errGoMongoDBCollUsers != nil {
 		if errGoMongoDBCollUsers == mongo.ErrNoDocuments {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -521,7 +523,7 @@ func (h *UserHandler) LoginTOTPSecret(c *fiber.Ctx) error {
 	IsUserBlocked, err := h.userService.IsUserBlocked(DataForLogin.NameUser)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"message": "login failed",
+			"message": "login failed in block",
 		})
 	}
 	if IsUserBlocked {

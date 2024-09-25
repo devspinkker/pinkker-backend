@@ -144,6 +144,12 @@ func (u *UserService) FindNameUser(NameUser string, Email string) (*domain.User,
 	user, err := u.roomRepository.FindNameUser(NameUser, Email)
 	return user, err
 }
+func (u *UserService) FindNameUserInternalOperation(NameUser string, Email string) (*domain.User, error) {
+
+	user, err := u.roomRepository.FindNameUserInternalOperation(NameUser, Email)
+	return user, err
+}
+
 func (u *UserService) FindNameUserNoSensitiveInformationApli(NameUser string, Email string) (*domain.GetUser, error) {
 
 	user, err := u.roomRepository.FindNameUserNoSensitiveInformation(NameUser, Email)
