@@ -748,12 +748,12 @@ func (c *AdvertisementsRepository) SaveClip(clip *clipdomain.Clip) (primitive.Ob
 	}
 	return insertedID, err
 }
-func (c *AdvertisementsRepository) UpdateClip(clipID primitive.ObjectID, newURL string) {
+func (c *AdvertisementsRepository) UpdateClip(clipID primitive.ObjectID, newURL string, ad primitive.ObjectID) {
 	clipCollection := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
 	filter := bson.M{"_id": clipID}
 
-	update := bson.M{"$set": bson.M{"url": newURL}}
+	update := bson.M{"$set": bson.M{"url": newURL, "AdId": ad}}
 
 	opts := options.Update().SetUpsert(false)
 

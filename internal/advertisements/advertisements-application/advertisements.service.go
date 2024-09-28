@@ -147,8 +147,8 @@ func (u *AdvertisementsService) CreateClipForAds(idCreator primitive.ObjectID, n
 	clip.ID = clipid
 	return clip, err
 }
-func (u *AdvertisementsService) UpdateClip(clipUpdate *clipdomain.Clip, ulrClip string) {
-	u.AdvertisementsRepository.UpdateClip(clipUpdate.ID, ulrClip)
+func (u *AdvertisementsService) UpdateClip(clipUpdate *clipdomain.Clip, ulrClip string, ad primitive.ObjectID) {
+	u.AdvertisementsRepository.UpdateClip(clipUpdate.ID, ulrClip, ad)
 }
 
 func (s *AdvertisementsService) BuyadClipCreate(StreamerID primitive.ObjectID, data advertisements.ClipAdsCreate, clipid primitive.ObjectID) (advertisements.Advertisements, error) {

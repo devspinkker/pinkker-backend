@@ -509,7 +509,7 @@ func (s *AdvertisementsRepository) CreateAdsClips(c *fiber.Ctx) error {
 	}
 
 	go func() {
-		s.Servise.UpdateClip(clipCreated, cloudinaryResponse)
+		s.Servise.UpdateClip(clipCreated, cloudinaryResponse, ads.ID)
 	}()
 
 	defer os.RemoveAll(videoDir)
