@@ -30,7 +30,10 @@ func TOTPAuthMiddleware(repo auth.TOTPRepository) fiber.Handler {
 
 		// Validate TOTP code
 		if body.TOTPCode == "" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "TOTP code is required"})
+			if c.FormValue("totp_code") == "" {
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "TOTP code is required"})
+			}
+			body.TOTPCode = c.FormValue("totp_code")
 		}
 
 		// Retrieve the user's TOTP secret from the repository
