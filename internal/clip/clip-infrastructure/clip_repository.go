@@ -617,6 +617,7 @@ func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (clipdomain.Get
 		}}},
 		// Project the required fields
 		{{Key: "$project", Value: bson.D{
+			{Key: "AdId", Value: 1},
 			{Key: "likeCount", Value: 1},
 			{Key: "CommentsCount", Value: 1},
 			{Key: "id", Value: "$_id"},
@@ -636,7 +637,6 @@ func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (clipdomain.Get
 			{Key: "Comments", Value: 1},
 			{Key: "timestamps", Value: 1},
 			{Key: "Type", Value: 1},
-			{Key: "AdId", Value: 1},
 		}}},
 	}
 
@@ -1348,7 +1348,7 @@ func (c *ClipRepository) GetClipCommentsLoguedo(clipID primitive.ObjectID, page 
 	return comments, nil
 }
 
-func (t *ClipRepository) GetAdClips() (primitive.ObjectID, primitive.ObjectID, error) {
+func (t *ClipRepository) GetAdClips() (primitive.ObjectID, error) {
 	db := t.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
 	ctx := context.TODO()
@@ -1375,16 +1375,16 @@ func (t *ClipRepository) GetAdClips() (primitive.ObjectID, primitive.ObjectID, e
 
 	cursor, err := GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineRandom)
 	if err != nil {
-		return primitive.ObjectID{}, primitive.ObjectID{}, err
+		return primitive.ObjectID{}, err
 	}
 	defer cursor.Close(ctx)
 
 	if cursor.Next(ctx) {
 		if err := cursor.Decode(&advertisement); err != nil {
-			return primitive.ObjectID{}, primitive.ObjectID{}, err
+			return primitive.ObjectID{}, err
 		}
-		return advertisement.ClipId, advertisement.id, nil
+		return advertisement.ClipId, nil
 	}
 
-	return primitive.ObjectID{}, primitive.ObjectID{}, errors.New("no advertisements found")
+	return primitive.ObjectID{}, errors.New("no advertisements found")
 }

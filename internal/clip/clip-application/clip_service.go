@@ -152,14 +152,12 @@ func (u *ClipService) GetClipCommentsLoguedo(idClip primitive.ObjectID, page int
 }
 func (u *ClipService) GetClipTheAd() (clipdomain.GetClip, error) {
 
-	clipId, idClip, err := u.ClipRepository.GetAdClips()
+	clipId, err := u.ClipRepository.GetAdClips()
 	if err != nil {
 		return clipdomain.GetClip{}, err
 	}
 	clipAds, err := u.ClipRepository.FindClipById(clipId)
-	clipAds.AdId = idClip
 	return clipAds, err
-
 }
 
 // func (u *ClipService) ExtractFrameFromVideo(videoPath, outputPath, ffmpegPath string) error {
