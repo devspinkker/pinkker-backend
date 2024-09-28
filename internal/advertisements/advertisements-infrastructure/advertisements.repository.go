@@ -571,7 +571,7 @@ func (r *AdvertisementsRepository) RemovePendingAds(NameUser string) error {
 	var totalPixeles float64
 	for _, ad := range ads {
 		var pixelesUserNeed float64
-		if ad.Destination == "Muro" {
+		if ad.Destination == "Muro" || ad.Destination == "ClipAds" {
 			pixelesUserNeed = float64(ad.ClicksMax) * float64(floatValuePayClicks)
 		} else if ad.Destination == "Streams" {
 			pixelesUserNeed = float64(ad.ImpressionsMax) * float64(floatValuePayPerPrint)
