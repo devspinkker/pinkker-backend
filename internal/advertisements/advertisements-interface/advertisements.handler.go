@@ -424,9 +424,9 @@ func (s *AdvertisementsRepository) CreateAdsClips(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
-
 	idValue := c.Context().UserValue("_id").(string)
 	nameUser := c.Context().UserValue("nameUser").(string)
+	req.NameUser = nameUser
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
 	if errorID != nil {
 		return c.Status(fiber.StatusNetworkAuthenticationRequired).JSON(fiber.Map{
