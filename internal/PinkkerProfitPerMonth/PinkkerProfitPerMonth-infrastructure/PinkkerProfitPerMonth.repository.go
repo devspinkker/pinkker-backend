@@ -2,7 +2,6 @@ package PinkkerProfitPerMonthinfrastructure
 
 import (
 	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
-	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"fmt"
 	"time"
@@ -82,19 +81,34 @@ func (r *PinkkerProfitPerMonthRepository) GetProfitByMonthRange(startDate time.T
 
 	return results, nil
 }
-
-func (u *PinkkerProfitPerMonthRepository) AutCode(id primitive.ObjectID, code string) error {
-	db := u.mongoClient.Database("PINKKER-BACKEND")
+func (r *PinkkerProfitPerMonthRepository) AutCode(id primitive.ObjectID, code string) error {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collectionUsers := db.Collection("Users")
-	var User userdomain.User
 
-	err := collectionUsers.FindOne(context.Background(), bson.M{"_id": id}).Decode(&User)
+	// Definir la proyección para obtener solo los campos necesarios
+	projection := bson.M{
+		"PanelAdminPinkker.Level": 1,
+		"PanelAdminPinkker.Asset": 1,
+		"PanelAdminPinkker.Code":  1,
+	}
+
+	var user struct {
+		PanelAdminPinkker struct {
+			Level int    `bson:"Level"`
+			Asset bool   `bson:"Asset"`
+			Code  string `bson:"Code"`
+		} `bson:"PanelAdminPinkker"`
+	}
+
+	err := collectionUsers.FindOne(context.Background(), bson.M{"_id": id}, options.FindOne().SetProjection(projection)).Decode(&user)
 	if err != nil {
 		return err
 	}
 
-	if User.PanelAdminPinkker.Level != 1 || !User.PanelAdminPinkker.Asset || User.PanelAdminPinkker.Code != code {
+	// Comprobar las condiciones de autorización
+	if user.PanelAdminPinkker.Level != 1 || !user.PanelAdminPinkker.Asset || user.PanelAdminPinkker.Code != code {
 		return fmt.Errorf("usuario no autorizado")
 	}
+
 	return nil
 }

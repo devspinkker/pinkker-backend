@@ -245,17 +245,17 @@ func (r *AdvertisementsRepository) AutCode(id primitive.ObjectID, code string) e
 
 	// Definir la proyección para obtener solo los campos necesarios
 	projection := bson.M{
-		"panelAdminPinkker.level": 1,
-		"panelAdminPinkker.asset": 1,
-		"panelAdminPinkker.code":  1,
+		"PanelAdminPinkker.Level": 1,
+		"PanelAdminPinkker.Asset": 1,
+		"PanelAdminPinkker.Code":  1,
 	}
 
 	var user struct {
 		PanelAdminPinkker struct {
-			Level int    `bson:"level"`
-			Asset bool   `bson:"asset"`
-			Code  string `bson:"code"`
-		} `bson:"panelAdminPinkker"`
+			Level int    `bson:"Level"`
+			Asset bool   `bson:"Asset"`
+			Code  string `bson:"Code"`
+		} `bson:"PanelAdminPinkker"`
 	}
 
 	err := collectionUsers.FindOne(context.Background(), bson.M{"_id": id}, options.FindOne().SetProjection(projection)).Decode(&user)
