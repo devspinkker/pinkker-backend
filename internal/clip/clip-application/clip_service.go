@@ -152,11 +152,13 @@ func (u *ClipService) GetClipCommentsLoguedo(idClip primitive.ObjectID, page int
 }
 func (u *ClipService) GetClipTheAd() (clipdomain.GetClip, error) {
 
-	clipId, err := u.ClipRepository.GetAdClips()
+	clipId, idClip, err := u.ClipRepository.GetAdClips()
 	if err != nil {
 		return clipdomain.GetClip{}, err
 	}
-	return u.ClipRepository.FindClipById(clipId)
+	clipAds, err := u.ClipRepository.FindClipById(clipId)
+	clipAds.AdId = idClip
+	return clipAds, err
 
 }
 

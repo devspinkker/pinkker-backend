@@ -1346,7 +1346,7 @@ func (c *ClipRepository) GetClipCommentsLoguedo(clipID primitive.ObjectID, page 
 	return comments, nil
 }
 
-func (t *ClipRepository) GetAdClips() (primitive.ObjectID, error) {
+func (t *ClipRepository) GetAdClips() (primitive.ObjectID, primitive.ObjectID, error) {
 	db := t.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
 	ctx := context.TODO()
@@ -1362,25 +1362,27 @@ func (t *ClipRepository) GetAdClips() (primitive.ObjectID, error) {
 		bson.M{"$sample": bson.M{"size": 1}},
 		bson.M{"$project": bson.M{
 			"ClipId": 1,
+			"_id":    1,
 		}},
 	}
 
 	var advertisement struct {
 		ClipId primitive.ObjectID `bson:"ClipId"`
+		id     primitive.ObjectID `bson:"_id"`
 	}
 
 	cursor, err := GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineRandom)
 	if err != nil {
-		return primitive.ObjectID{}, err
+		return primitive.ObjectID{}, primitive.ObjectID{}, err
 	}
 	defer cursor.Close(ctx)
 
 	if cursor.Next(ctx) {
 		if err := cursor.Decode(&advertisement); err != nil {
-			return primitive.ObjectID{}, err
+			return primitive.ObjectID{}, primitive.ObjectID{}, err
 		}
-		return advertisement.ClipId, nil
+		return advertisement.ClipId, advertisement.id, nil
 	}
 
-	return primitive.ObjectID{}, errors.New("no advertisements found")
+	return primitive.ObjectID{}, primitive.ObjectID{}, errors.New("no advertisements found")
 }
