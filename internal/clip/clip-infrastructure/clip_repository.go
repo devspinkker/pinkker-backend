@@ -636,6 +636,7 @@ func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (clipdomain.Get
 			{Key: "Comments", Value: 1},
 			{Key: "timestamps", Value: 1},
 			{Key: "Type", Value: 1},
+			{Key: "AdId", Value: 1},
 		}}},
 	}
 
