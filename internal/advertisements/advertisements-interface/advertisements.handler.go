@@ -1,11 +1,18 @@
 package advertisementsinterface
 
 import (
+	"PINKKER-BACKEND/config"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	advertisementsapplication "PINKKER-BACKEND/internal/advertisements/advertisements-application"
+	"PINKKER-BACKEND/pkg/helpers"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -399,5 +406,113 @@ func (s *AdvertisementsRepository) DeleteAdvertisement(c *fiber.Ctx) error {
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
+	})
+}
+func (s *AdvertisementsRepository) CreateAdsClips(c *fiber.Ctx) error {
+	var req advertisements.ClipAdsCreate
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"err":     err.Error(),
+		})
+	}
+	file, err := c.FormFile("video")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "No video file provided",
+			"data":    err.Error(),
+		})
+	}
+
+	idValue := c.Context().UserValue("_id").(string)
+	nameUser := c.Context().UserValue("nameUser").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusNetworkAuthenticationRequired).JSON(fiber.Map{
+			"message": "StatusNetworkAuthenticationRequired",
+			"data":    errorID,
+		})
+	}
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error al obtener el directorio actual",
+			"data":    err.Error(),
+		})
+	}
+
+	baseDir := filepath.Join(currentDir, "clips_CreateAds")
+	videoDir := filepath.Join(baseDir, uuid.NewString())
+	if err := os.MkdirAll(videoDir, os.ModePerm); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error al crear directorio de video",
+			"data":    err.Error(),
+		})
+	}
+
+	videoPath := filepath.Join(videoDir, file.Filename)
+	if err := c.SaveFile(file, videoPath); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error al guardar el archivo de video",
+			"data":    err.Error(),
+		})
+	}
+
+	outputFilePath := filepath.Join(videoDir, "output.mp4")
+	FFmpegPath := config.FFmpegPath()
+
+	// Usar FFmpeg para procesar el video recibido
+	cmd := exec.Command(
+		FFmpegPath,
+		"-i", videoPath,
+		"-t", "60",
+		"-c:v", "libx264",
+		"-c:a", "aac",
+		"-strict", "experimental",
+		"-b:a", "192k",
+		"-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+		"-y",
+		outputFilePath,
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("FFmpeg error: %s\n", string(output))
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error al procesar el video",
+			"data":    err.Error(),
+		})
+	}
+
+	// Crear el clip en el servicio
+	clipCreated, err := s.Servise.CreateClipForAds(idValueObj, nameUser, req.ClipTitle, outputFilePath)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error creando el clip",
+			"data":    err.Error(),
+		})
+	}
+	ads, err := s.Servise.BuyadClipCreate(idValueObj, req, clipCreated.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	cloudinaryResponse, err := helpers.UploadVideo(outputFilePath)
+	if err != nil {
+		fmt.Printf("Error al subir el video a Cloudinary: %v\n", err)
+	}
+
+	go func() {
+		s.Servise.UpdateClip(clipCreated, cloudinaryResponse)
+	}()
+
+	defer os.RemoveAll(videoDir)
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message": "ad clip creado con exito",
+		"data":    ads,
 	})
 }

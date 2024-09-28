@@ -3,7 +3,6 @@ package clipapplication
 import (
 	clipdomain "PINKKER-BACKEND/internal/clip/clip-domain"
 	clipinfrastructure "PINKKER-BACKEND/internal/clip/clip-infrastructure"
-	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -33,10 +32,7 @@ func (u *ClipService) TimeOutClipCreate(idClip primitive.ObjectID) error {
 	err := u.ClipRepository.TimeOutClipCreate(idClip)
 	return err
 }
-func (u *ClipService) FindUser(NameUser string) (*userdomain.User, error) {
-	findUserInDbExist, errCollUsers := u.ClipRepository.FindUser(NameUser)
-	return findUserInDbExist, errCollUsers
-}
+
 func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, nameUser string, ClipTitle string, outputFilePath string) (*clipdomain.Clip, error) {
 	user, err := u.ClipRepository.FindUser(totalKey)
 	if err != nil {
@@ -71,6 +67,7 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		Cover:           "",
 		Comments:        []primitive.ObjectID{},
 		Timestamps:      timeStamps,
+		Type:            "clip",
 	}
 	clip, err = u.ClipRepository.SaveClip(clip)
 	return clip, err

@@ -26,6 +26,7 @@ type Clip struct {
 	Views           int                  `json:"views" bson:"views"`
 	Cover           string               `json:"cover" bson:"cover"`
 	Comments        []primitive.ObjectID `json:"comments" bson:"Comments"`
+	Type            string               `json:"Type" bson:"Type"`
 	Timestamps      struct {
 		CreatedAt time.Time `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 		UpdatedAt time.Time `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`

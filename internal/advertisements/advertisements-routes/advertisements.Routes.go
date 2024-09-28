@@ -21,6 +21,8 @@ func AdvertisementsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB 
 
 	App.Post("/advertisements/BuyadCreate", middleware.UseExtractor(), middleware.TOTPAuthMiddleware(Repository), Handler.BuyadCreate)
 
+	App.Post("/advertisements/CreateAdsClips", middleware.UseExtractor(), middleware.TOTPAuthMiddleware(Repository), Handler.CreateAdsClips)
+
 	App.Post("/advertisements/GetAllPendingAds", middleware.UseExtractor(), Handler.GetAllPendingAds)
 	App.Post("/advertisements/GetAdsUserPendingCode", middleware.UseExtractor(), Handler.GetAdsUserPendingCode)
 

@@ -344,6 +344,7 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Co
 			"timestamps.createdAt": bson.M{"$gte": timeLimit},
 			"Category":             bson.M{"$in": categories},
 		}}},
+		bson.D{{Key: "$match", Value: bson.M{"Type": bson.M{"$ne": "Ad"}}}},
 		// Aplicar filtro adicional para excluir ciertos clips
 		bson.D{{Key: "$match", Value: excludeFilter}},
 		// Agregar campos auxiliares
@@ -432,7 +433,7 @@ func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.
 		}}},
 		bson.D{{Key: "$match", Value: excludeFilter}},
 		// Agregar campos auxiliares
-
+		bson.D{{Key: "$match", Value: bson.M{"Type": bson.M{"$ne": "Ad"}}}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
@@ -714,15 +715,32 @@ func (c *ClipRepository) GetClipIdLogueado(IdClip, idValueObj primitive.ObjectID
 	return &clip, nil
 }
 
-func (c *ClipRepository) FindUser(totalKey string) (*userdomain.User, error) {
+func (c *ClipRepository) FindUser(totalKey string) (userdomain.User, error) {
 	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	FindUserInDb := bson.D{
 		{Key: "KeyTransmission", Value: totalKey},
 	}
-	var findUserInDbExist *userdomain.User
-	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb).Decode(&findUserInDbExist)
-	return findUserInDbExist, errCollUsers
+
+	projection := bson.D{
+		{Key: "NameUser", Value: 1},
+		{Key: "Avatar", Value: 1},
+		{Key: "_id", Value: 1},
+	}
+
+	var user userdomain.User
+	err := GoMongoDBCollUsers.FindOne(
+		context.Background(),
+		FindUserInDb,
+		options.FindOne().SetProjection(projection),
+	).Decode(&user)
+
+	if err != nil {
+		return userdomain.User{}, err
+	}
+
+	return user, nil
 }
+
 func (c *ClipRepository) FindUserId(FindUserId string) (*userdomain.User, error) {
 	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	FindUserInDb := bson.D{
@@ -827,7 +845,10 @@ func (c *ClipRepository) GetClipsMostViewed(page int) ([]clipdomain.Clip, error)
 	options.SetSkip(int64((page - 1) * 10))
 	options.SetLimit(10)
 
-	filter := bson.D{}
+	// Filtro para excluir clips de tipo "Ad"
+	filter := bson.D{
+		{Key: "Type", Value: bson.M{"$ne": "Ad"}},
+	}
 
 	cursor, err := GoMongoDBColl.Find(context.Background(), filter, options)
 	if err != nil {
@@ -842,6 +863,7 @@ func (c *ClipRepository) GetClipsMostViewed(page int) ([]clipdomain.Clip, error)
 
 	return clips, nil
 }
+
 func (c *ClipRepository) GetClipsMostViewedLast48Hours(page int) ([]clipdomain.Clip, error) {
 	twoDaysAgo := time.Now().Add(-48 * time.Hour)
 
@@ -875,10 +897,12 @@ func (c *ClipRepository) LikeClip(clipID, userID primitive.ObjectID) error {
 	GoMongoDBCollClips := GoMongoDB.Collection("Clips")
 
 	// Verificar si el clip existe
-	var clip clipdomain.Clip
-	err := GoMongoDBCollClips.FindOne(ctx, bson.M{"_id": clipID}).Decode(&clip)
+	err := GoMongoDBCollClips.FindOne(ctx, bson.M{"_id": clipID}).Err()
 	if err != nil {
-		return err
+		if err == mongo.ErrNoDocuments {
+			return fmt.Errorf("clip with ID %s does not exist", clipID.Hex())
+		}
+		return fmt.Errorf("error fetching clip: %v", err)
 	}
 
 	// Incrementar el contador de likes del clip
@@ -903,6 +927,7 @@ func (c *ClipRepository) LikeClip(clipID, userID primitive.ObjectID) error {
 
 	return nil
 }
+
 func (c *ClipRepository) UpdateUserCategoryPreference(userID primitive.ObjectID, clipCategory string) error {
 	ctx := context.Background()
 	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
@@ -1033,14 +1058,14 @@ func (c *ClipRepository) ClipDislike(ClipId, idValueToken primitive.ObjectID) er
 	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBColl := GoMongoDB.Collection("Clips")
 
-	count, err := GoMongoDBColl.CountDocuments(context.Background(), bson.D{{Key: "_id", Value: ClipId}})
+	err := GoMongoDBColl.FindOne(context.Background(), bson.M{"_id": ClipId}).Err()
 	if err != nil {
-		return err
+		if err == mongo.ErrNoDocuments {
+			return fmt.Errorf("clip with ID  does not exist")
+		}
+		return fmt.Errorf("error fetching clip", err)
 	}
 
-	if count == 0 {
-		return fmt.Errorf("el ClipId no existe")
-	}
 	filter := bson.D{{Key: "_id", Value: ClipId}}
 	update := bson.D{{Key: "$pull", Value: bson.D{{Key: "Likes", Value: idValueToken}}}}
 
@@ -1077,12 +1102,19 @@ func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username
 	db := c.mongoClient.Database("PINKKER-BACKEND")
 
 	clipCollection := db.Collection("Clips")
-	count, err := clipCollection.CountDocuments(ctx, bson.M{"_id": clipID})
+	var clip struct {
+		Type string `bson:"Type"`
+	}
+	err := clipCollection.FindOne(ctx, bson.M{"_id": clipID}, options.FindOne().SetProjection(bson.M{"Type": 1})).Decode(&clip)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return clipdomain.ClipCommentGet{}, errors.New("el clip no existe")
+		}
 		return clipdomain.ClipCommentGet{}, err
 	}
-	if count == 0 {
-		return clipdomain.ClipCommentGet{}, errors.New("el clip no existe")
+
+	if clip.Type == "Ad" {
+		return clipdomain.ClipCommentGet{}, errors.New("no se puede comentar en clips de tipo Ad")
 	}
 
 	commentCollection := db.Collection("CommentsClips")

@@ -3,6 +3,8 @@ package advertisementsapplication
 import (
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	advertisementsinfrastructure "PINKKER-BACKEND/internal/advertisements/advertisements-infrastructure"
+	clipdomain "PINKKER-BACKEND/internal/clip/clip-domain"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -82,6 +84,12 @@ func (s *AdvertisementsService) BuyadCreate(StreamerID primitive.ObjectID, data 
 	advertisementsGet, err := s.AdvertisementsRepository.BuyadCreate(data, StreamerID)
 	return advertisementsGet, err
 }
+
+func (s *AdvertisementsService) ClipAdsCreate(data advertisements.ClipAdsCreate) (advertisements.Advertisements, error) {
+	advertisementsGet, err := s.AdvertisementsRepository.CreateAdsAdvertisement(data)
+	return advertisementsGet, err
+}
+
 func (s *AdvertisementsService) UpdateAdvertisement(StreamerID primitive.ObjectID, data advertisements.UpdateAdvertisement) (advertisements.Advertisements, error) {
 	err := s.AdvertisementsRepository.AutCode(StreamerID, data.Code)
 	if err != nil {
@@ -102,4 +110,48 @@ func (s *AdvertisementsService) DeleteAdvertisement(StreamerID primitive.ObjectI
 	}
 	err = s.AdvertisementsRepository.DeleteAdvertisement(data.ID)
 	return err
+}
+
+func (u *AdvertisementsService) CreateClipForAds(idCreator primitive.ObjectID, nameUser string, ClipTitle string, outputFilePath string) (*clipdomain.Clip, error) {
+	avatar, err := u.AdvertisementsRepository.FindUser(idCreator)
+	if err != nil {
+		return &clipdomain.Clip{}, err
+	}
+	timeStamps := struct {
+		CreatedAt time.Time `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
+		UpdatedAt time.Time `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
+	}{
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	clip := &clipdomain.Clip{
+
+		NameUserCreator: nameUser,
+		IDCreator:       idCreator,
+		NameUser:        nameUser,
+		UserID:          idCreator,
+		Avatar:          avatar,
+		ClipTitle:       ClipTitle,
+		URL:             outputFilePath,
+		Likes:           []primitive.ObjectID{},
+		StreamThumbnail: "",
+		Category:        "Ad",
+		Duration:        10,
+		Views:           0,
+		Cover:           "",
+		Comments:        []primitive.ObjectID{},
+		Timestamps:      timeStamps,
+		Type:            "Ad",
+	}
+	clipid, err := u.AdvertisementsRepository.SaveClip(clip)
+	clip.ID = clipid
+	return clip, err
+}
+func (u *AdvertisementsService) UpdateClip(clipUpdate *clipdomain.Clip, ulrClip string) {
+	u.AdvertisementsRepository.UpdateClip(clipUpdate.ID, ulrClip)
+}
+
+func (s *AdvertisementsService) BuyadClipCreate(StreamerID primitive.ObjectID, data advertisements.ClipAdsCreate, clipid primitive.ObjectID) (advertisements.Advertisements, error) {
+	advertisementsGet, err := s.AdvertisementsRepository.BuyadClipCreate(data, StreamerID, clipid)
+	return advertisementsGet, err
 }

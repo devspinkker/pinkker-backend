@@ -15,7 +15,7 @@ type Advertisements struct {
 	ID                     primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
 	Name                   string               `json:"Name" bson:"Name"`
 	NameUser               string               `json:"NameUser" bson:"NameUser"`
-	Destination            string               `json:"Destination" bson:"Destination"` // para Streams o para Muro o que
+	Destination            string               `json:"Destination" bson:"Destination"` // para Streams o para Muro o que ClipAds
 	Categorie              string               `json:"Categorie" bson:"Categorie"`
 	Impressions            int                  `json:"Impressions" bson:"Impressions"`
 	ImpressionsMax         int                  `json:"ImpressionsMax" bson:"ImpressionsMax"`
@@ -30,6 +30,7 @@ type Advertisements struct {
 	ImpressionsPerDay      []ImpressionsPerDay  `json:"ImpressionsPerDay" bson:"ImpressionsPerDay"`
 	Timestamp              time.Time            `json:"Timestamp" bson:"Timestamp"`
 	State                  string               `json:"State"  bson:"State"`
+	ClipId                 primitive.ObjectID   `json:"ClipId"  bson:"ClipId"`
 }
 
 type ClicksPerDay struct {
@@ -67,6 +68,22 @@ type UpdateAdvertisement struct {
 	Code                  string             `json:"Code"`
 	ClicksMax             int                `json:"ClicksMax"`
 	DocumentToBeAnnounced primitive.ObjectID `json:"DocumentToBeAnnounced"`
+}
+
+type ClipAdsCreate struct {
+	ID                    primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Name                  string             `json:"Name" bson:"Name"`
+	NameUser              string             `json:"NameUser" bson:"NameUser"`
+	Destination           string             `json:"Destination" bson:"Destination"` // ClipAds
+	Categorie             string             `json:"Categorie" bson:"Categorie"`
+	ImpressionsMax        int                `json:"ImpressionsMax" bson:"ImpressionsMax"`
+	UrlVideo              string             `json:"UrlVideo" bson:"UrlVideo"`
+	ReferenceLink         string             `json:"ReferenceLink" bson:"ReferenceLink"`
+	Code                  string             `json:"Code"`
+	ClicksMax             int                `json:"ClicksMax"`
+	DocumentToBeAnnounced primitive.ObjectID `json:"DocumentToBeAnnounced"`
+	ClipTitle             string             `json:"clipTitle" validate:"required,min=2,max=100"`
+	TotalKey              string             `json:"totalKey" validate:"required"`
 }
 
 func (u *UpdateAdvertisement) Validate() error {

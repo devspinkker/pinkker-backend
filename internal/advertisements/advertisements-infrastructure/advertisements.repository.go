@@ -4,7 +4,7 @@ import (
 	"PINKKER-BACKEND/config"
 	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
-	userdomain "PINKKER-BACKEND/internal/user/user-domain"
+	clipdomain "PINKKER-BACKEND/internal/clip/clip-domain"
 	"context"
 	"errors"
 	"fmt"
@@ -242,18 +242,35 @@ func (r *AdvertisementsRepository) GetAdsUser(NameUser string) ([]advertisements
 func (r *AdvertisementsRepository) AutCode(id primitive.ObjectID, code string) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collectionUsers := db.Collection("Users")
-	var User userdomain.User
 
-	err := collectionUsers.FindOne(context.Background(), bson.M{"_id": id}).Decode(&User)
+	// Definir la proyección para obtener solo los campos necesarios
+	projection := bson.M{
+		"panelAdminPinkker.level": 1,
+		"panelAdminPinkker.asset": 1,
+		"panelAdminPinkker.code":  1,
+	}
+
+	var user struct {
+		PanelAdminPinkker struct {
+			Level int    `bson:"level"`
+			Asset bool   `bson:"asset"`
+			Code  string `bson:"code"`
+		} `bson:"panelAdminPinkker"`
+	}
+
+	err := collectionUsers.FindOne(context.Background(), bson.M{"_id": id}, options.FindOne().SetProjection(projection)).Decode(&user)
 	if err != nil {
 		return err
 	}
 
-	if User.PanelAdminPinkker.Level != 1 || !User.PanelAdminPinkker.Asset || User.PanelAdminPinkker.Code != code {
+	// Comprobar las condiciones de autorización
+	if user.PanelAdminPinkker.Level != 1 || !user.PanelAdminPinkker.Asset || user.PanelAdminPinkker.Code != code {
 		return fmt.Errorf("usuario no autorizado")
 	}
+
 	return nil
 }
+
 func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateAdvertisement) (advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("Advertisements")
@@ -659,4 +676,168 @@ func (r *AdvertisementsRepository) GetAllPendingNameUserAds(page int64, nameuser
 	}
 
 	return pendingAds, nil
+}
+
+func (r *AdvertisementsRepository) CreateAdsAdvertisement(data advertisements.ClipAdsCreate) (advertisements.Advertisements, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Advertisements")
+	AdvertisementsPayPerPrint := config.AdvertisementsPayPerPrint()
+	floatValue, err := strconv.ParseFloat(AdvertisementsPayPerPrint, 64)
+	if err != nil {
+		log.Fatalf("error al convertir el valor")
+	}
+	var documento advertisements.Advertisements
+	documento.Name = data.Name
+	documento.NameUser = data.NameUser
+	documento.Destination = data.Destination
+	documento.Categorie = data.Categorie
+	documento.UrlVideo = data.UrlVideo
+	documento.ReferenceLink = data.ReferenceLink
+	documento.ImpressionsMax = data.ImpressionsMax
+	documento.PayPerPrint = floatValue
+	documento.Impressions = 0
+	documento.ClicksMax = data.ClicksMax
+	documento.DocumentToBeAnnounced = data.DocumentToBeAnnounced
+	documento.IdOfTheUsersWhoClicked = []primitive.ObjectID{}
+	documento.ClicksPerDay = []advertisements.ClicksPerDay{}
+	documento.ImpressionsPerDay = []advertisements.ImpressionsPerDay{}
+	documento.Timestamp = time.Now()
+	documento.ClipId = primitive.ObjectID{}
+
+	_, err = collection.InsertOne(context.Background(), documento)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+
+	return documento, nil
+}
+func (c *AdvertisementsRepository) FindUser(id primitive.ObjectID) (string, error) {
+	GoMongoDBCollUsers := c.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	FindUserInDb := bson.D{
+		{Key: "_id", Value: id},
+	}
+
+	projection := bson.M{
+		"Avatar": 1,
+	}
+
+	var result struct {
+		Avatar string `bson:"Avatar"`
+	}
+
+	// Realizar la consulta con proyección
+	errCollUsers := GoMongoDBCollUsers.FindOne(context.Background(), FindUserInDb, options.FindOne().SetProjection(projection)).Decode(&result)
+	if errCollUsers != nil {
+		return "", errCollUsers
+	}
+
+	return result.Avatar, nil
+}
+
+func (c *AdvertisementsRepository) SaveClip(clip *clipdomain.Clip) (primitive.ObjectID, error) {
+	database := c.mongoClient.Database("PINKKER-BACKEND")
+	clipCollection := database.Collection("Clips")
+
+	result, err := clipCollection.InsertOne(context.Background(), clip)
+	if err != nil {
+		return primitive.ObjectID{}, err
+	}
+	insertedID, ok := result.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return primitive.ObjectID{}, errors.New("no se pudo obtener el ID insertado")
+	}
+	return insertedID, err
+}
+func (c *AdvertisementsRepository) UpdateClip(clipID primitive.ObjectID, newURL string) {
+	clipCollection := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+
+	filter := bson.M{"_id": clipID}
+
+	update := bson.M{"$set": bson.M{"url": newURL}}
+
+	opts := options.Update().SetUpsert(false)
+
+	clipCollection.UpdateOne(context.Background(), filter, update, opts)
+}
+
+func (r *AdvertisementsRepository) BuyadClipCreate(ad advertisements.ClipAdsCreate, idUser, clipid primitive.ObjectID) (advertisements.Advertisements, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Advertisements")
+	collectionUsers := db.Collection("Users")
+
+	ctx := context.Background()
+	AdvertisementsPayPerPrint := config.AdvertisementsPayPerPrint()
+	floatValuePayPerPrint, err := strconv.ParseFloat(AdvertisementsPayPerPrint, 64)
+	if err != nil {
+		log.Fatalf("error al convertir el valor")
+	}
+	floatValuePayPerPrint *= 2
+	AdvertisementsPayClicks := config.AdvertisementsPayClicks()
+	floatValuePayClicks, err := strconv.ParseFloat(AdvertisementsPayClicks, 64)
+	if err != nil {
+		log.Fatalf("error al convertir el valor")
+	}
+
+	// Buscar solo los Pixeles del usuario
+	userPixeles, err := r.findPixelesByUserId(ctx, idUser, collectionUsers)
+	if err != nil {
+		log.Fatalf("error al encontrar los pixeles del usuario")
+		return advertisements.Advertisements{}, err
+	}
+
+	// Calcular los pixeles necesarios
+	var PixelesUserNeed float64
+	if ad.Destination == "ClipAds" {
+		PixelesUserNeed = floatValuePayClicks * float64(ad.ClicksMax)
+	} else {
+		return advertisements.Advertisements{}, errors.New("destination undefined")
+	}
+
+	// Verificar si el usuario tiene suficientes pixeles
+	if PixelesUserNeed > userPixeles || PixelesUserNeed <= 50000 {
+		return advertisements.Advertisements{}, errors.New("insufficient Pixeles")
+	}
+
+	// Restar los pixeles del usuario
+	userPixeles -= PixelesUserNeed
+
+	// Actualizar la cantidad de pixeles del usuario en la base de datos
+	update := bson.M{
+		"$inc": bson.M{
+			"Pixeles": -PixelesUserNeed,
+		},
+	}
+	_, err = collectionUsers.UpdateOne(ctx, bson.M{"_id": idUser}, update)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+
+	// Crear el documento del anuncio
+	var documento advertisements.Advertisements
+	documento.Name = ad.Name
+	documento.NameUser = ad.NameUser
+	documento.Destination = ad.Destination
+	documento.Categorie = ad.Categorie
+	documento.UrlVideo = ad.UrlVideo
+	documento.ReferenceLink = ad.ReferenceLink
+	documento.ImpressionsMax = ad.ImpressionsMax
+	documento.PayPerPrint = floatValuePayPerPrint
+	documento.Impressions = 0
+	documento.ClicksMax = ad.ClicksMax
+	documento.DocumentToBeAnnounced = ad.DocumentToBeAnnounced
+	documento.IdOfTheUsersWhoClicked = []primitive.ObjectID{}
+	documento.ClicksPerDay = []advertisements.ClicksPerDay{}
+	documento.ImpressionsPerDay = []advertisements.ImpressionsPerDay{}
+	documento.Timestamp = time.Now()
+	documento.State = "pending"
+	documento.ClipId = clipid
+
+	// Insertar el anuncio en la base de datos
+	_, err = collection.InsertOne(ctx, documento)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+
+	// Devolver el anuncio creado
+	return documento, nil
 }
