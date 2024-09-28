@@ -71,7 +71,6 @@ type UpdateAdvertisement struct {
 }
 
 type ClipAdsCreate struct {
-	ID                    primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Name                  string             `json:"Name" bson:"Name"`
 	NameUser              string             `json:"NameUser" bson:"NameUser"`
 	Destination           string             `json:"Destination" bson:"Destination"` // ClipAds

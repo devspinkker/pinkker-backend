@@ -78,7 +78,7 @@ func (u *ClipService) UpdateClip(clipUpdate *clipdomain.Clip, ulrClip string) {
 func (u *ClipService) UpdateClipPreviouImage(clipUpdate *clipdomain.Clip, ulrClip string) {
 	u.ClipRepository.UpdateClip(clipUpdate.ID, ulrClip)
 }
-func (u *ClipService) GetClipId(clipId primitive.ObjectID) (*clipdomain.GetClip, error) {
+func (u *ClipService) GetClipId(clipId primitive.ObjectID) (clipdomain.GetClip, error) {
 	clip, err := u.ClipRepository.FindClipById(clipId)
 	return clip, err
 }
@@ -149,6 +149,15 @@ func (u *ClipService) GetClipComments(idClip primitive.ObjectID, page int) ([]cl
 func (u *ClipService) GetClipCommentsLoguedo(idClip primitive.ObjectID, page int, idt primitive.ObjectID) ([]clipdomain.ClipCommentGet, error) {
 	clips, err := u.ClipRepository.GetClipCommentsLoguedo(idClip, page, idt)
 	return clips, err
+}
+func (u *ClipService) GetClipTheAd() (clipdomain.GetClip, error) {
+
+	clipId, err := u.ClipRepository.GetAdClips()
+	if err != nil {
+		return clipdomain.GetClip{}, err
+	}
+	return u.ClipRepository.FindClipById(clipId)
+
 }
 
 // func (u *ClipService) ExtractFrameFromVideo(videoPath, outputPath, ffmpegPath string) error {

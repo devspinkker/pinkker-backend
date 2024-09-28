@@ -674,6 +674,14 @@ func (clip *ClipHandler) ClipsRecommended(c *fiber.Ctx) error {
 			"data":    errLike.Error(),
 		})
 	}
+
+	ClipAd, err := clip.ClipService.GetClipTheAd()
+	if err != nil {
+		fmt.Println(err)
+	}
+	if ClipAd.URL != "" {
+		clips = append(clips, ClipAd)
+	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 		"data":    clips,

@@ -413,6 +413,7 @@ func (t *TweetRepository) GetAdsMuro() (advertisements.Advertisements, error) {
 		bson.M{"$sample": bson.M{"size": 1}},
 		bson.M{"$project": bson.M{
 			"IdOfTheUsersWhoClicked": 0,
+			"ClicksPerDay":           0,
 		}},
 	}
 

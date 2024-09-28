@@ -603,7 +603,7 @@ func (c *ClipRepository) UpdateClipPreviouImage(clipID primitive.ObjectID, newUR
 	clipCollection.UpdateOne(context.Background(), filter, update, opts)
 
 }
-func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (*clipdomain.GetClip, error) {
+func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (clipdomain.GetClip, error) {
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
 	pipeline := mongo.Pipeline{
@@ -641,21 +641,21 @@ func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (*clipdomain.Ge
 	// Execute the aggregation pipeline
 	cursor, err := GoMongoDBColl.Aggregate(context.Background(), pipeline)
 	if err != nil {
-		return nil, err
+		return clipdomain.GetClip{}, err
 	}
 	defer cursor.Close(context.Background())
 
 	var clip clipdomain.GetClip
 	if cursor.Next(context.Background()) {
 		if err := cursor.Decode(&clip); err != nil {
-			return nil, err
+			return clipdomain.GetClip{}, err
 		}
 	} else {
-		return nil, fmt.Errorf("clip not found")
+		return clipdomain.GetClip{}, fmt.Errorf("clip not found")
 	}
 
 	// Return the found clip
-	return &clip, nil
+	return clip, nil
 }
 func (c *ClipRepository) GetClipIdLogueado(IdClip, idValueObj primitive.ObjectID) (*clipdomain.GetClip, error) {
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
@@ -1344,4 +1344,43 @@ func (c *ClipRepository) GetClipCommentsLoguedo(clipID primitive.ObjectID, page 
 	}
 
 	return comments, nil
+}
+
+func (t *ClipRepository) GetAdClips() (primitive.ObjectID, error) {
+	db := t.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
+	ctx := context.TODO()
+
+	pipelineRandom := bson.A{
+		bson.M{"$match": bson.M{
+			"Destination": "ClipAds",
+			"State":       "accepted",
+			"$expr": bson.M{
+				"$lte": bson.A{"$Clicks", "$ClicksMax"},
+			},
+		}},
+		bson.M{"$sample": bson.M{"size": 1}},
+		bson.M{"$project": bson.M{
+			"ClipId": 1,
+		}},
+	}
+
+	var advertisement struct {
+		ClipId primitive.ObjectID `bson:"ClipId"`
+	}
+
+	cursor, err := GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineRandom)
+	if err != nil {
+		return primitive.ObjectID{}, err
+	}
+	defer cursor.Close(ctx)
+
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&advertisement); err != nil {
+			return primitive.ObjectID{}, err
+		}
+		return advertisement.ClipId, nil
+	}
+
+	return primitive.ObjectID{}, errors.New("no advertisements found")
 }

@@ -496,6 +496,9 @@ func (s *AdvertisementsRepository) CreateAdsClips(c *fiber.Ctx) error {
 	}
 	ads, err := s.Servise.BuyadClipCreate(idValueObj, req, clipCreated.ID)
 	if err != nil {
+		fmt.Println(ads)
+		fmt.Println(err.Error())
+		fmt.Println(req)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
 		})
