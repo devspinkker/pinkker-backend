@@ -833,11 +833,13 @@ func (r *AdvertisementsRepository) BuyadClipCreate(ad advertisements.ClipAdsCrea
 	documento.ClipId = clipid
 
 	// Insertar el anuncio en la base de datos
-	_, err = collection.InsertOne(ctx, documento)
+	result, err := collection.InsertOne(ctx, documento)
 	if err != nil {
 		return advertisements.Advertisements{}, err
 	}
-
+	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
+		documento.ID = oid
+	}
 	// Devolver el anuncio creado
 	return documento, nil
 }
