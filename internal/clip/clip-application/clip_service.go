@@ -150,13 +150,16 @@ func (u *ClipService) GetClipCommentsLoguedo(idClip primitive.ObjectID, page int
 	clips, err := u.ClipRepository.GetClipCommentsLoguedo(idClip, page, idt)
 	return clips, err
 }
-func (u *ClipService) GetClipTheAd() (clipdomain.GetClip, error) {
+func (u *ClipService) GetClipTheAd(clips []clipdomain.GetClip) (clipdomain.GetClip, error) {
 
 	clipId, err := u.ClipRepository.GetAdClips()
 	if err != nil {
 		return clipdomain.GetClip{}, err
 	}
 	clipAds, err := u.ClipRepository.FindClipById(clipId)
+
+	u.ClipRepository.AddAds(clipAds.AdId, clips)
+
 	return clipAds, err
 }
 

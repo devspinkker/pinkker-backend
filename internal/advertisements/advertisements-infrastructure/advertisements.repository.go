@@ -772,8 +772,6 @@ func (r *AdvertisementsRepository) BuyadClipCreate(ad advertisements.ClipAdsCrea
 		log.Fatalf("error al convertir el valor")
 	}
 	floatValuePayPerPrint *= 2
-	AdvertisementsPayClicks := config.AdvertisementsPayClicks()
-	floatValuePayClicks, err := strconv.ParseFloat(AdvertisementsPayClicks, 64)
 	if err != nil {
 		log.Fatalf("error al convertir el valor")
 	}
@@ -788,7 +786,7 @@ func (r *AdvertisementsRepository) BuyadClipCreate(ad advertisements.ClipAdsCrea
 	// Calcular los pixeles necesarios
 	var PixelesUserNeed float64
 	if ad.Destination == "ClipAds" {
-		PixelesUserNeed = floatValuePayClicks * float64(ad.ClicksMax)
+		PixelesUserNeed = floatValuePayPerPrint * float64(ad.ImpressionsMax)
 	} else {
 		return advertisements.Advertisements{}, errors.New("destination undefined")
 	}

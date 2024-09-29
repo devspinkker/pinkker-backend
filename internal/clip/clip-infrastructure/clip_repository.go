@@ -2,13 +2,17 @@
 package clipinfrastructure
 
 import (
+	"PINKKER-BACKEND/config"
+	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
 	clipdomain "PINKKER-BACKEND/internal/clip/clip-domain"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -1358,7 +1362,7 @@ func (t *ClipRepository) GetAdClips() (primitive.ObjectID, error) {
 			"Destination": "ClipAds",
 			"State":       "accepted",
 			"$expr": bson.M{
-				"$lte": bson.A{"$Clicks", "$ClicksMax"},
+				"$lte": bson.A{"$Impressions", "$ImpressionsMax"},
 			},
 		}},
 		bson.M{"$sample": bson.M{"size": 1}},
@@ -1370,7 +1374,7 @@ func (t *ClipRepository) GetAdClips() (primitive.ObjectID, error) {
 
 	var advertisement struct {
 		ClipId primitive.ObjectID `bson:"ClipId"`
-		id     primitive.ObjectID `bson:"_id"`
+		ID     primitive.ObjectID `bson:"_id"`
 	}
 
 	cursor, err := GoMongoDBCollAdvertisements.Aggregate(ctx, pipelineRandom)
@@ -1383,8 +1387,164 @@ func (t *ClipRepository) GetAdClips() (primitive.ObjectID, error) {
 		if err := cursor.Decode(&advertisement); err != nil {
 			return primitive.ObjectID{}, err
 		}
-		return advertisement.ClipId, nil
+
+		// Incrementar impresiones y actualizar registros de impresiones diarias
+		currentDate := time.Now().Format("2006-01-02")
+		advertisementFilter := bson.M{"_id": advertisement.ID}
+
+		// Actualización para incrementar impresiones
+		updateImpressions := bson.M{
+			"$inc": bson.M{
+				"Impressions": 1,
+			},
+		}
+
+		// Ejecutar la actualización de impresiones
+		_, err := GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, updateImpressions)
+		if err != nil {
+			return primitive.ObjectID{}, err
+		}
+
+		// Actualización para impresiones diarias
+		updateImpressionsPerDay := bson.M{
+			"$inc": bson.M{
+				"ImpressionsPerDay.$[elem].Impressions": 1,
+			},
+		}
+
+		arrayFilter := options.ArrayFilters{
+			Filters: []interface{}{
+				bson.M{"elem.Date": currentDate},
+			},
+		}
+
+		updateResult, err := GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, updateImpressionsPerDay, options.Update().SetArrayFilters(arrayFilter))
+		if err != nil {
+			return primitive.ObjectID{}, err
+		}
+
+		// Si no se actualizó ningún documento, crear un nuevo registro para la fecha actual
+		if updateResult.ModifiedCount == 0 {
+			newDateUpdate := bson.M{
+				"$addToSet": bson.M{
+					"ImpressionsPerDay": bson.M{
+						"Date":        currentDate,
+						"Impressions": 1,
+					},
+				},
+			}
+
+			_, err = GoMongoDBCollAdvertisements.UpdateOne(ctx, advertisementFilter, newDateUpdate)
+			if err != nil {
+				return primitive.ObjectID{}, err
+			}
+		}
+		err = t.updatePinkkerProfitPerMonth(ctx)
+		// Retornar ClipId después de manejar las impresiones
+		return advertisement.ClipId, err
 	}
 
 	return primitive.ObjectID{}, errors.New("no advertisements found")
+}
+
+func (r *ClipRepository) AddAds(idValueObj primitive.ObjectID, ids []clipdomain.GetClip) error {
+	ctx := context.Background()
+
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := GoMongoDB.Collection("Users")
+
+	// Verificar si hay 10 clips
+	if len(ids) == 10 {
+		// Extraer todos los IDCreator de los clips
+		var creatorIDs []primitive.ObjectID
+		for _, clip := range ids {
+			creatorIDs = append(creatorIDs, clip.IDCreator)
+		}
+
+		// Filtrar los usuarios cuyos IDs están en la lista de creatorIDs
+		userFilter := bson.M{"_id": bson.M{"$in": creatorIDs}}
+
+		// Incrementar Pixeles en 1 para cada usuario cuyo ID esté en creatorIDs
+		updatePixel := bson.M{
+			"$inc": bson.M{
+				"Pixeles": 1,
+			},
+		}
+
+		// Actualizar todos los documentos en una sola operación
+		_, err := GoMongoDBCollUsers.UpdateMany(ctx, userFilter, updatePixel)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *ClipRepository) updatePinkkerProfitPerMonth(ctx context.Context) error {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
+	AdvertisementsPayPerPrint := config.AdvertisementsPayPerPrint()
+
+	AdvertisementsPayPerPrintFloat, err := strconv.ParseFloat(AdvertisementsPayPerPrint, 64)
+	if err != nil {
+		log.Fatalf("error al convertir el valor: %v", err)
+	}
+	impressions := int(AdvertisementsPayPerPrintFloat)
+	currentTime := time.Now()
+	currentMonth := int(currentTime.Month())
+	currentYear := currentTime.Year()
+	currentWeek := getWeekOfMonth(currentTime)
+
+	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
+	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
+
+	monthlyFilter := bson.M{
+		"timestamp": bson.M{
+			"$gte": startOfMonth,
+			"$lt":  startOfNextMonth,
+		},
+	}
+
+	// Paso 1: Inserta el documento si no existe con la estructura básica
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
+		"$setOnInsert": bson.M{
+			"timestamp": currentTime,
+			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.Week{
+				Impressions: 0,
+				Clicks:      0,
+				Pixels:      0.0,
+			},
+		},
+	}, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+
+	// Paso 2: Incrementa los valores en 'weeks.week_x'
+	monthlyUpdate := bson.M{
+		"$inc": bson.M{
+			"total":                                 AdvertisementsPayPerPrintFloat,
+			"weeks." + currentWeek + ".impressions": impressions,
+		},
+	}
+
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func getWeekOfMonth(t time.Time) string {
+	startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+	dayOfMonth := t.Day()
+	dayOfWeek := int(startOfMonth.Weekday())
+	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
+
+	if weekNumber > 4 {
+		weekNumber = 4
+	}
+
+	return "week_" + strconv.Itoa(weekNumber)
 }

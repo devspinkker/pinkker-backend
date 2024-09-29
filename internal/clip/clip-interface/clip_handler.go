@@ -675,7 +675,7 @@ func (clip *ClipHandler) ClipsRecommended(c *fiber.Ctx) error {
 		})
 	}
 
-	ClipAd, err := clip.ClipService.GetClipTheAd()
+	ClipAd, err := clip.ClipService.GetClipTheAd(clips)
 	if err != nil {
 		fmt.Println(err)
 	}
