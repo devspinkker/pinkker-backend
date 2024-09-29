@@ -1455,24 +1455,43 @@ func (r *ClipRepository) AddAds(idValueObj primitive.ObjectID, ids []clipdomain.
 
 	// Verificar si hay 10 clips
 	if len(ids) == 10 {
-		// Extraer todos los IDCreator de los clips
-		var creatorIDs []primitive.ObjectID
+		// Crear un mapa para contar cuántas veces aparece cada IDCreator
+		pixelIncrementMap := make(map[primitive.ObjectID]int)
+
+		// Contar las apariciones de cada IDCreator
 		for _, clip := range ids {
-			creatorIDs = append(creatorIDs, clip.IDCreator)
+			pixelIncrementMap[clip.IDCreator]++
 		}
 
-		// Filtrar los usuarios cuyos IDs están en la lista de creatorIDs
-		userFilter := bson.M{"_id": bson.M{"$in": creatorIDs}}
-
-		// Incrementar Pixeles en 1 para cada usuario cuyo ID esté en creatorIDs
-		updatePixel := bson.M{
-			"$inc": bson.M{
-				"Pixeles": 1,
-			},
+		// Iniciar una sesión para realizar la operación en una transacción
+		session, err := GoMongoDB.Client().StartSession()
+		if err != nil {
+			return err
 		}
+		defer session.EndSession(ctx)
 
-		// Actualizar todos los documentos en una sola operación
-		_, err := GoMongoDBCollUsers.UpdateMany(ctx, userFilter, updatePixel)
+		// Usar la sesión para ejecutar la transacción
+		_, err = session.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+			// Iterar sobre el mapa de incrementos y ejecutar las actualizaciones
+			for creatorID, pixelCount := range pixelIncrementMap {
+				userFilter := bson.M{"_id": creatorID}
+				updatePixel := bson.M{
+					"$inc": bson.M{
+						"Pixeles": pixelCount, // Incrementar según el número de ocurrencias
+					},
+				}
+
+				// Actualizar el Pixeles para cada creador dentro de la transacción
+				_, err := GoMongoDBCollUsers.UpdateOne(sessCtx, userFilter, updatePixel)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			// Si todo salió bien, devolver un valor de éxito
+			return nil, nil
+		})
+
 		if err != nil {
 			return err
 		}
