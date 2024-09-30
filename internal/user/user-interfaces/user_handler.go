@@ -774,7 +774,7 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 			"data":    "toUser !== ",
 		})
 	}
-	errUpdateUserFollow := h.userService.FollowUser(IdUserTokenP, IdUser)
+	avatar, errUpdateUserFollow := h.userService.FollowUser(IdUserTokenP, IdUser)
 	if errUpdateUserFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -788,21 +788,23 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 			"data":    errdeleteUser,
 		})
 	}
-	h.NotifyActivityFeed(IdUser.Hex()+"ActivityFeed", nameUser)
+	h.NotifyActivityFeed(IdUser.Hex()+"ActivityFeed", nameUser, avatar)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Follow",
 	})
 }
-func (h *UserHandler) NotifyActivityFeed(room, user string) error {
+func (h *UserHandler) NotifyActivityFeed(room, user, Avatar string) error {
 	clients, err := h.userService.GetWebSocketActivityFeed(room)
 	if err != nil {
 		return err
 	}
 
 	notification := map[string]interface{}{
-		"action": "follow",
-		"data":   user,
+		"Type":     "follow",
+		"Nameuser": user,
+		"Avatar":   Avatar,
 	}
+
 	for _, client := range clients {
 		err = client.WriteJSON(notification)
 		if err != nil {

@@ -785,23 +785,34 @@ func (u *UserRepository) EditSocialNetworks(SocialNetwork domain.SocialNetwork, 
 }
 
 // follow
-func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.ObjectID) error {
+func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.ObjectID) (string, error) {
 	db := u.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollUsers := db.Collection("Users")
 
+	// Buscar al usuario seguido (followedUserID)
 	filterFollowe := bson.M{"_id": followedUserID}
+	projection := bson.M{"Avatar": 1, "_id": 0} // Solo obtener el campo Avatar
 
-	var userFolloer domain.User
-	err := GoMongoDBCollUsers.FindOne(context.Background(), filterFollowe).Decode(&userFolloer)
-	if err != nil {
-		return err
+	var result struct {
+		Avatar string `bson:"Avatar"`
 	}
+
+	err := GoMongoDBCollUsers.FindOne(context.Background(), filterFollowe, options.FindOne().SetProjection(projection)).Decode(&result)
+	if err != nil {
+		return "", err
+	}
+
+	// Obtener el Avatar del usuario seguido
+	avatar := result.Avatar
+
+	// Buscar al usuario que sigue (IdUserTokenP)
 	filterToken := bson.M{"_id": IdUserTokenP}
 	var usertoken domain.User
 	err = GoMongoDBCollUsers.FindOne(context.Background(), filterToken).Decode(&usertoken)
 	if err != nil {
-		return err
+		return "", err
 	}
+
 	Followingadd := domain.FollowInfo{
 		Since:         time.Now(),
 		Notifications: true,
@@ -814,7 +825,7 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 
 	_, err = GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Agregar IdUserTokenP al mapa Followers de followedUserID
@@ -829,8 +840,9 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 
 	_, err = GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		return err
+		return "", err
 	}
+
 	GoMongoDBCollInformationInAllRooms := db.Collection("UserInformationInAllRooms")
 
 	var StreamInfo streamdomain.Stream
@@ -838,8 +850,9 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 	GoMongoDBCollStreams := db.Collection("Streams")
 	err = GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&StreamInfo)
 	if err != nil {
-		return err
+		return "", err
 	}
+
 	filter = bson.M{"NameUser": usertoken.NameUser}
 	var userInfo domain.InfoUser
 	err = GoMongoDBCollInformationInAllRooms.FindOne(context.Background(), filter).Decode(&userInfo)
@@ -867,11 +880,12 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 		}
 		_, err := GoMongoDBCollInformationInAllRooms.InsertOne(context.Background(), userInfo)
 		if err != nil {
-			return err
+			return "", err
 		}
 	} else if err != nil {
-		return err
+		return "", err
 	}
+
 	roomExists := false
 	for _, room := range userInfo.Rooms {
 		if room["Room"] == StreamInfo.ID {
@@ -900,16 +914,17 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 		}
 
 		userInfo.Rooms = append(userInfo.Rooms, newRoom)
-
 	}
 
 	_, err = GoMongoDBCollInformationInAllRooms.UpdateOne(context.Background(), filter, bson.M{"$set": userInfo})
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	// Devolver el Avatar del usuario seguido
+	return avatar, nil
 }
+
 func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectID) error {
 	db := u.mongoClient.Database("PINKKER-BACKEND")
 

@@ -55,7 +55,7 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 		})
 	}
 
-	user, errdonatePixels := h.subscriptionService.Subscription(FromUser, idReq.ToUser, idReq.Text)
+	user, avatar, errdonatePixels := h.subscriptionService.Subscription(FromUser, idReq.ToUser, idReq.Text)
 	if errdonatePixels != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": errdonatePixels.Error(),
@@ -74,14 +74,14 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 			"message": errupdataSubsChat,
 		})
 	}
-	h.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", user, idReq.Text)
+	h.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", user, avatar, idReq.Text)
 	h.NotifyActivityToChat(idReq.ToUser, user, idReq.Text)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})
 }
-func (h *SubscriptionHandler) NotifyActivityFeed(room, user string, text string) error {
+func (h *SubscriptionHandler) NotifyActivityFeed(room, user, Avatar, text string) error {
 	clients, err := h.subscriptionService.GetWebSocketActivityFeed(room)
 	if err != nil {
 		return err
@@ -89,10 +89,12 @@ func (h *SubscriptionHandler) NotifyActivityFeed(room, user string, text string)
 	}
 
 	notification := map[string]interface{}{
-		"action": "Suscribirse",
-		"Text":   text,
-		"data":   user,
+		"Type":     "Suscribirse",
+		"Nameuser": user,
+		"Text":     text,
+		"Avatar":   Avatar,
 	}
+
 	for _, client := range clients {
 		err = client.WriteJSON(notification)
 		if err != nil {

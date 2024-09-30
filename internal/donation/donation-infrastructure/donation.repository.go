@@ -31,17 +31,17 @@ func NewDonationRepository(redisClient *redis.Client, mongoClient *mongo.Client)
 		mongoClient: mongoClient,
 	}
 }
-func (D *DonationRepository) StateTheUserInChat(Donado primitive.ObjectID, Donante primitive.ObjectID) (bool, error) {
+func (D *DonationRepository) StateTheUserInChat(Donado primitive.ObjectID, Donante primitive.ObjectID) (bool, string, error) {
 	ctx := context.Background()
 	db := D.mongoClient.Database("PINKKER-BACKEND")
 
 	stream, err := D.GetStreamByStreamerID(Donado)
 	if err != nil {
-		return true, err
+		return true, "", err
 	}
-	userDonante, err := D.GetUserID(ctx, db, Donante)
+	userDonante, avatar, err := D.GetUserID(ctx, db, Donante)
 	if err != nil {
-		return true, err
+		return true, avatar, err
 	}
 	collection := db.Collection("UserInformationInAllRooms")
 	userFilter := bson.M{"NameUser": userDonante}
@@ -49,7 +49,7 @@ func (D *DonationRepository) StateTheUserInChat(Donado primitive.ObjectID, Donan
 	var infoUser userdomain.InfoUser
 	err = collection.FindOne(ctx, userFilter).Decode(&infoUser)
 	if err != nil {
-		return true, fmt.Errorf("error finding user by NameUser: %v", err)
+		return true, avatar, fmt.Errorf("error finding user by NameUser: %v", err)
 	}
 
 	for _, room := range infoUser.Rooms {
@@ -58,12 +58,12 @@ func (D *DonationRepository) StateTheUserInChat(Donado primitive.ObjectID, Donan
 
 			fmt.Println(room["Baneado"])
 			if banned, ok := room["Baneado"].(bool); ok {
-				return banned, nil
+				return banned, avatar, nil
 			}
 		}
 	}
 
-	return true, fmt.Errorf("room with ID %s not found for user %s", stream.ID, userDonante)
+	return true, avatar, fmt.Errorf("room with ID %s not found for user %s", stream.ID, userDonante)
 }
 
 func (u *DonationRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {
@@ -140,26 +140,27 @@ func (D *DonationRepository) GetStreamByStreamerID(user primitive.ObjectID) (str
 	err := GoMongoDBCollStreams.FindOne(context.Background(), filter).Decode(&stream)
 	return stream, err
 }
-func (u *DonationRepository) GetUserID(ctx context.Context, db *mongo.Database, userID primitive.ObjectID) (string, error) {
+func (u *DonationRepository) GetUserID(ctx context.Context, db *mongo.Database, userID primitive.ObjectID) (string, string, error) {
 	usersCollection := db.Collection("Users")
 
 	// Filtro para buscar el usuario por ID
 	filter := bson.M{"_id": userID}
 
 	// Proyección para solo obtener la propiedad NameUser
-	projection := bson.M{"NameUser": 1, "_id": 0}
+	projection := bson.M{"NameUser": 1, "Avatar": 1}
 
 	var result struct {
 		NameUser string `bson:"NameUser"`
+		Avatar   string `bson:"Avatar"`
 	}
 
 	// Consulta con proyección para obtener solo NameUser
 	err := usersCollection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return result.NameUser, nil
+	return result.NameUser, result.Avatar, nil
 }
 
 func (D *DonationRepository) PublishNotification(roomID string, noty map[string]interface{}) error {

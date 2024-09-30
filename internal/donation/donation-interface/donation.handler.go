@@ -47,7 +47,7 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 			"data":    "toUser !== ",
 		})
 	}
-	banned, err := d.VodServise.StateTheUserInChat(idReq.ToUser, FromUser)
+	banned, avatar, err := d.VodServise.StateTheUserInChat(idReq.ToUser, FromUser)
 	if err != nil || banned {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 			"message": "StatusConflict",
@@ -74,25 +74,27 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 			"message": LatestStreamSummaryByUpdate.Error(),
 		})
 	}
-	d.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", nameUser, idReq.Pixeles, idReq.Text)
+	d.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", nameUser, avatar, idReq.Pixeles, idReq.Text)
 	d.NotifyActivityToChat(idReq.ToUser, nameUser, idReq.Pixeles, idReq.Text)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})
 }
 
-func (d *DonationHandler) NotifyActivityFeed(room, user string, Pixeles float64, text string) error {
+func (d *DonationHandler) NotifyActivityFeed(room, user, Avatar string, Pixeles float64, text string) error {
 	clients, err := d.VodServise.GetWebSocketActivityFeed(room)
 	if err != nil {
 		return err
 	}
 
 	notification := map[string]interface{}{
-		"action":  "DonatePixels",
-		"Pixeles": Pixeles,
-		"data":    user,
-		"text":    text,
+		"Type":     "DonatePixels",
+		"Nameuser": user,
+		"Text":     text,
+		"Avatar":   Avatar,
+		"Pixeles":  Pixeles,
 	}
+
 	for _, client := range clients {
 		err = client.WriteJSON(notification)
 		if err != nil {

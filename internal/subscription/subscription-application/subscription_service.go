@@ -22,9 +22,9 @@ func (s *SubscriptionService) GetWebSocketActivityFeed(user string) ([]*websocke
 	client, err := s.roomRepository.GetWebSocketClientsInRoom(user)
 	return client, err
 }
-func (s *SubscriptionService) Subscription(FromUser, ToUser primitive.ObjectID, text string) (string, error) {
-	user, err := s.roomRepository.Subscription(FromUser, ToUser, text)
-	return user, err
+func (s *SubscriptionService) Subscription(FromUser, ToUser primitive.ObjectID, text string) (string, string, error) {
+	user, avatar, err := s.roomRepository.Subscription(FromUser, ToUser, text)
+	return user, avatar, err
 }
 func (D *SubscriptionService) GetSubsChat(id primitive.ObjectID) ([]subscriptiondomain.ResSubscriber, error) {
 	Donations, err := D.roomRepository.GetSubsChat(id)

@@ -55,7 +55,7 @@ func (r *SubscriptionRepository) GetWebSocketClientsInRoom(roomID string) ([]*we
 
 	return clients, err
 }
-func (r *SubscriptionRepository) Subscription(Source, Destination primitive.ObjectID, text string) (string, error) {
+func (r *SubscriptionRepository) Subscription(Source, Destination primitive.ObjectID, text string) (string, string, error) {
 	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*24*time.Hour)
@@ -63,20 +63,20 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 
 	sourceUser, destUser, err := r.findUsersBy_ids(ctx, Source, Destination, usersCollection)
 	if err != nil {
-		return sourceUser.NameUser, err
+		return sourceUser.NameUser, sourceUser.Avatar, err
 	}
 	if sourceUser.ID == destUser.ID {
-		return sourceUser.NameUser, errors.New("You can't subscribe to yourself")
+		return sourceUser.NameUser, sourceUser.Avatar, errors.New("You can't subscribe to yourself")
 	}
 	if sourceUser.Pixeles < 1000 {
-		return sourceUser.NameUser, errors.New("pixeles insufficient")
+		return sourceUser.NameUser, sourceUser.Avatar, errors.New("pixeles insufficient")
 	}
 
 	// Verificar si el usuario fuente ya tiene una suscripción existente al usuario destino
 	existingSubscription, err := r.getSubscriptionByUserIDs(sourceUser.ID, destUser.ID)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
-			return sourceUser.NameUser, err
+			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
 	}
 
@@ -87,43 +87,44 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 	if existingSubscription.ID == primitive.NilObjectID {
 		subscriptionID, err = r.addSubscription(sourceUser, destUser, subscriptionStart, subscriptionEnd, text)
 		if err != nil {
-			return sourceUser.NameUser, err
+			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
 		err = r.addSubscriber(destUser, sourceUser, subscriptionEnd, text)
 		if err != nil {
-			return sourceUser.NameUser, err
+			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
 
 	} else {
 		err = r.updateSubscription(existingSubscription.ID, subscriptionStart, subscriptionEnd, text)
 		if err != nil {
-			return sourceUser.NameUser, err
+			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
 		Subscriber, err := r.getSubscribersByUserIDs(sourceUser.ID, destUser.ID)
 		if err != nil {
 			if err != mongo.ErrNoDocuments {
-				return sourceUser.NameUser, err
+				return sourceUser.NameUser, sourceUser.Avatar, err
 			}
 		}
 		err = r.updateSubscriber(Subscriber.ID.Hex(), subscriptionEnd, text)
 		if err != nil {
-			return sourceUser.NameUser, err
+			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
 		subscriptionID = existingSubscription.ID
 	}
 
 	if err := r.updateUserSource(ctx, sourceUser, usersCollection, Destination, subscriptionID); err != nil {
-		return sourceUser.NameUser, err
+		return sourceUser.NameUser, sourceUser.Avatar, err
 	}
 
 	err = r.updateUserDest(ctx, destUser, usersCollection)
-	return sourceUser.NameUser, err
+	return sourceUser.NameUser, sourceUser.Avatar, err
 }
 
 func (r *SubscriptionRepository) findUsersBy_ids(ctx context.Context, source_id, dest_id primitive.ObjectID, usersCollection *mongo.Collection) (*userdomain.User, *userdomain.User, error) {
 	var sourceUser struct {
 		ID       primitive.ObjectID `bson:"_id"`
 		NameUser string             `bson:"NameUser"`
+		Avatar   string             `bson:"Avatar"`
 		Pixeles  float64            `bson:"Pixeles"`
 	}
 	var destUser struct {
@@ -135,7 +136,7 @@ func (r *SubscriptionRepository) findUsersBy_ids(ctx context.Context, source_id,
 	err := usersCollection.FindOne(
 		ctx,
 		bson.M{"_id": source_id},
-		options.FindOne().SetProjection(bson.M{"_id": 1, "NameUser": 1, "Pixeles": 1}),
+		options.FindOne().SetProjection(bson.M{"_id": 1, "NameUser": 1, "Pixeles": 1, "Avatar": 1}),
 	).Decode(&sourceUser)
 	if err != nil {
 		return nil, nil, err

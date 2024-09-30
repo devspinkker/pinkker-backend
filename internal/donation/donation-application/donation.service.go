@@ -35,7 +35,7 @@ func (D *DonationService) LatestStreamSummaryByUpdateDonations(FromUser primitiv
 	err := D.DonationRepository.LatestStreamSummaryByUpdateDonations(FromUser, pixeles)
 	return err
 }
-func (D *DonationService) StateTheUserInChat(Donado primitive.ObjectID, Donante primitive.ObjectID) (bool, error) {
+func (D *DonationService) StateTheUserInChat(Donado primitive.ObjectID, Donante primitive.ObjectID) (bool, string, error) {
 	return D.DonationRepository.StateTheUserInChat(Donado, Donante)
 }
 
