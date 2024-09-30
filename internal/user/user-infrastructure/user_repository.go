@@ -791,19 +791,15 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 
 	// Buscar al usuario seguido (followedUserID)
 	filterFollowe := bson.M{"_id": followedUserID}
-	projection := bson.M{"Avatar": 1, "_id": 0} // Solo obtener el campo Avatar
 
-	var result struct {
-		Avatar string `bson:"Avatar"`
-	}
-
-	err := GoMongoDBCollUsers.FindOne(context.Background(), filterFollowe, options.FindOne().SetProjection(projection)).Decode(&result)
+	var userFolloer domain.User
+	err := GoMongoDBCollUsers.FindOne(context.Background(), filterFollowe).Decode(&userFolloer)
 	if err != nil {
 		return "", err
 	}
 
 	// Obtener el Avatar del usuario seguido
-	avatar := result.Avatar
+	avatar := userFolloer.Avatar
 
 	// Buscar al usuario que sigue (IdUserTokenP)
 	filterToken := bson.M{"_id": IdUserTokenP}
