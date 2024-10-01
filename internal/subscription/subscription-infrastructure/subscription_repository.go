@@ -87,7 +87,7 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 	var subscriberID primitive.ObjectID
 
 	if existingSubscription.ID == primitive.NilObjectID {
-		subscriptionID, err = r.addSubscription(sourceUser, sourceUser, subscriptionStart, subscriptionEnd, text)
+		subscriptionID, err = r.addSubscription(sourceUser, destUser, subscriptionStart, subscriptionEnd, text)
 		if err != nil {
 			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
@@ -192,7 +192,6 @@ func (r *SubscriptionRepository) addSubscription(sourceUser *userdomain.User, de
 			return primitive.NilObjectID, err
 		}
 
-		sourceUser.Subscriptions = append(sourceUser.Subscriptions, subscriptionID)
 		return subscriptionID, nil
 	}
 
@@ -323,26 +322,6 @@ func (r *SubscriptionRepository) updateUserDest(ctx context.Context, user *userd
 
 func (r *SubscriptionRepository) addSubscriber(destUser *userdomain.User, sourceUser *userdomain.User, subscriptionEnd time.Time, text string) (primitive.ObjectID, error) {
 
-	existingSubscriberID := ""
-	for _, subscriberID := range destUser.Subscribers {
-		subscriber := r.getSubscriberByID(subscriberID)
-
-		if subscriber.SubscriptionNameUser == sourceUser.NameUser {
-			existingSubscriberID = subscriberID.Hex()
-			break
-		}
-	}
-	if existingSubscriberID != "" {
-		// Actualizar la suscripción existente
-		err := r.updateSubscriber(existingSubscriberID, subscriptionEnd, text)
-		if err != nil {
-			return primitive.ObjectID{}, err
-		}
-		destUser.Pixeles += 1000
-		return primitive.ObjectID{}, nil
-	}
-
-	// Si no hay una suscripción existente, agregar una nueva
 	subscriber := subscriptiondomain.Subscriber{
 		SubscriberNameUser: sourceUser.NameUser,
 		SourceUserID:       sourceUser.ID,
@@ -357,8 +336,6 @@ func (r *SubscriptionRepository) addSubscriber(destUser *userdomain.User, source
 	if err != nil {
 		return subscriberID, err
 	}
-
-	destUser.Subscribers = append(destUser.Subscribers, subscriberID)
 
 	return subscriberID, nil
 }
