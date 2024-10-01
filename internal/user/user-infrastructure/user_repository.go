@@ -1398,3 +1398,174 @@ func (u *UserRepository) getActiveSubscriptions(userID primitive.ObjectID) (int,
 
 	return result.ActiveSubscriptionsCount, nil
 }
+func (u *UserRepository) GetRecommendedUsers(idT primitive.ObjectID, excludeIDs []primitive.ObjectID, limit int) ([]userdomain.GetUser, error) {
+	ctx := context.Background()
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	collUsers := db.Collection("Users")
+
+	excludedIDs := append(excludeIDs, idT)
+	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
+
+	last24Hours := time.Now().Add(-24 * time.Hour)
+
+	relevantUsers, err := u.getRelevantUsers(ctx, idT, collUsers, excludeFilter, last24Hours, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calcular el nuevo límite para el pipeline secundario
+	newLimit := limit - len(relevantUsers)
+	if newLimit > 0 {
+		var recommendedUserIDs []primitive.ObjectID
+		for _, user := range relevantUsers {
+			recommendedUserIDs = append(recommendedUserIDs, user.ID)
+		}
+
+		// Actualizar el filtro de exclusión
+		excludeFilter := bson.D{
+			{Key: "_id", Value: bson.D{
+				{Key: "$nin", Value: append(excludedIDs, recommendedUserIDs...)},
+			}},
+		}
+
+		// Obtener usuarios aleatorios si no se ha cumplido el límite
+		randomUsers, err := u.getRandomUsers(ctx, idT, collUsers, excludeFilter, newLimit)
+		if err != nil {
+			return nil, err
+		}
+		relevantUsers = append(relevantUsers, randomUsers...)
+	}
+
+	return relevantUsers, nil
+}
+
+func (u *UserRepository) getRelevantUsers(ctx context.Context, idT primitive.ObjectID, collUsers *mongo.Collection, excludeFilter bson.D, last24Hours time.Time, limit int) ([]userdomain.GetUser, error) {
+	userCollection := collUsers.Database().Collection("Users")
+
+	// Pipeline para obtener los usuarios seguidos por el usuario actual (idT)
+	userPipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.M{"_id": idT}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Following", Value: bson.D{{Key: "$objectToArray", Value: "$Following"}}},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$Following"}},
+		bson.D{{Key: "$limit", Value: 100}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Following.k", Value: 1},
+		}}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: bson.D{}},
+			{Key: "followingIDs", Value: bson.D{{Key: "$push", Value: "$Following.k"}}},
+		}}},
+	}
+
+	// Obtener la lista de usuarios seguidos
+	cursor, err := userCollection.Aggregate(ctx, userPipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var userResult struct {
+		FollowingIDs []primitive.ObjectID `bson:"followingIDs"`
+	}
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&userResult); err != nil {
+			return nil, err
+		}
+	}
+
+	followingIDs := userResult.FollowingIDs
+
+	// Pipeline para obtener usuarios que son seguidos por los usuarios en followingIDs
+	userRelevancePipeline := bson.A{
+		// Filtrar usuarios activos en las últimas 24 horas
+		bson.D{{Key: "$match", Value: bson.M{
+			"Online": true,
+		}}},
+		bson.D{{Key: "$match", Value: bson.M{
+			"_id": bson.M{"$nin": followingIDs},
+		}}},
+		bson.D{{Key: "$match", Value: excludeFilter}},
+		// Filtrar para obtener los usuarios que son seguidos por los usuarios de followingIDs
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "isFollowedByFollowingIDs", Value: bson.D{
+				{Key: "$in", Value: bson.A{"$_id", followingIDs}},
+			}},
+		}}},
+		// Dejar solo los usuarios que son seguidos por al menos uno de los usuarios de followingIDs
+		bson.D{{Key: "$match", Value: bson.M{"isFollowedByFollowingIDs": true}}},
+		// Calcular la cantidad de seguidores y suscriptores
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "followersCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Followers", bson.A{}}}}}}},
+			{Key: "subscriptionsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Subscriptions", bson.A{}}}}}}},
+		}}},
+		// Ordenar por la cantidad de seguidores o cualquier otra métrica de relevancia
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "followersCount", Value: -1},
+		}}},
+		bson.D{{Key: "$limit", Value: limit}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "FullName", Value: 1},
+			{Key: "Avatar", Value: 1},
+			{Key: "NameUser", Value: 1},
+			{Key: "followersCount", Value: 1},
+			{Key: "subscriptionsCount", Value: 1},
+			{Key: "Online", Value: 1},
+		}}},
+	}
+
+	cursor, err = userCollection.Aggregate(ctx, userRelevancePipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var relevantUsers []userdomain.GetUser
+	for cursor.Next(ctx) {
+		var user userdomain.GetUser
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+		relevantUsers = append(relevantUsers, user)
+	}
+
+	return relevantUsers, nil
+}
+func (u *UserRepository) getRandomUsers(ctx context.Context, idT primitive.ObjectID, collUsers *mongo.Collection, excludeFilter bson.D, limit int) ([]userdomain.GetUser, error) {
+	randomUserPipeline := bson.A{
+
+		// Filtrar usuarios excluidos
+		bson.D{{Key: "$match", Value: excludeFilter}},
+		// Ordenar aleatoriamente
+		bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: limit}}}},
+		// Seleccionar campos relevantes
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "FullName", Value: 1},
+			{Key: "Avatar", Value: 1},
+			{Key: "NameUser", Value: 1},
+			{Key: "followersCount", Value: 1},
+			{Key: "subscriptionsCount", Value: 1},
+			{Key: "Online", Value: 1},
+		}}},
+	}
+
+	cursor, err := collUsers.Aggregate(ctx, randomUserPipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var randomUsers []userdomain.GetUser
+	for cursor.Next(ctx) {
+		var user userdomain.GetUser
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+		randomUsers = append(randomUsers, user)
+	}
+
+	return randomUsers, nil
+}

@@ -135,6 +135,7 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.Obj
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
 			{Key: "likeCount", Value: 1},
 			{Key: "RePostsCount", Value: 1},
 
@@ -207,7 +208,6 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 					{Key: "$ifNull", Value: bson.A{followingIDs, bson.A{}}},
 				}}},
 			}},
-			// {Key: "isFollowingUser", Value: bson.D{{Key: "$in", Value: bson.A{"$UserID", followingIDs}}}},
 			{Key: "likedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$Likes", followingIDs}}}},
 			{Key: "repostedByFollowing", Value: bson.D{{Key: "$setIntersection", Value: bson.A{"$RePosts", followingIDs}}}},
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
@@ -262,6 +262,7 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
 			{Key: "likeCount", Value: 1},
 
 			{Key: "RePostsCount", Value: 1},
@@ -562,6 +563,7 @@ func (t *TweetRepository) FindTweetbyId(idTweet, idT primitive.ObjectID) (tweetd
 				{Key: "FullName", Value: 1},
 				{Key: "Avatar", Value: 1},
 				{Key: "NameUser", Value: 1},
+				{Key: "Online", Value: 1},
 			}},
 			{Key: "OriginalPostData", Value: 1},
 			{Key: "Views", Value: 1},
@@ -730,6 +732,7 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
 			{Key: "IsLikedByID", Value: "$IsLikedByID"},
 		}}},
 	}
@@ -804,6 +807,7 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 				{Key: "UserInfo.FullName", Value: 1},
 				{Key: "UserInfo.Avatar", Value: 1},
 				{Key: "UserInfo.NameUser", Value: 1},
+				{Key: "UserInfo.Online", Value: 1},
 			}}},
 		}
 
@@ -897,6 +901,7 @@ func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGet
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
 		}}},
 	}
 
@@ -947,6 +952,7 @@ func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGet
 				{Key: "OriginalPost", Value: "$OriginalPost"},
 				{Key: "UserInfo.FullName", Value: 1},
 				{Key: "UserInfo.Avatar", Value: 1},
+				{Key: "UserInfo.Online", Value: 1},
 				{Key: "UserInfo.NameUser", Value: 1},
 			}}},
 		}
@@ -1018,6 +1024,7 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
 		}}},
 	}
 
@@ -1069,6 +1076,7 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 				{Key: "UserInfo.FullName", Value: 1},
 				{Key: "UserInfo.Avatar", Value: 1},
 				{Key: "UserInfo.NameUser", Value: 1},
+				{Key: "UserInfo.Online", Value: 1},
 			}}},
 		}
 
@@ -1129,6 +1137,7 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
 			{Key: "likeCount", Value: 1},
 			{Key: "RePostsCount", Value: 1},
 			{Key: "CommentsCount", Value: 1},
@@ -1203,6 +1212,7 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 				{Key: "UserInfo.FullName", Value: 1},
 				{Key: "UserInfo.Avatar", Value: 1},
 				{Key: "UserInfo.NameUser", Value: 1},
+				{Key: "UserInfo.Online", Value: 1},
 			}}},
 		}
 
@@ -1279,6 +1289,7 @@ func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, li
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
 			{Key: "likeCount", Value: 1},
 			{Key: "RePostsCount", Value: 1},
 			{Key: "CommentsCount", Value: 1},
@@ -1353,6 +1364,7 @@ func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, li
 				{Key: "UserInfo.FullName", Value: 1},
 				{Key: "UserInfo.Avatar", Value: 1},
 				{Key: "UserInfo.NameUser", Value: 1},
+				{Key: "UserInfo.Online", Value: 1},
 			}}},
 		}
 
@@ -1427,6 +1439,7 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
 		}}},
 	}
 
@@ -1499,6 +1512,7 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 				{Key: "UserInfo.FullName", Value: 1},
 				{Key: "UserInfo.Avatar", Value: 1},
 				{Key: "UserInfo.NameUser", Value: 1},
+				{Key: "UserInfo.Online", Value: 1},
 			}}},
 		}
 
@@ -1579,6 +1593,7 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
 		}}},
 	}
 
@@ -1628,6 +1643,7 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 				{Key: "OriginalPost", Value: "$OriginalPost"},
 				{Key: "UserInfo.FullName", Value: 1},
 				{Key: "UserInfo.Avatar", Value: 1},
+				{Key: "UserInfo.Online", Value: 1},
 				{Key: "UserInfo.NameUser", Value: 1},
 			}}},
 		}
@@ -1701,6 +1717,7 @@ func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int) 
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
 		}}},
 	}
 
@@ -1839,6 +1856,7 @@ func (t *TweetRepository) GetTweetsByHashtag(hashtag string, page int, limit int
 			{Key: "UserInfo.FullName", Value: 1},
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
 		}}},
 		{{Key: "$skip", Value: int64((page - 1) * limit)}}, // Saltar resultados según la paginación
 		{{Key: "$limit", Value: int64(limit)}},             // Limitar resultados según la paginación

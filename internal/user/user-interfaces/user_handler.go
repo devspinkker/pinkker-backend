@@ -1235,3 +1235,33 @@ func (h *UserHandler) EditSocialNetworks(c *fiber.Ctx) error {
 	})
 
 }
+
+func (h *UserHandler) GetRecommendedUsers(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	var req userdomain.GetRecommended
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+	User, err := h.userService.GetRecommendedUsers(idValueObj, req.ExcludeIDs)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    User,
+	})
+}

@@ -277,3 +277,9 @@ func (u *UserService) ChangeNameUser(CreateAdmin domain.ChangeNameUser) error {
 	err := u.roomRepository.ChangeNameUser(CreateAdmin)
 	return err
 }
+
+func (u *UserService) GetRecommendedUsers(idT primitive.ObjectID, excludeIDs []primitive.ObjectID) ([]userdomain.GetUser, error) {
+	limit := 5
+	Users, err := u.roomRepository.GetRecommendedUsers(idT, excludeIDs, limit)
+	return Users, err
+}

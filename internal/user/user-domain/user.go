@@ -223,7 +223,9 @@ type ReqRestorePassword struct {
 type DeleteGoogleAuthenticator struct {
 	Code string `json:"code"`
 }
-
+type GetRecommended struct {
+	ExcludeIDs []primitive.ObjectID `json:"ExcludeIDs" validate:"required"`
+}
 type GetUser struct {
 	ID       primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Avatar   string             `json:"Avatar" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"Avatar"`
