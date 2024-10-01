@@ -87,7 +87,9 @@ func (u *DonationRepository) GetTOTPSecret(ctx context.Context, userID primitive
 
 func (d *DonationRepository) UserHasNumberPikels(FromUser primitive.ObjectID, Pixeles float64) error {
 	GoMongoDBCollUsers := d.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	filter := bson.M{"_id": FromUser, "Pixeles": bson.M{"$gte": Pixeles}}
+
+	PixelesTotals := (Pixeles*2)/100 + Pixeles
+	filter := bson.M{"_id": FromUser, "Pixeles": bson.M{"$gte": PixelesTotals}}
 
 	err := GoMongoDBCollUsers.FindOne(context.Background(), filter)
 
@@ -201,10 +203,11 @@ func (d *DonationRepository) DonatePixels(FromUser, ToUser primitive.ObjectID, P
 	}
 
 	// Actualizar el usuario donante (FromUser)
+	PixelesTotals := (Pixels*2)/100 + Pixels
 	_, err = GoMongoDBCollUsers.UpdateOne(
 		context.Background(),
 		primitive.D{{Key: "_id", Value: FromUser}},
-		primitive.D{{Key: "$inc", Value: primitive.D{{Key: "Pixeles", Value: -Pixels}}}},
+		primitive.D{{Key: "$inc", Value: primitive.D{{Key: "Pixeles", Value: -PixelesTotals}}}},
 	)
 	if err != nil {
 		session.AbortTransaction(context.Background())
