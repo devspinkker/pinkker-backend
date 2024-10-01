@@ -66,7 +66,7 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 		return sourceUser.NameUser, sourceUser.Avatar, err
 	}
 	if sourceUser.ID == destUser.ID {
-		return sourceUser.NameUser, sourceUser.Avatar, errors.New("You can't subscribe to yourself")
+		return sourceUser.NameUser, sourceUser.Avatar, errors.New("you can't subscribe to yourself")
 	}
 	if sourceUser.Pixeles < 1000 {
 		return sourceUser.NameUser, sourceUser.Avatar, errors.New("pixeles insufficient")
@@ -84,12 +84,14 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 	subscriptionEnd := subscriptionStart.Add(30 * 24 * time.Hour)
 
 	var subscriptionID primitive.ObjectID
+	var subscriberID primitive.ObjectID
+
 	if existingSubscription.ID == primitive.NilObjectID {
-		subscriptionID, err = r.addSubscription(sourceUser, destUser, subscriptionStart, subscriptionEnd, text)
+		subscriptionID, err = r.addSubscription(sourceUser, sourceUser, subscriptionStart, subscriptionEnd, text)
 		if err != nil {
 			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
-		err = r.addSubscriber(destUser, sourceUser, subscriptionEnd, text)
+		subscriberID, err = r.addSubscriber(destUser, sourceUser, subscriptionEnd, text)
 		if err != nil {
 			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
@@ -99,13 +101,13 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 		if err != nil {
 			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
-		Subscriber, err := r.getSubscribersByUserIDs(sourceUser.ID, destUser.ID)
+		subscriberID, err := r.getSubscribersByUserIDs(sourceUser.ID, destUser.ID)
 		if err != nil {
 			if err != mongo.ErrNoDocuments {
 				return sourceUser.NameUser, sourceUser.Avatar, err
 			}
 		}
-		err = r.updateSubscriber(Subscriber.ID.Hex(), subscriptionEnd, text)
+		err = r.updateSubscriber(subscriberID.ID.Hex(), subscriptionEnd, text)
 		if err != nil {
 			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
@@ -116,7 +118,7 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 		return sourceUser.NameUser, sourceUser.Avatar, err
 	}
 
-	err = r.updateUserDest(ctx, destUser, usersCollection)
+	err = r.updateUserDest(ctx, destUser, usersCollection, subscriberID)
 	return sourceUser.NameUser, sourceUser.Avatar, err
 }
 
@@ -167,39 +169,7 @@ func (r *SubscriptionRepository) findUsersBy_ids(ctx context.Context, source_id,
 }
 
 func (r *SubscriptionRepository) addSubscription(sourceUser *userdomain.User, destUser *userdomain.User, subscriptionStart, subscriptionEnd time.Time, text string) (primitive.ObjectID, error) {
-	ctx := context.TODO()
-	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-
-	existingSubscription, _ := r.getSubscriptionByUserIDs(sourceUser.ID, destUser.ID)
-
-	if existingSubscription.ID != primitive.NilObjectID && existingSubscription.SubscriptionEnd.After(time.Now()) {
-		existingSubscription.MonthsSubscribed += 1
-		existingSubscription.SubscriptionStart = subscriptionStart
-
-		existingSubscription.SubscriptionEnd = subscriptionEnd
-		existingSubscription.Text = text
-		existingSubscription.Notified = false
-
-		sourceUser.Pixeles -= 1000
-		destUser.Pixeles += 1000
-
-		err := r.updateSubscription(existingSubscription.ID, subscriptionStart, subscriptionEnd, text)
-		if err != nil {
-			return primitive.NilObjectID, err
-		}
-
-		destUser.Subscribers = append(destUser.Subscribers, existingSubscription.ID)
-		err = r.updateUserDest(ctx, destUser, usersCollection)
-		if err != nil {
-			return primitive.NilObjectID, err
-		}
-
-		return existingSubscription.ID, nil
-	}
-
 	if sourceUser.Pixeles >= 1000 {
-		sourceUser.Pixeles -= 1000
-		destUser.Pixeles += 1000
 
 		var monthsSubscribed int
 		if subscriptionEnd.After(time.Now()) {
@@ -223,12 +193,6 @@ func (r *SubscriptionRepository) addSubscription(sourceUser *userdomain.User, de
 		}
 
 		sourceUser.Subscriptions = append(sourceUser.Subscriptions, subscriptionID)
-
-		err = r.updateUserDest(ctx, destUser, usersCollection)
-		if err != nil {
-			return primitive.NilObjectID, err
-		}
-
 		return subscriptionID, nil
 	}
 
@@ -300,10 +264,13 @@ func (r *SubscriptionRepository) updateSubscription(subscriptionID primitive.Obj
 
 func (r *SubscriptionRepository) updateUserSource(ctx context.Context, user *userdomain.User, usersCollection *mongo.Collection, Destination primitive.ObjectID, subscriptionID primitive.ObjectID) error {
 	filter := bson.M{"_id": user.ID}
+
 	update := bson.M{
-		"$set": bson.M{
-			"Subscriptions": user.Subscriptions,
-			"Pixeles":       user.Pixeles,
+		"$addToSet": bson.M{
+			"Subscriptions": subscriptionID,
+		},
+		"$inc": bson.M{
+			"Pixeles": -1000,
 		},
 	}
 	_, err := usersCollection.UpdateOne(ctx, filter, update)
@@ -338,12 +305,15 @@ func (r *SubscriptionRepository) updateUserSource(ctx context.Context, user *use
 	return nil
 }
 
-func (r *SubscriptionRepository) updateUserDest(ctx context.Context, user *userdomain.User, usersCollection *mongo.Collection) error {
+func (r *SubscriptionRepository) updateUserDest(ctx context.Context, user *userdomain.User, usersCollection *mongo.Collection, subscriptionID primitive.ObjectID) error {
 	filter := bson.M{"_id": user.ID}
 	update := bson.M{
-		"$set": bson.M{
-			"Subscribers": user.Subscribers,
-			"Pixeles":     user.Pixeles,
+
+		"$addToSet": bson.M{
+			"Subscribers": subscriptionID,
+		},
+		"$inc": bson.M{
+			"Pixeles": 1000,
 		},
 	}
 
@@ -351,7 +321,7 @@ func (r *SubscriptionRepository) updateUserDest(ctx context.Context, user *userd
 	return err
 }
 
-func (r *SubscriptionRepository) addSubscriber(destUser *userdomain.User, sourceUser *userdomain.User, subscriptionEnd time.Time, text string) error {
+func (r *SubscriptionRepository) addSubscriber(destUser *userdomain.User, sourceUser *userdomain.User, subscriptionEnd time.Time, text string) (primitive.ObjectID, error) {
 
 	existingSubscriberID := ""
 	for _, subscriberID := range destUser.Subscribers {
@@ -366,33 +336,31 @@ func (r *SubscriptionRepository) addSubscriber(destUser *userdomain.User, source
 		// Actualizar la suscripción existente
 		err := r.updateSubscriber(existingSubscriberID, subscriptionEnd, text)
 		if err != nil {
-			return err
+			return primitive.ObjectID{}, err
 		}
 		destUser.Pixeles += 1000
-		return nil
+		return primitive.ObjectID{}, nil
 	}
 
 	// Si no hay una suscripción existente, agregar una nueva
-	subscriber := subscriptiondomain.Subscription{
-		SubscriptionNameUser: sourceUser.NameUser,
-		SourceUserID:         sourceUser.ID,
-		DestinationUserID:    destUser.ID,
-		SubscriptionStart:    time.Now(),
-		SubscriptionEnd:      subscriptionEnd,
-		Notified:             false,
-		MonthsSubscribed:     0,
-		Text:                 text,
+	subscriber := subscriptiondomain.Subscriber{
+		SubscriberNameUser: sourceUser.NameUser,
+		SourceUserID:       sourceUser.ID,
+		DestinationUserID:  destUser.ID,
+		SubscriptionStart:  time.Now(),
+		SubscriptionEnd:    subscriptionEnd,
+		Notified:           false,
+		Text:               text,
 	}
 
 	subscriberID, err := r.insertSubscriber(subscriber)
 	if err != nil {
-		return err
+		return subscriberID, err
 	}
 
-	destUser.Pixeles += 1000
 	destUser.Subscribers = append(destUser.Subscribers, subscriberID)
 
-	return nil
+	return subscriberID, nil
 }
 func (r *SubscriptionRepository) updateSubscriber(subscriberID string, subscriptionEnd time.Time, text string) error {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscribers")
@@ -413,7 +381,7 @@ func (r *SubscriptionRepository) updateSubscriber(subscriberID string, subscript
 	return err
 }
 
-func (r *SubscriptionRepository) insertSubscriber(subscriber subscriptiondomain.Subscription) (primitive.ObjectID, error) {
+func (r *SubscriptionRepository) insertSubscriber(subscriber subscriptiondomain.Subscriber) (primitive.ObjectID, error) {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscribers")
 
 	result, err := collection.InsertOne(context.Background(), subscriber)
