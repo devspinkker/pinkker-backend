@@ -106,7 +106,7 @@ type TweetGetFollowReq struct {
 		FullName string `json:"FullName"`
 		Avatar   string `json:"Avatar"`
 		NameUser string `json:"NameUser"`
-		Online   string `json:"Online"`
+		Online   bool   `json:"Online"`
 	} `json:"UserInfo"`
 	OriginalPostData *TweetGetFollowReq `json:"OriginalPostData"`
 	Views            int                `json:"Views" bson:"Views"`
@@ -132,7 +132,7 @@ type TweetCommentsGetReq struct {
 		FullName string `json:"FullName"`
 		Avatar   string `json:"Avatar"`
 		NameUser string `json:"NameUser"`
-		Online   string `json:"Online"`
+		Online   bool   `json:"Online"`
 	} `json:"UserInfo"`
 }
 type PostAds struct {
@@ -148,7 +148,7 @@ type PostAds struct {
 		FullName string `json:"FullName"`
 		Avatar   string `json:"Avatar"`
 		NameUser string `json:"NameUser"`
-		Online   string `json:"Online"`
+		Online   bool   `json:"Online"`
 	} `json:"UserInfo"`
 	OriginalPostData *TweetGetFollowReq `json:"OriginalPostData"`
 	Views            int                `json:"Views" bson:"Views"`

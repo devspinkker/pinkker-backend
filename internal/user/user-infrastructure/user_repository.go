@@ -1398,49 +1398,8 @@ func (u *UserRepository) getActiveSubscriptions(userID primitive.ObjectID) (int,
 
 	return result.ActiveSubscriptionsCount, nil
 }
-func (u *UserRepository) GetRecommendedUsers(idT primitive.ObjectID, excludeIDs []primitive.ObjectID, limit int) ([]userdomain.GetUser, error) {
-	ctx := context.Background()
-	db := u.mongoClient.Database("PINKKER-BACKEND")
-	collUsers := db.Collection("Users")
 
-	excludedIDs := append(excludeIDs, idT)
-	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
-
-	last24Hours := time.Now().Add(-24 * time.Hour)
-
-	relevantUsers, err := u.getRelevantUsers(ctx, idT, collUsers, excludeFilter, last24Hours, limit)
-	if err != nil {
-		return nil, err
-	}
-
-	// Calcular el nuevo límite para el pipeline secundario
-	newLimit := limit - len(relevantUsers)
-	if newLimit > 0 {
-		var recommendedUserIDs []primitive.ObjectID
-		for _, user := range relevantUsers {
-			recommendedUserIDs = append(recommendedUserIDs, user.ID)
-		}
-
-		// Actualizar el filtro de exclusión
-		excludeFilter := bson.D{
-			{Key: "_id", Value: bson.D{
-				{Key: "$nin", Value: append(excludedIDs, recommendedUserIDs...)},
-			}},
-		}
-
-		// Obtener usuarios aleatorios si no se ha cumplido el límite
-		randomUsers, err := u.getRandomUsers(ctx, idT, collUsers, excludeFilter, newLimit)
-		if err != nil {
-			return nil, err
-		}
-		relevantUsers = append(relevantUsers, randomUsers...)
-	}
-
-	return relevantUsers, nil
-}
-
-func (u *UserRepository) getRelevantUsers(ctx context.Context, idT primitive.ObjectID, collUsers *mongo.Collection, excludeFilter bson.D, last24Hours time.Time, limit int) ([]userdomain.GetUser, error) {
-	userCollection := collUsers.Database().Collection("Users")
+func (u *UserRepository) GetFollowsUser(ctx context.Context, idT primitive.ObjectID, userCollection *mongo.Collection) ([]primitive.ObjectID, error) {
 
 	// Pipeline para obtener los usuarios seguidos por el usuario actual (idT)
 	userPipeline := bson.A{
@@ -1448,6 +1407,7 @@ func (u *UserRepository) getRelevantUsers(ctx context.Context, idT primitive.Obj
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "Following", Value: bson.D{{Key: "$objectToArray", Value: "$Following"}}},
 		}}},
+
 		bson.D{{Key: "$unwind", Value: "$Following"}},
 		bson.D{{Key: "$limit", Value: 100}},
 		bson.D{{Key: "$project", Value: bson.D{
@@ -1475,7 +1435,54 @@ func (u *UserRepository) getRelevantUsers(ctx context.Context, idT primitive.Obj
 		}
 	}
 
-	followingIDs := userResult.FollowingIDs
+	return userResult.FollowingIDs, nil
+}
+func (u *UserRepository) GetRecommendedUsers(idT primitive.ObjectID, excludeIDs []primitive.ObjectID, limit int) ([]userdomain.GetUser, error) {
+	ctx := context.Background()
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	collUsers := db.Collection("Users")
+
+	excludedIDs := append(excludeIDs, idT)
+	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludedIDs}}}}
+
+	last24Hours := time.Now().Add(-24 * time.Hour)
+
+	followingIDs, err := u.GetFollowsUser(ctx, idT, collUsers)
+	if err != nil {
+		return nil, err
+	}
+	relevantUsers, err := u.getRelevantUsers(ctx, idT, collUsers, excludeFilter, last24Hours, limit, followingIDs, *collUsers)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calcular el nuevo límite para el pipeline secundario
+	newLimit := limit - len(relevantUsers)
+	if newLimit > 0 {
+		var recommendedUserIDs []primitive.ObjectID
+		for _, user := range relevantUsers {
+			recommendedUserIDs = append(recommendedUserIDs, user.ID)
+		}
+
+		// Actualizar el filtro de exclusión
+		excludeFilter := bson.D{
+			{Key: "_id", Value: bson.D{
+				{Key: "$nin", Value: append(excludedIDs, recommendedUserIDs...)},
+			}},
+		}
+
+		// Obtener usuarios aleatorios si no se ha cumplido el límite
+		randomUsers, err := u.getRandomUsers(ctx, idT, collUsers, excludeFilter, newLimit, followingIDs)
+		if err != nil {
+			return nil, err
+		}
+		relevantUsers = append(relevantUsers, randomUsers...)
+	}
+
+	return relevantUsers, nil
+}
+
+func (u *UserRepository) getRelevantUsers(ctx context.Context, idT primitive.ObjectID, collUsers *mongo.Collection, excludeFilter bson.D, last24Hours time.Time, limit int, followingIDs []primitive.ObjectID, userCollection mongo.Collection) ([]userdomain.GetUser, error) {
 
 	// Pipeline para obtener usuarios que son seguidos por los usuarios en followingIDs
 	userRelevancePipeline := bson.A{
@@ -1486,6 +1493,7 @@ func (u *UserRepository) getRelevantUsers(ctx context.Context, idT primitive.Obj
 		bson.D{{Key: "$match", Value: bson.M{
 			"_id": bson.M{"$nin": followingIDs},
 		}}},
+
 		bson.D{{Key: "$match", Value: excludeFilter}},
 		// Filtrar para obtener los usuarios que son seguidos por los usuarios de followingIDs
 		bson.D{{Key: "$addFields", Value: bson.D{
@@ -1516,7 +1524,7 @@ func (u *UserRepository) getRelevantUsers(ctx context.Context, idT primitive.Obj
 		}}},
 	}
 
-	cursor, err = userCollection.Aggregate(ctx, userRelevancePipeline)
+	cursor, err := userCollection.Aggregate(ctx, userRelevancePipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -1533,11 +1541,15 @@ func (u *UserRepository) getRelevantUsers(ctx context.Context, idT primitive.Obj
 
 	return relevantUsers, nil
 }
-func (u *UserRepository) getRandomUsers(ctx context.Context, idT primitive.ObjectID, collUsers *mongo.Collection, excludeFilter bson.D, limit int) ([]userdomain.GetUser, error) {
+func (u *UserRepository) getRandomUsers(ctx context.Context, idT primitive.ObjectID, collUsers *mongo.Collection, excludeFilter bson.D, limit int, followingIDs []primitive.ObjectID) ([]userdomain.GetUser, error) {
 	randomUserPipeline := bson.A{
 
 		// Filtrar usuarios excluidos
 		bson.D{{Key: "$match", Value: excludeFilter}},
+		bson.D{{Key: "$match", Value: bson.M{
+			"_id": bson.M{"$nin": followingIDs},
+		}}},
+
 		// Ordenar aleatoriamente
 		bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: limit}}}},
 		// Seleccionar campos relevantes
