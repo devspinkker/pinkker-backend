@@ -1,6 +1,7 @@
 package userdomain
 
 import (
+	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	"regexp"
 	"time"
 
@@ -152,6 +153,10 @@ type ChangeNameUser struct {
 	NameUserNew    string             `json:"NameUserNew,omitempty" bson:"NameUserNew" validate:"NameUserNew"`
 	NameUserRemove string             `json:"NameUserRemove,omitempty" bson:"NameUserRemove"`
 }
+type ReqGetUserByNameUser struct {
+	User   *GetUser             `json:"user"`
+	Stream *streamdomain.Stream `json:"stream"`
+}
 
 // Valida que NameUserNew tenga al menos 5 caracteres y no tenga espacios
 func nameUserNewValidator(fl validator.FieldLevel) bool {
@@ -280,6 +285,7 @@ type GetUser struct {
 	// ClipsComment             []primitive.ObjectID              `json:"ClipsComment" bson:"ClipsComment"`
 	CategoryPreferences map[string]float64 `json:"categoryPreferences" bson:"categoryPreferences"`
 	Banned              bool               `json:"Banned" bson:"Banned"`
+	IsFollowedByUser    bool               `json:"isFollowedByUser" bson:"isFollowedByUser"`
 }
 type UserInfoOAuth2 struct {
 	ID      string `json:"id"`

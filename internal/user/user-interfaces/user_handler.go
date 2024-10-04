@@ -1265,3 +1265,37 @@ func (h *UserHandler) GetRecommendedUsers(c *fiber.Ctx) error {
 		"data":    User,
 	})
 }
+func (h *UserHandler) GetStreamAndUserData(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var Req ReqGetUserByNameUser
+	if err := c.QueryParser(&Req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	stream, User, err := h.userService.GetStreamAndUserData(Req.NameUser, idValueObj)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+
+	response := domain.ReqGetUserByNameUser{
+		User:   User,
+		Stream: stream,
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    response,
+	})
+}

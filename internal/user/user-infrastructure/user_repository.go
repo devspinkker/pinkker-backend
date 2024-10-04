@@ -1581,3 +1581,121 @@ func (u *UserRepository) getRandomUsers(ctx context.Context, idT primitive.Objec
 
 	return randomUsers, nil
 }
+func (u *UserRepository) getUserAndCheckFollow(filter bson.D, id primitive.ObjectID) (*userdomain.GetUser, error) {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	currentTime := time.Now()
+
+	pipeline := mongo.Pipeline{
+		// Filtra el usuario basado en el filtro proporcionado
+		bson.D{{Key: "$match", Value: filter}},
+		// Agrega campos adicionales como FollowersCount, FollowingCount, SubscribersCount
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "FollowersCount", Value: bson.D{
+				{Key: "$size", Value: bson.D{
+					{Key: "$ifNull", Value: bson.A{
+						bson.D{{Key: "$objectToArray", Value: "$Followers"}},
+						bson.A{},
+					}},
+				}},
+			}},
+			{Key: "FollowingCount", Value: bson.D{
+				{Key: "$size", Value: bson.D{
+					{Key: "$ifNull", Value: bson.A{
+						bson.D{{Key: "$objectToArray", Value: "$Following"}},
+						bson.A{},
+					}},
+				}},
+			}},
+			{Key: "SubscribersCount", Value: bson.D{
+				{Key: "$size", Value: bson.D{
+					{Key: "$ifNull", Value: bson.A{"$Subscribers", bson.A{}}},
+				}},
+			}},
+		}}},
+		// Verifica si el 'id' está en las claves de 'Followers'
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "isFollowedByUser", Value: bson.D{
+				{Key: "$in", Value: bson.A{id, bson.D{{Key: "$ifNull", Value: bson.A{
+					bson.D{{Key: "$objectToArray", Value: "$Followers"}}, bson.A{},
+				}}}}},
+			}},
+		}}},
+		// Realiza un lookup en la colección de suscripciones
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Subscriptions"},
+			{Key: "let", Value: bson.D{{Key: "userID", Value: "$_id"}}}, // Pasa el ID del usuario actual
+			{Key: "pipeline", Value: mongo.Pipeline{
+				bson.D{{Key: "$match", Value: bson.D{
+					{Key: "$expr", Value: bson.D{
+						{Key: "$and", Value: bson.A{
+							bson.D{{Key: "$eq", Value: bson.A{"$destinationUserID", "$$userID"}}}, // Coincide el userID con el destinationUserID
+							bson.D{{Key: "$gt", Value: bson.A{"$SubscriptionEnd", currentTime}}},  // Verifica que la suscripción esté activa
+						}}}}}}},
+				bson.D{{Key: "$count", Value: "activeSubscriptionsCount"}},
+			}},
+			{Key: "as", Value: "SubscriptionData"},
+		}}},
+		// Agrega el SubscriptionCount desde SubscriptionData
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "SubscriptionCount", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{
+					bson.D{{Key: "$arrayElemAt", Value: bson.A{"$SubscriptionData.activeSubscriptionsCount", 0}}},
+					0,
+				}},
+			}},
+		}}},
+		// Proyección para excluir campos innecesarios
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Followers", Value: 0},
+			{Key: "Subscribers", Value: 0},
+			{Key: "SubscriptionData", Value: 0}, // Excluir los datos de lookup
+		}}},
+	}
+
+	cursor, err := GoMongoDBCollUsers.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var user domain.GetUser
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+	}
+
+	return &user, nil
+}
+
+func (r *UserRepository) GetStreamByNameUser(nameUser string) (*streamdomain.Stream, error) {
+	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	FindStreamInDb := bson.D{
+		{Key: "Streamer", Value: nameUser},
+	}
+	var FindStreamsByStreamer *streamdomain.Stream
+	errCollStreams := GoMongoDBCollStreams.FindOne(context.Background(), FindStreamInDb).Decode(&FindStreamsByStreamer)
+	return FindStreamsByStreamer, errCollStreams
+}
+func (r *UserRepository) GetStreamAndUserData(nameUser string, id primitive.ObjectID) (*streamdomain.Stream, *userdomain.GetUser, error) {
+	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	FindStreamInDb := bson.D{
+		{Key: "Streamer", Value: nameUser},
+	}
+	stream, err := r.GetStreamByNameUser(nameUser)
+	if err != nil {
+		return nil, nil, err
+	}
+	var FindStreamsByStreamer *streamdomain.Stream
+	errCollStreams := GoMongoDBCollStreams.FindOne(context.Background(), FindStreamInDb).Decode(&FindStreamsByStreamer)
+	if errCollStreams != nil {
+		return nil, nil, errCollStreams
+	}
+	filter := bson.D{
+		{Key: "$or", Value: bson.A{
+			bson.D{{Key: "_id", Value: id}},
+		}},
+	}
+	user, err := r.getUserAndCheckFollow(filter, id)
+	return stream, user, err
+}
