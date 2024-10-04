@@ -1615,9 +1615,19 @@ func (u *UserRepository) getUserAndCheckFollow(filter bson.D, id primitive.Objec
 		// Verifica si el 'id' está en las claves de 'Followers'
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "isFollowedByUser", Value: bson.D{
-				{Key: "$in", Value: bson.A{id, bson.D{{Key: "$ifNull", Value: bson.A{
-					bson.D{{Key: "$objectToArray", Value: "$Followers"}}, bson.A{},
-				}}}}},
+				{Key: "$cond", Value: bson.D{
+					{Key: "if", Value: bson.D{
+						{Key: "$in", Value: bson.A{id.Hex(), bson.D{
+							{Key: "$map", Value: bson.D{
+								{Key: "input", Value: bson.D{{Key: "$objectToArray", Value: "$Followers"}}},
+								{Key: "as", Value: "follower"},
+								{Key: "in", Value: "$$follower.k"}, // La clave es el ObjectID
+							}},
+						}}},
+					}},
+					{Key: "then", Value: true},
+					{Key: "else", Value: false},
+				}},
 			}},
 		}}},
 		// Realiza un lookup en la colección de suscripciones
@@ -1693,7 +1703,7 @@ func (r *UserRepository) GetStreamAndUserData(nameUser string, id primitive.Obje
 	}
 	filter := bson.D{
 		{Key: "$or", Value: bson.A{
-			bson.D{{Key: "_id", Value: id}},
+			bson.D{{Key: "NameUser", Value: nameUser}},
 		}},
 	}
 	user, err := r.getUserAndCheckFollow(filter, id)
