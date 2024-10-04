@@ -154,8 +154,9 @@ type ChangeNameUser struct {
 	NameUserRemove string             `json:"NameUserRemove,omitempty" bson:"NameUserRemove"`
 }
 type ReqGetUserByNameUser struct {
-	User   *GetUser             `json:"user"`
-	Stream *streamdomain.Stream `json:"stream"`
+	User     *GetUser             `json:"user"`
+	Stream   *streamdomain.Stream `json:"stream"`
+	UserInfo *UserInfo            `json:"UserInfo"`
 }
 
 // Valida que NameUserNew tenga al menos 5 caracteres y no tenga espacios
@@ -383,4 +384,20 @@ type SubscriptionInfo struct {
 	MonthsSubscribed     int                `bson:"MonthsSubscribed"`
 	Notified             bool               `bson:"Notified"`
 	Text                 string             `bson:"Text"`
+}
+type UserInfo struct { // ROOMS
+	Room                 primitive.ObjectID
+	Color                string
+	Vip                  bool
+	Verified             bool
+	Moderator            bool
+	Subscription         primitive.ObjectID
+	SubscriptionInfo     SubscriptionInfo
+	Baneado              bool
+	TimeOut              time.Time
+	EmblemasChat         map[string]string
+	Identidad            string
+	Following            FollowInfo
+	StreamerChannelOwner bool
+	LastMessage          time.Time
 }

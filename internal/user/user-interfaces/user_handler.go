@@ -932,7 +932,8 @@ func (h *UserHandler) GetUserByCmt(c *fiber.Ctx) error {
 }
 
 type ReqGetUserByNameUser struct {
-	NameUser string `json:"nameUser" query:"nameUser"`
+	NameUser          string             `json:"nameUser" query:"nameUser"`
+	GetInfoUserInRoom primitive.ObjectID `json:"GetInfoUserInRoom" query:"GetInfoUserInRoom"`
 }
 
 func (h *UserHandler) GetUserByNameUser(c *fiber.Ctx) error {
@@ -1267,6 +1268,7 @@ func (h *UserHandler) GetRecommendedUsers(c *fiber.Ctx) error {
 }
 func (h *UserHandler) GetStreamAndUserData(c *fiber.Ctx) error {
 	idValue := c.Context().UserValue("_id").(string)
+	nameUserToken := c.Context().UserValue("nameUser").(string)
 	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
 	if errorID != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -1280,7 +1282,7 @@ func (h *UserHandler) GetStreamAndUserData(c *fiber.Ctx) error {
 		})
 	}
 
-	stream, User, err := h.userService.GetStreamAndUserData(Req.NameUser, idValueObj)
+	stream, User, UserInfoRoom, err := h.userService.GetStreamAndUserData(Req.NameUser, idValueObj, Req.GetInfoUserInRoom, nameUserToken)
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -1290,8 +1292,9 @@ func (h *UserHandler) GetStreamAndUserData(c *fiber.Ctx) error {
 	}
 
 	response := domain.ReqGetUserByNameUser{
-		User:   User,
-		Stream: stream,
+		User:     User,
+		Stream:   stream,
+		UserInfo: UserInfoRoom,
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{

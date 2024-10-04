@@ -1687,19 +1687,19 @@ func (r *UserRepository) GetStreamByNameUser(nameUser string) (*streamdomain.Str
 	errCollStreams := GoMongoDBCollStreams.FindOne(context.Background(), FindStreamInDb).Decode(&FindStreamsByStreamer)
 	return FindStreamsByStreamer, errCollStreams
 }
-func (r *UserRepository) GetStreamAndUserData(nameUser string, id primitive.ObjectID) (*streamdomain.Stream, *userdomain.GetUser, error) {
+func (r *UserRepository) GetStreamAndUserData(nameUser string, id primitive.ObjectID, GetInfoUserInRoom primitive.ObjectID, nameUserToken string) (*streamdomain.Stream, *userdomain.GetUser, *domain.UserInfo, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 	FindStreamInDb := bson.D{
 		{Key: "Streamer", Value: nameUser},
 	}
 	stream, err := r.GetStreamByNameUser(nameUser)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	var FindStreamsByStreamer *streamdomain.Stream
 	errCollStreams := GoMongoDBCollStreams.FindOne(context.Background(), FindStreamInDb).Decode(&FindStreamsByStreamer)
 	if errCollStreams != nil {
-		return nil, nil, errCollStreams
+		return nil, nil, nil, errCollStreams
 	}
 	filter := bson.D{
 		{Key: "$or", Value: bson.A{
@@ -1707,5 +1707,52 @@ func (r *UserRepository) GetStreamAndUserData(nameUser string, id primitive.Obje
 		}},
 	}
 	user, err := r.getUserAndCheckFollow(filter, id)
-	return stream, user, err
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	UserInfo, err := r.GetInfoUserInRoom(nameUserToken, GetInfoUserInRoom)
+
+	return stream, user, UserInfo, err
+}
+func (r *UserRepository) GetInfoUserInRoom(nameUser string, getInfoUserInRoom primitive.ObjectID) (*domain.UserInfo, error) {
+	database := r.mongoClient.Database("PINKKER-BACKEND")
+	var room *domain.UserInfo
+	filter := bson.D{
+		{Key: "NameUser", Value: nameUser},
+		{Key: "Rooms.Room", Value: getInfoUserInRoom},
+	}
+
+	pipeline := mongo.Pipeline{
+		{
+			{Key: "$match", Value: filter},
+		},
+		{
+			{Key: "$unwind", Value: "$Rooms"},
+		},
+		{
+			{Key: "$match", Value: bson.D{{Key: "Rooms.Room", Value: getInfoUserInRoom}}},
+		},
+		{
+			{Key: "$replaceRoot", Value: bson.D{{Key: "newRoot", Value: "$Rooms"}}},
+		},
+	}
+
+	// Obtener el cursor
+	cursor, err := database.Collection("UserInformationInAllRooms").Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return room, err
+	}
+	defer cursor.Close(context.Background())
+
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&room); err != nil {
+			return room, err
+		}
+	}
+
+	if err := cursor.Err(); err != nil {
+		return room, err
+	}
+
+	return room, nil
 }
