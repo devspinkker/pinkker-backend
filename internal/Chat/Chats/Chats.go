@@ -41,6 +41,8 @@ type ChatWithUsers struct {
 	CreatedAt   time.Time            `bson:"created_at"`
 	Users       []*User              `bson:"users"`
 	LastMessage time.Time            `bson:"LastMessage"`
+	StatusUser1 string               `bson:"status_user1"`
+	StatusUser2 string               `bson:"status_user2"`
 	NotifyA     primitive.ObjectID   `bson:"NotifyA"`
 }
 
