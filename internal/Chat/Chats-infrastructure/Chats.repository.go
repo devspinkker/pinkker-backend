@@ -2,6 +2,7 @@ package Chatsinfrastructure
 
 import (
 	Chatsdomain "PINKKER-BACKEND/internal/Chat/Chats"
+	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"fmt"
 	"time"
@@ -107,36 +108,81 @@ func (r *ChatsRepository) UpdateNotificationFlag(chatID primitive.ObjectID, noti
 
 	return nil
 }
-func (r *ChatsRepository) usersExist(user1ID, user2ID primitive.ObjectID) (bool, error) {
-	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	var userCount int64
-	var err error
+func (r *ChatsRepository) usersExist(user1ID, user2ID primitive.ObjectID) (*userdomain.GetUser, *userdomain.GetUser, error) {
 
 	// Verificar si user1 existe
-	userCount, err = collection.CountDocuments(ctx, bson.M{"_id": user1ID})
-	if err != nil || userCount == 0 {
-		return false, err
+	filter := bson.D{
+		{Key: "_id", Value: user1ID},
 	}
-
+	user1, err := r.getUserAndCheckFollow(filter, user2ID)
+	if err != nil {
+		return nil, nil, err
+	}
 	// Verificar si user2 existe
-	userCount, err = collection.CountDocuments(ctx, bson.M{"_id": user2ID})
-	if err != nil || userCount == 0 {
-		return false, err
+	filter = bson.D{
+		{Key: "_id", Value: user2ID},
 	}
 
-	return true, nil
+	user2, err := r.getUserAndCheckFollow(filter, user1ID)
+
+	return user1, user2, err
+}
+
+func (u *ChatsRepository) getUserAndCheckFollow(filter bson.D, id primitive.ObjectID) (*userdomain.GetUser, error) {
+	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	// currentTime := time.Now()
+
+	pipeline := mongo.Pipeline{
+		// Filtra el usuario basado en el filtro proporcionado
+		bson.D{{Key: "$match", Value: filter}},
+		// Agrega campos adicionales como FollowersCount, FollowingCount, SubscribersCount
+		// Verifica si el 'id' está en las claves de 'Followers'
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "isFollowedByUser", Value: bson.D{
+				{Key: "$cond", Value: bson.D{
+					{Key: "if", Value: bson.D{
+						{Key: "$in", Value: bson.A{id.Hex(), bson.D{
+							{Key: "$map", Value: bson.D{
+								{Key: "input", Value: bson.D{{Key: "$objectToArray", Value: "$Followers"}}},
+								{Key: "as", Value: "follower"},
+								{Key: "in", Value: "$$follower.k"}, // La clave es el ObjectID
+							}},
+						}}},
+					}},
+					{Key: "then", Value: true},
+					{Key: "else", Value: false},
+				}},
+			}},
+		}}},
+
+		// Proyección para excluir campos innecesarios
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Followers", Value: 0},
+			{Key: "Subscribers", Value: 0},
+			{Key: "SubscriptionData", Value: 0}, // Excluir los datos de lookup
+		}}},
+	}
+
+	cursor, err := GoMongoDBCollUsers.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var user userdomain.GetUser
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+	}
+
+	return &user, nil
 }
 
 func (r *ChatsRepository) CreateChatOrGetChats(user1ID, user2ID primitive.ObjectID) (*Chatsdomain.ChatWithUsers, error) {
-	exist, err := r.usersExist(user1ID, user2ID)
+	user1, user2, err := r.usersExist(user1ID, user2ID)
 	if err != nil {
 		return nil, fmt.Errorf("error checking users existence: %v", err)
-	}
-	if !exist {
-		return nil, fmt.Errorf("one or both users do not exist")
 	}
 
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
@@ -158,14 +204,23 @@ func (r *ChatsRepository) CreateChatOrGetChats(user1ID, user2ID primitive.Object
 	} else if err != mongo.ErrNoDocuments {
 		return nil, fmt.Errorf("error finding chat: %v", err)
 	}
+	var StatusUser1 string = "request"
+	var StatusUser2 string = "request"
 
-	// El chat no existe, crearlo
+	if user2.IsFollowedByUser {
+		StatusUser1 = "secondary"
+	}
+	if user1.IsFollowedByUser {
+		StatusUser2 = "secondary"
+	}
 	newChat := Chatsdomain.Chat{
 		User1ID:     user1ID,
 		User2ID:     user2ID,
 		CreatedAt:   time.Now(),
 		MessageIDs:  []primitive.ObjectID{},
 		LastMessage: time.Now(),
+		StatusUser1: StatusUser1,
+		StatusUser2: StatusUser2,
 	}
 
 	result, err := collection.InsertOne(ctx, newChat)
@@ -249,13 +304,13 @@ func (r *ChatsRepository) SaveMessage(message *Chatsdomain.Message) (*Chatsdomai
 }
 
 func (r *ChatsRepository) AddMessageToChat(user1ID, user2ID, messageID primitive.ObjectID) (primitive.ObjectID, error) {
-	exist, err := r.usersExist(user1ID, user2ID)
+	_, _, err := r.usersExist(user1ID, user2ID)
 	if err != nil {
 		return primitive.ObjectID{}, fmt.Errorf("error checking users existence: %v", err)
 	}
-	if !exist {
-		return primitive.ObjectID{}, fmt.Errorf("one or both users do not exist")
-	}
+	// if !exist {
+	// 	return primitive.ObjectID{}, fmt.Errorf("one or both users do not exist")
+	// }
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -299,20 +354,27 @@ func (r *ChatsRepository) AddMessageToChat(user1ID, user2ID, messageID primitive
 	return objectID, nil
 }
 
-func (r *ChatsRepository) GetChatsByUserID(userID primitive.ObjectID) ([]*Chatsdomain.ChatWithUsers, error) {
-	// Convertir el userID de string a ObjectID
-
+func (r *ChatsRepository) GetChatsByUserIDWithStatus(ctx context.Context, userID primitive.ObjectID, status string, page, limit int) ([]*Chatsdomain.ChatWithUsers, error) {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// Determinar el estado que queremos filtrar (según sea user1 o user2)
+	matchStatus := bson.M{
+		"$or": bson.A{
+			bson.M{"user1_id": userID, "status_user1": status}, // Filtrar por el estado si es user1
+			bson.M{"user2_id": userID, "status_user2": status}, // Filtrar por el estado si es user2
+		},
+	}
+
+	// Calcular el salto para la paginación
+	skip := (page - 1) * limit
+
 	pipeline := bson.A{
-		bson.D{{Key: "$match", Value: bson.M{
-			"$or": bson.A{
-				bson.M{"user1_id": userID}, // Aquí utilizamos objID, que es de tipo primitive.ObjectID
-				bson.M{"user2_id": userID}, // Aquí también
-			},
-		}}},
+		// Filtrar los chats por el userID y el estado
+		bson.D{{Key: "$match", Value: matchStatus}},
+
+		// Hacer un lookup para traer los detalles de los usuarios
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "let", Value: bson.D{
@@ -337,18 +399,25 @@ func (r *ChatsRepository) GetChatsByUserID(userID primitive.ObjectID) ([]*Chatsd
 			}},
 			{Key: "as", Value: "users"},
 		}}},
-		bson.D{{Key: "$limit", Value: 20}},
+
+		// Ordenar por la fecha del último mensaje
 		bson.D{{Key: "$sort", Value: bson.D{
 			{Key: "LastMessage", Value: -1},
 		}}},
+
+		// Aplicar paginación: saltar y limitar el número de documentos
+		bson.D{{Key: "$skip", Value: skip}},
+		bson.D{{Key: "$limit", Value: limit}},
 	}
 
+	// Ejecutar la consulta agregada
 	cursor, err := collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
+	// Decodificar los resultados
 	var chats []*Chatsdomain.ChatWithUsers
 	for cursor.Next(ctx) {
 		var chat Chatsdomain.ChatWithUsers
@@ -385,4 +454,34 @@ func (r *ChatsRepository) GetMessageByID(messageID string) (*Chatsdomain.Message
 	}
 
 	return &message, nil
+}
+func (r *ChatsRepository) UpdateUserStatus(ctx context.Context, chatID, userID primitive.ObjectID, newStatus string) error {
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
+
+	// Obtener el chat para verificar qué usuario es
+	var chat Chatsdomain.Chat
+	err := collection.FindOne(ctx, bson.M{"_id": chatID}).Decode(&chat)
+	if err != nil {
+		return fmt.Errorf("error al buscar el chat: %v", err)
+	}
+
+	// Crear la consulta de actualización según el usuario
+	var update bson.M
+	if chat.User1ID == userID {
+		// Si es el user1, actualiza el status_user1
+		update = bson.M{"$set": bson.M{"status_user1": newStatus}}
+	} else if chat.User2ID == userID {
+		// Si es el user2, actualiza el status_user2
+		update = bson.M{"$set": bson.M{"status_user2": newStatus}}
+	} else {
+		return fmt.Errorf("el usuario %v no es parte de este chat", userID)
+	}
+
+	// Actualizar el chat en la base de datos
+	_, err = collection.UpdateOne(ctx, bson.M{"_id": chatID}, update)
+	if err != nil {
+		return fmt.Errorf("error al actualizar el estado del usuario: %v", err)
+	}
+
+	return nil
 }

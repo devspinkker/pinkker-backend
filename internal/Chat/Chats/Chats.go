@@ -16,6 +16,12 @@ type Message struct {
 	CreatedAt  time.Time          `bson:"created_at"`
 }
 
+const (
+	REQUESTS  = "request"
+	PRIMARY   = "primary"
+	SECONDARY = "secondary"
+)
+
 type Chat struct {
 	ID          primitive.ObjectID   `bson:"_id,omitempty"`
 	User1ID     primitive.ObjectID   `bson:"user1_id"`
@@ -24,6 +30,8 @@ type Chat struct {
 	CreatedAt   time.Time            `bson:"created_at"`
 	LastMessage time.Time            `bson:"LastMessage"`
 	NotifyA     primitive.ObjectID   `bson:"NotifyA"`
+	StatusUser1 string               `bson:"status_user1"`
+	StatusUser2 string               `bson:"status_user2"`
 }
 type ChatWithUsers struct {
 	ID          primitive.ObjectID   `bson:"_id,omitempty"`

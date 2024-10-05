@@ -3,6 +3,8 @@ package Chatsapplication
 import (
 	Chatsdomain "PINKKER-BACKEND/internal/Chat/Chats"
 	Chatsinfrastructure "PINKKER-BACKEND/internal/Chat/Chats-infrastructure"
+	"context"
+	"errors"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -47,8 +49,14 @@ func (s *ChatsService) GetMessages(objID, receiverID primitive.ObjectID) ([]*Cha
 func (s *ChatsService) MarkMessageAsSeen(messageID string) error {
 	return s.ChatsRepository.MarkMessageAsSeen(messageID)
 }
-func (s *ChatsService) GetChatsByUserID(messageID primitive.ObjectID) ([]*Chatsdomain.ChatWithUsers, error) {
-	return s.ChatsRepository.GetChatsByUserID(messageID)
+func (s *ChatsService) GetChatsByUserIDWithStatus(userID primitive.ObjectID, page int, status string) ([]*Chatsdomain.ChatWithUsers, error) {
+	limit := 20
+	ctx := context.Background()
+	if status != "primary" && status != "secondary" && status != "request" {
+		return nil, errors.New("estado inválido")
+	}
+	return s.ChatsRepository.GetChatsByUserIDWithStatus(ctx, userID, status, page, limit)
+
 }
 func (s *ChatsService) UpdateNotificationFlag(chatID primitive.ObjectID, receiverID primitive.ObjectID) error {
 	return s.ChatsRepository.UpdateNotificationFlag(chatID, receiverID)
@@ -59,4 +67,12 @@ func (s *ChatsService) GetMessageByID(messageID string) (*Chatsdomain.Message, e
 }
 func (s *ChatsService) CreateChatOrGetChats(Idtoken, userId primitive.ObjectID) (*Chatsdomain.ChatWithUsers, error) {
 	return s.ChatsRepository.CreateChatOrGetChats(Idtoken, userId)
+}
+
+func (s *ChatsService) UpdateUserStatus(Idtoken, chatID primitive.ObjectID, newStatus string) error {
+	ctx := context.Background()
+	if newStatus != "primary" && newStatus != "secondary" {
+		return errors.New("estado inválido")
+	}
+	return s.ChatsRepository.UpdateUserStatus(ctx, chatID, Idtoken, newStatus)
 }

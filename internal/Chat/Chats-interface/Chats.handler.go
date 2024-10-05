@@ -6,6 +6,7 @@ import (
 	"PINKKER-BACKEND/pkg/jwt"
 	"PINKKER-BACKEND/pkg/utils"
 	"encoding/json"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -19,6 +20,34 @@ type ChatsHandler struct {
 func NewChatsHandler(service *Chatsapplication.ChatsService) *ChatsHandler {
 	return &ChatsHandler{Service: service}
 }
+
+func (h *ChatsHandler) UpdateUserStatus(c *fiber.Ctx) error {
+	userID := c.Context().UserValue("_id").(string)
+
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
+	}
+	var request struct {
+		Chatid  primitive.ObjectID `json:"chatid"`
+		Content string             `json:"content"`
+	}
+
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse request"})
+	}
+	if err := h.Service.UpdateUserStatus(objID, request.Chatid, request.Content); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"error":   err,
+		})
+
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+	})
+}
+
 func (h *ChatsHandler) CreateChatOrGetChats(c *fiber.Ctx) error {
 	// Obtener el ID del usuario actual desde el contexto
 	userID := c.Context().UserValue("_id").(string)
@@ -56,7 +85,7 @@ func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
 	}
 	var request struct {
-		ReceiverID primitive.ObjectID `json:"receiver_id"`
+		ReceiverID primitive.ObjectID `json:"chatid"`
 		Content    string             `json:"content"`
 	}
 
@@ -123,7 +152,7 @@ func (h *ChatsHandler) GetMessages(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(messages)
 }
 
-func (h *ChatsHandler) GetChatsByUserID(c *fiber.Ctx) error {
+func (h *ChatsHandler) GetChatsByUserIDWithStatus(c *fiber.Ctx) error {
 	userID := c.Context().UserValue("_id").(string)
 
 	objID, err := primitive.ObjectIDFromHex(userID)
@@ -131,7 +160,13 @@ func (h *ChatsHandler) GetChatsByUserID(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
 	}
 
-	messages, err := h.Service.GetChatsByUserID(objID)
+	status := c.Query("status", "primary")
+
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid page parameter"})
+	}
+	messages, err := h.Service.GetChatsByUserIDWithStatus(objID, page, status)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot get messages"})
 	}
