@@ -40,6 +40,7 @@ func (c *ClipRepository) GetClipsByNameUserIDOrdenación(UserID primitive.Object
 
 	pipeline := mongo.Pipeline{}
 
+	// Filtrar por UserID
 	pipeline = append(pipeline, bson.D{{Key: "$match", Value: bson.D{{Key: "UserID", Value: UserID}}}})
 
 	// Filtro por rango de fechas (si se especifica)
@@ -50,19 +51,21 @@ func (c *ClipRepository) GetClipsByNameUserIDOrdenación(UserID primitive.Object
 
 	// Ordenar los clips dependiendo del filtro (más vistos, recientes, aleatorios)
 	sortStage := c.getSortStage(filterType)
-	pipeline = append(pipeline, sortStage)
+	if filterType == "random" {
+		pipeline = append(pipeline, bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: limit}}}})
+	} else {
+		pipeline = append(pipeline, sortStage)
 
-	// Saltar y limitar los resultados para paginación
-	pipeline = append(pipeline,
-		bson.D{{Key: "$skip", Value: (page - 1) * limit}},
-		bson.D{{Key: "$limit", Value: limit}},
-	)
+		pipeline = append(pipeline,
+			bson.D{{Key: "$skip", Value: (page - 1) * limit}},
+			bson.D{{Key: "$limit", Value: limit}},
+		)
+	}
 
-	// Campos adicionales
-	pipeline = append(pipeline, bson.D{{Key: "$addFields", Value: bson.D{
-		{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
-		{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
-	}}})
+	// pipeline = append(pipeline, bson.D{{Key: "$addFields", Value: bson.D{
+	// 	{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+	// 	{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+	// }}})
 
 	cursor, err := clipCollection.Aggregate(context.Background(), pipeline)
 	if err != nil {
