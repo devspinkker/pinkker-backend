@@ -84,7 +84,7 @@ func (h *ChatsHandler) DeleteAllMessages(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
 	}
 	var request struct {
-		ReceiverID primitive.ObjectID `json:"chatid"`
+		ReceiverID primitive.ObjectID `json:"userid"`
 	}
 
 	if err := c.BodyParser(&request); err != nil {
