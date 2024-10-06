@@ -25,4 +25,7 @@ func ChatsRoutes(app *fiber.App, redisClient *redis.Client, mongoClient *mongo.C
 
 	app.Post("/chats/UpdateUserStatus", middleware.UseExtractor(), handler.UpdateUserStatus)
 
+	app.Post("/chats/DeleteAllMessages", middleware.UseExtractor(), handler.DeleteAllMessages)
+	app.Post("/chats/UpdateChatBlockStatus", middleware.UseExtractor(), handler.UpdateChatBlockStatus)
+
 }

@@ -19,8 +19,35 @@ func NewChatsService(ChatsRepository *Chatsinfrastructure.ChatsRepository) *Chat
 		ChatsRepository: ChatsRepository,
 	}
 }
+func (s *ChatsService) DeleteAllMessages(senderID, receiverID primitive.ObjectID) error {
+	// Eliminar mensajes entre estos dos usuarios
+	err := s.ChatsRepository.DeleteMessages(senderID, receiverID)
+	if err != nil {
+		return err
+	}
+
+	err = s.ChatsRepository.ClearMessageIDsInChat(senderID, receiverID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (s *ChatsService) UpdateChatBlockStatus(chatID primitive.ObjectID, userID primitive.ObjectID, blockStatus bool) error {
+	// Eliminar mensajes entre estos dos usuarios
+	err := s.ChatsRepository.UpdateChatBlockStatus(chatID, userID, blockStatus)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func (s *ChatsService) SendMessage(senderID, receiverID primitive.ObjectID, content string) (*Chatsdomain.Message, primitive.ObjectID, error) {
+
+	chatId, bloqued, err := s.ChatsRepository.IsUserBlocked(senderID, receiverID)
+	if bloqued {
+		return nil, primitive.ObjectID{}, errors.New("bloqued")
+	}
 	message := &Chatsdomain.Message{
 		SenderID:   senderID,
 		ReceiverID: receiverID,
@@ -29,12 +56,13 @@ func (s *ChatsService) SendMessage(senderID, receiverID primitive.ObjectID, cont
 		Notified:   false,
 		CreatedAt:  time.Now(),
 	}
+
 	savedMessage, err := s.ChatsRepository.SaveMessage(message)
 	if err != nil {
 		return message, primitive.ObjectID{}, err
 	}
 
-	id, err := s.ChatsRepository.AddMessageToChat(senderID, receiverID, savedMessage.ID)
+	id, err := s.ChatsRepository.AddMessageToChat(savedMessage.ID, chatId)
 	if err != nil {
 		return message, id, err
 	}

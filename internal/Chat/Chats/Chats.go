@@ -32,18 +32,27 @@ type Chat struct {
 	NotifyA     primitive.ObjectID   `bson:"NotifyA"`
 	StatusUser1 string               `bson:"status_user1"`
 	StatusUser2 string               `bson:"status_user2"`
+	Blocked     struct {
+		BlockedByUser1 bool `bson:"blocked_by_user1"`
+		BlockedByUser2 bool `bson:"blocked_by_user2"`
+	} `bson:"blocked"`
 }
+
 type ChatWithUsers struct {
-	ID          primitive.ObjectID   `bson:"_id,omitempty"`
-	User1ID     primitive.ObjectID   `bson:"user1_id"`
-	User2ID     primitive.ObjectID   `bson:"user2_id"`
-	MessageIDs  []primitive.ObjectID `bson:"message_ids"`
-	CreatedAt   time.Time            `bson:"created_at"`
-	Users       []*User              `bson:"users"`
-	LastMessage time.Time            `bson:"LastMessage"`
-	StatusUser1 string               `bson:"status_user1"`
-	StatusUser2 string               `bson:"status_user2"`
-	NotifyA     primitive.ObjectID   `bson:"NotifyA"`
+	ID      primitive.ObjectID `bson:"_id,omitempty"`
+	User1ID primitive.ObjectID `bson:"user1_id"`
+	User2ID primitive.ObjectID `bson:"user2_id"`
+	// MessageIDs  []primitive.ObjectID `bson:"message_ids"`
+	CreatedAt   time.Time          `bson:"created_at"`
+	Users       []*User            `bson:"users"`
+	LastMessage time.Time          `bson:"LastMessage"`
+	StatusUser1 string             `bson:"status_user1"`
+	StatusUser2 string             `bson:"status_user2"`
+	NotifyA     primitive.ObjectID `bson:"NotifyA"`
+	Blocked     struct {
+		BlockedByUser1 bool `bson:"blocked_by_user1"`
+		BlockedByUser2 bool `bson:"blocked_by_user2"`
+	} `bson:"blocked"`
 }
 
 type User struct {

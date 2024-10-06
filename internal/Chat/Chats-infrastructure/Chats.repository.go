@@ -221,6 +221,13 @@ func (r *ChatsRepository) CreateChatOrGetChats(user1ID, user2ID primitive.Object
 		LastMessage: time.Now(),
 		StatusUser1: StatusUser1,
 		StatusUser2: StatusUser2,
+		Blocked: struct {
+			BlockedByUser1 bool `bson:"blocked_by_user1"`
+			BlockedByUser2 bool `bson:"blocked_by_user2"`
+		}{
+			BlockedByUser1: false,
+			BlockedByUser2: false,
+		},
 	}
 
 	result, err := collection.InsertOne(ctx, newChat)
@@ -230,8 +237,43 @@ func (r *ChatsRepository) CreateChatOrGetChats(user1ID, user2ID primitive.Object
 
 	insertedID := result.InsertedID.(primitive.ObjectID)
 
-	// Devolver el chat recién creado con la información de los usuarios
 	return r.getChatWithUsers(ctx, insertedID)
+}
+func (r *ChatsRepository) UpdateChatBlockStatus(chatID, userID primitive.ObjectID, blockStatus bool) error {
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Buscar el chat por su ID
+	var chat Chatsdomain.Chat
+	err := collection.FindOne(ctx, bson.M{"_id": chatID}).Decode(&chat)
+	if err != nil {
+		return fmt.Errorf("error finding chat: %v", err)
+	}
+
+	update := bson.M{}
+	if chat.User1ID == userID {
+		update = bson.M{
+			"$set": bson.M{
+				"blocked.blocked_by_user1": blockStatus,
+			},
+		}
+	} else if chat.User2ID == userID {
+		update = bson.M{
+			"$set": bson.M{
+				"blocked.blocked_by_user2": blockStatus,
+			},
+		}
+	} else {
+		return fmt.Errorf("user is not part of the chat")
+	}
+
+	_, err = collection.UpdateOne(ctx, bson.M{"_id": chatID}, update)
+	if err != nil {
+		return fmt.Errorf("error updating block status: %v", err)
+	}
+
+	return nil
 }
 
 func (r *ChatsRepository) getChatWithUsers(ctx context.Context, chatID primitive.ObjectID) (*Chatsdomain.ChatWithUsers, error) {
@@ -280,6 +322,39 @@ func (r *ChatsRepository) getChatWithUsers(ctx context.Context, chatID primitive
 
 	return &chatWithUsers, nil
 }
+func (r *ChatsRepository) IsUserBlocked(user1ID, user2ID primitive.ObjectID) (primitive.ObjectID, bool, error) {
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Buscar el chat por user1ID y user2ID
+	filter := bson.M{
+		"$or": []bson.M{
+			{"user1_id": user1ID, "user2_id": user2ID},
+			{"user1_id": user2ID, "user2_id": user1ID},
+		},
+	}
+
+	var chat Chatsdomain.Chat
+	err := collection.FindOne(ctx, filter).Decode(&chat)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return primitive.NilObjectID, false, fmt.Errorf("chat not found between the users")
+		}
+		return primitive.NilObjectID, false, fmt.Errorf("error finding chat: %v", err)
+	}
+
+	// Verificar si el usuario user1ID ha sido bloqueado por user2ID
+	isBlocked := false
+	if chat.User1ID == user1ID {
+		isBlocked = chat.Blocked.BlockedByUser2 // user2 bloqueó a user1
+	} else {
+		isBlocked = chat.Blocked.BlockedByUser1 // user1 bloqueó a user2
+	}
+
+	return chat.ID, isBlocked, nil
+}
+
 func (r *ChatsRepository) SaveMessage(message *Chatsdomain.Message) (*Chatsdomain.Message, error) {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("messages")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -302,15 +377,7 @@ func (r *ChatsRepository) SaveMessage(message *Chatsdomain.Message) (*Chatsdomai
 
 	return &savedMessage, nil
 }
-
-func (r *ChatsRepository) AddMessageToChat(user1ID, user2ID, messageID primitive.ObjectID) (primitive.ObjectID, error) {
-	_, _, err := r.usersExist(user1ID, user2ID)
-	if err != nil {
-		return primitive.ObjectID{}, fmt.Errorf("error checking users existence: %v", err)
-	}
-	// if !exist {
-	// 	return primitive.ObjectID{}, fmt.Errorf("one or both users do not exist")
-	// }
+func (r *ChatsRepository) ClearMessageIDsInChat(user1ID, user2ID primitive.ObjectID) error {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -321,43 +388,63 @@ func (r *ChatsRepository) AddMessageToChat(user1ID, user2ID, messageID primitive
 	}}
 
 	update := bson.M{
-		"$setOnInsert": bson.M{
-			"user1_id":   user1ID,
-			"user2_id":   user2ID,
-			"created_at": time.Now(),
+		"$set": bson.M{
+			"message_ids": []primitive.ObjectID{},
+			"LastMessage": time.Now(),
 		},
+	}
+
+	_, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("error clearing message_ids: %v", err)
+	}
+
+	return nil
+}
+
+func (r *ChatsRepository) DeleteMessages(user1ID, user2ID primitive.ObjectID) error {
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("messages")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"$or": []bson.M{
+			{"sender_id": user1ID, "receiver_id": user2ID},
+			{"sender_id": user2ID, "receiver_id": user1ID},
+		},
+	}
+
+	_, err := collection.DeleteMany(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("error deleting messages: %v", err)
+	}
+
+	return nil
+}
+
+func (r *ChatsRepository) AddMessageToChat(chatID, messageID primitive.ObjectID) (primitive.ObjectID, error) {
+	// Verificar si el chat existe
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Actualizar el chat con el nuevo mensaje
+	update := bson.M{
 		"$push": bson.M{"message_ids": messageID},
 		"$set":  bson.M{"LastMessage": time.Now()}, // Actualizar LastMessage a la fecha actual
 	}
 
-	opts := options.Update().SetUpsert(true)
-
 	// Realizar la actualización
-	_, err = collection.UpdateOne(ctx, filter, update, opts)
+	_, err := collection.UpdateOne(ctx, bson.M{"_id": chatID}, update)
 	if err != nil {
-		return primitive.ObjectID{}, err
+		return primitive.ObjectID{}, fmt.Errorf("error updating chat: %v", err)
 	}
 
-	// Si fue una inserción (upsert), obtener el ID del documento insertado
-	var result bson.M
-	err = collection.FindOne(ctx, filter).Decode(&result)
-	if err != nil {
-		return primitive.ObjectID{}, err
-	}
-
-	// Extraer el ID del documento
-	objectID, ok := result["_id"].(primitive.ObjectID)
-	if !ok {
-		return primitive.ObjectID{}, fmt.Errorf("could not convert _id to ObjectID")
-	}
-
-	return objectID, nil
+	return chatID, nil // Retorna el ID del chat actualizado
 }
 
 func (r *ChatsRepository) GetChatsByUserIDWithStatus(ctx context.Context, userID primitive.ObjectID, status string, page, limit int) ([]*Chatsdomain.ChatWithUsers, error) {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
 	// Determinar el estado que queremos filtrar (según sea user1 o user2)
 	matchStatus := bson.M{

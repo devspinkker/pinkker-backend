@@ -76,6 +76,52 @@ func (h *ChatsHandler) CreateChatOrGetChats(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(chat)
 }
+func (h *ChatsHandler) DeleteAllMessages(c *fiber.Ctx) error {
+	userID := c.Context().UserValue("_id").(string)
+
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
+	}
+	var request struct {
+		ReceiverID primitive.ObjectID `json:"chatid"`
+	}
+
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse request"})
+	}
+
+	err = h.Service.DeleteAllMessages(objID, request.ReceiverID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "StatusOK"})
+}
+
+func (h *ChatsHandler) UpdateChatBlockStatus(c *fiber.Ctx) error {
+	userID := c.Context().UserValue("_id").(string)
+
+	objID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "invalid user ID"})
+	}
+	var request struct {
+		ChatID      primitive.ObjectID `json:"chatID"`
+		BlockStatus bool               `json:"blockStatus"`
+	}
+
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse request"})
+	}
+
+	err = h.Service.UpdateChatBlockStatus(request.ChatID, objID, request.BlockStatus)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "StatusOK"})
+}
 
 func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 	userID := c.Context().UserValue("_id").(string)
