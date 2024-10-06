@@ -346,10 +346,8 @@ func (r *ChatsRepository) IsUserBlocked(user1ID, user2ID primitive.ObjectID) (pr
 
 	// Verificar si el usuario user1ID ha sido bloqueado por user2ID
 	isBlocked := false
-	if chat.User1ID == user1ID {
-		isBlocked = chat.Blocked.BlockedByUser2 // user2 bloqueó a user1
-	} else {
-		isBlocked = chat.Blocked.BlockedByUser1 // user1 bloqueó a user2
+	if chat.Blocked.BlockedByUser2 || chat.Blocked.BlockedByUser1 {
+		isBlocked = true
 	}
 
 	return chat.ID, isBlocked, nil
@@ -422,7 +420,7 @@ func (r *ChatsRepository) DeleteMessages(user1ID, user2ID primitive.ObjectID) er
 	return nil
 }
 
-func (r *ChatsRepository) AddMessageToChat(chatID, messageID primitive.ObjectID) (primitive.ObjectID, error) {
+func (r *ChatsRepository) AddMessageToChat(messageID, chatID primitive.ObjectID) (primitive.ObjectID, error) {
 	// Verificar si el chat existe
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

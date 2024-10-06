@@ -45,9 +45,10 @@ func (s *ChatsService) UpdateChatBlockStatus(chatID primitive.ObjectID, userID p
 func (s *ChatsService) SendMessage(senderID, receiverID primitive.ObjectID, content string) (*Chatsdomain.Message, primitive.ObjectID, error) {
 
 	chatId, bloqued, err := s.ChatsRepository.IsUserBlocked(senderID, receiverID)
-	if bloqued {
+	if bloqued || err != nil {
 		return nil, primitive.ObjectID{}, errors.New("bloqued")
 	}
+
 	message := &Chatsdomain.Message{
 		SenderID:   senderID,
 		ReceiverID: receiverID,
@@ -61,7 +62,6 @@ func (s *ChatsService) SendMessage(senderID, receiverID primitive.ObjectID, cont
 	if err != nil {
 		return message, primitive.ObjectID{}, err
 	}
-
 	id, err := s.ChatsRepository.AddMessageToChat(savedMessage.ID, chatId)
 	if err != nil {
 		return message, id, err
