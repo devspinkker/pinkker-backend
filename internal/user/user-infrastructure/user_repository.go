@@ -809,14 +809,14 @@ func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.O
 			},
 		}},
 		bson.M{"$unwind": "$followingList"},
-		bson.M{"$match": bson.M{"followingList.v.Since": bson.M{"$gt": "$LastConnection"}}},
-		bson.M{"$sort": bson.M{"followingList.v.Since": -1}},
+		bson.M{"$match": bson.M{"followingList.v.since": bson.M{"$gt": "$LastConnection"}}},
+		bson.M{"$sort": bson.M{"followingList.v.since": -1}},
 		bson.M{"$skip": skip},
 		bson.M{"$limit": limit},
 		bson.M{"$project": bson.M{
 			"Email":         "$followingList.v.Email",
-			"Since":         "$followingList.v.Since",
-			"Notifications": "$followingList.v.Notifications",
+			"since":         "$followingList.v.since",
+			"notifications": "$followingList.v.notifications",
 		}},
 	}
 

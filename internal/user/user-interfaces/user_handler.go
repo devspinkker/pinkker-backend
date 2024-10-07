@@ -765,9 +765,15 @@ func (h *UserHandler) GetNotificacionesLastConnection(c *fiber.Ctx) error {
 	// Obtener las notificaciones llamando al servicio de usuario
 	FollowInfo, ResDonation, Subscription, errUpdateUserFollow := h.userService.GetNotificacionesLastConnection(IdUserTokenP, page)
 	if errUpdateUserFollow != nil {
+		fmt.Println(errUpdateUserFollow.Error())
+		fmt.Println(FollowInfo)
+		fmt.Println(ResDonation)
+
+		fmt.Println(Subscription)
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
-			"data":    errUpdateUserFollow,
+			"data":    errUpdateUserFollow.Error(),
 		})
 	}
 
