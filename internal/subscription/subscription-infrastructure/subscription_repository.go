@@ -389,7 +389,7 @@ func (r *SubscriptionRepository) GetSubsChat(id primitive.ObjectID) ([]subscript
 	GoMongoDBCollDonations := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscribers")
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{{Key: "destinationUserID", Value: id}}}},
-		{{Key: "$sort", Value: bson.D{{Key: "SubscriptionEnd", Value: -1}}}},
+		{{Key: "$sort", Value: bson.D{{Key: "SubscriptionStart", Value: -1}}}},
 		{{Key: "$limit", Value: 10}},
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},

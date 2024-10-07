@@ -1,7 +1,9 @@
 package userapplication
 
 import (
+	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
+	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	domain "PINKKER-BACKEND/internal/user/user-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	infrastructure "PINKKER-BACKEND/internal/user/user-infrastructure"
@@ -181,6 +183,29 @@ func (u *UserService) GetUserBanInstream(key string) (bool, error) {
 func (u *UserService) GetUserByCmt(key string) (*domain.User, error) {
 	user, err := u.roomRepository.GetUserByCmt(key)
 	return user, err
+}
+func (u *UserService) UpdateLastConnection(IdUserTokenP primitive.ObjectID) error {
+	return u.roomRepository.UpdateLastConnection(IdUserTokenP)
+
+}
+
+func (u *UserService) GetNotificacionesLastConnection(IdUserTokenP primitive.ObjectID, page int) ([]userdomain.FollowInfo, []donationdomain.ResDonation, []subscriptiondomain.ResSubscriber, error) {
+	GetRecentFollows, err := u.roomRepository.GetRecentFollowsLastConnection(IdUserTokenP, page)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	AllMyPixelesDonors, err := u.roomRepository.AllMyPixelesDonorsLastConnection(IdUserTokenP, page)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	GetSubsChat, err := u.roomRepository.GetSubsChatLastConnection(IdUserTokenP, page)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return GetRecentFollows, AllMyPixelesDonors, GetSubsChat, nil
 }
 
 // follow

@@ -43,24 +43,18 @@ func (c *ClipRepository) GetClipsByNameUserIDOrdenación(UserID primitive.Object
 		bson.D{{Key: "$match", Value: bson.D{{Key: "UserID", Value: UserID}}}},
 	}
 
-	// Filtro por rango de fechas (si se especifica)
 	if dateRange != "" {
 		dateFilter := c.getDateFilter(dateRange)
-		// Asegurarse de que solo pasen los clips dentro del rango de fechas
 		pipeline = append(pipeline, bson.D{{Key: "$match", Value: dateFilter}})
 	}
 
-	// Ordenar los clips dependiendo del filtro (más vistos, recientes, aleatorios)
 	sortStage := c.getSortStage(filterType)
 
-	// Si es filtro aleatorio, usamos $sample
 	if filterType == "random" {
 		pipeline = append(pipeline, bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: limit}}}})
 	} else {
-		// Agregar la etapa de ordenación
 		pipeline = append(pipeline, sortStage)
 
-		// Paginación: saltar y limitar resultados
 		pipeline = append(pipeline,
 			bson.D{{Key: "$skip", Value: (page - 1) * limit}},
 			bson.D{{Key: "$limit", Value: limit}},
@@ -72,9 +66,6 @@ func (c *ClipRepository) GetClipsByNameUserIDOrdenación(UserID primitive.Object
 	// 	{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 	// 	{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 	// }}})
-
-	// Mostrar el pipeline para depurar
-	fmt.Println("Pipeline:", pipeline)
 
 	// Ejecutar la consulta con el pipeline
 	cursor, err := clipCollection.Aggregate(context.Background(), pipeline)

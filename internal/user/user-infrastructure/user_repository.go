@@ -1,7 +1,9 @@
 package userinfrastructure
 
 import (
+	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
+	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	domain "PINKKER-BACKEND/internal/user/user-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"PINKKER-BACKEND/pkg/authGoogleAuthenticator"
@@ -777,6 +779,203 @@ func (u *UserRepository) EditSocialNetworks(SocialNetwork domain.SocialNetwork, 
 	}
 
 	_, err := GoMongoDBCollUsers.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// get follows notis
+func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.ObjectID, page int) ([]domain.FollowInfo, error) {
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := db.Collection("Users")
+
+	limit := 10
+	skip := (page - 1) * limit
+
+	pipeline := bson.A{
+		bson.M{"$lookup": bson.M{
+			"from":         "Users",
+			"localField":   "_id",
+			"foreignField": "_id",
+			"as":           "user",
+		}},
+		bson.M{"$unwind": "$user"},
+		bson.M{"$project": bson.M{
+			"LastConnection": "$user.LastConnection",
+			"followingList": bson.M{
+				"$objectToArray": "$Following",
+			},
+		}},
+		bson.M{"$unwind": "$followingList"},
+		bson.M{"$match": bson.M{"followingList.v.Since": bson.M{"$gt": "$LastConnection"}}},
+		bson.M{"$sort": bson.M{"followingList.v.Since": -1}},
+		bson.M{"$skip": skip},
+		bson.M{"$limit": limit},
+		bson.M{"$project": bson.M{
+			"Email":         "$followingList.v.Email",
+			"Since":         "$followingList.v.Since",
+			"Notifications": "$followingList.v.Notifications",
+		}},
+	}
+
+	cursor, err := GoMongoDBCollUsers.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var results []domain.FollowInfo
+	for cursor.Next(context.Background()) {
+		var followInfo domain.FollowInfo
+		if err := cursor.Decode(&followInfo); err != nil {
+			return nil, err
+		}
+		results = append(results, followInfo)
+	}
+
+	return results, nil
+}
+
+func (d *UserRepository) AllMyPixelesDonorsLastConnection(id primitive.ObjectID, page int) ([]donationdomain.ResDonation, error) {
+	GoMongoDBCollDonations := d.mongoClient.Database("PINKKER-BACKEND").Collection("Donations")
+
+	limit := 10
+	skip := (page - 1) * limit
+
+	pipeline := []bson.D{
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "ToUser"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "user"},
+		}}},
+		{{Key: "$unwind", Value: "$user"}},
+		{{Key: "$match", Value: bson.M{
+			"ToUser":    id,
+			"TimeStamp": bson.M{"$gt": "$user.LastConnection"},
+		}}},
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "FromUser"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "FromUserInfo"},
+		}}},
+		{{Key: "$unwind", Value: "$FromUserInfo"}},
+		{{Key: "$project", Value: bson.D{
+			{Key: "FromUser", Value: "$FromUser"},
+			{Key: "FromUserInfo.Avatar", Value: "$FromUserInfo.Avatar"},
+			{Key: "FromUserInfo.NameUser", Value: "$FromUserInfo.NameUser"},
+			{Key: "Pixeles", Value: 1},
+			{Key: "Text", Value: 1},
+			{Key: "TimeStamp", Value: 1},
+			{Key: "Notified", Value: 1},
+			{Key: "ToUser", Value: 1},
+			{Key: "id", Value: "$_id"},
+		}}},
+		{{Key: "$sort", Value: bson.D{{Key: "TimeStamp", Value: -1}}}},
+		{{Key: "$skip", Value: skip}},
+		{{Key: "$limit", Value: limit}},
+	}
+
+	cursor, err := GoMongoDBCollDonations.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var Donations []donationdomain.ResDonation
+	for cursor.Next(context.Background()) {
+		var donation donationdomain.ResDonation
+		if err := cursor.Decode(&donation); err != nil {
+			return nil, err
+		}
+		Donations = append(Donations, donation)
+	}
+
+	if len(Donations) == 0 {
+		return nil, errors.New("no documents found")
+	}
+
+	return Donations, nil
+}
+
+func (r *UserRepository) GetSubsChatLastConnection(id primitive.ObjectID, page int) ([]subscriptiondomain.ResSubscriber, error) {
+	GoMongoDBCollSubscribers := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscribers")
+
+	limit := 10
+	skip := (page - 1) * limit
+
+	pipeline := []bson.D{
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "destinationUserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "user"},
+		}}},
+		{{Key: "$unwind", Value: "$user"}},
+		{{Key: "$match", Value: bson.D{
+			{Key: "destinationUserID", Value: id},
+			{Key: "SubscriptionStart", Value: bson.M{"$gt": "$user.LastConnection"}},
+		}}},
+		{{Key: "$sort", Value: bson.D{{Key: "SubscriptionStart", Value: -1}}}},
+		{{Key: "$skip", Value: skip}},
+		{{Key: "$limit", Value: limit}},
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "sourceUserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "FromUserInfo"},
+		}}},
+		{{Key: "$unwind", Value: "$FromUserInfo"}},
+		{{Key: "$project", Value: bson.D{
+			{Key: "SubscriberNameUser", Value: 1},
+			{Key: "FromUserInfo.Avatar", Value: 1},
+			{Key: "FromUserInfo.NameUser", Value: 1},
+			{Key: "SubscriptionStart", Value: 1},
+			{Key: "SubscriptionEnd", Value: 1},
+			{Key: "Notified", Value: 1},
+			{Key: "Text", Value: 1},
+			{Key: "id", Value: "$_id"},
+		}}},
+	}
+
+	cursor, err := GoMongoDBCollSubscribers.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var Subscriber []subscriptiondomain.ResSubscriber
+	for cursor.Next(context.Background()) {
+		var subscriber subscriptiondomain.ResSubscriber
+		if err := cursor.Decode(&subscriber); err != nil {
+			return nil, err
+		}
+		Subscriber = append(Subscriber, subscriber)
+	}
+
+	if len(Subscriber) == 0 {
+		return nil, errors.New("no documents found")
+	}
+
+	return Subscriber, nil
+}
+
+func (u *UserRepository) UpdateLastConnection(userID primitive.ObjectID) error {
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	usersCollection := db.Collection("Users")
+
+	filter := bson.M{"_id": userID}
+	lastConnection := time.Now().Add(-1 * time.Minute)
+	update := bson.M{
+		"$set": bson.M{
+			"LastConnection": lastConnection,
+		},
+	}
+
+	_, err := usersCollection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		return err
 	}

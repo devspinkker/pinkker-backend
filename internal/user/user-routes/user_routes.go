@@ -7,10 +7,12 @@ import (
 	"PINKKER-BACKEND/pkg/jwt"
 	"PINKKER-BACKEND/pkg/middleware"
 	"PINKKER-BACKEND/pkg/utils"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -49,7 +51,7 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Get("/user/GetUserBanInstream", UserHandler.GetUserBanInstream)
 
 	App.Get("/user/getUserById", middleware.UseExtractor(), UserHandler.GetUserByIdTheToken)
-
+	App.Get("/user/GetNotificacionesLastConnection", middleware.UseExtractor(), UserHandler.GetNotificacionesLastConnection)
 	//Follow
 	App.Post("/user/follow", middleware.UseExtractor(), UserHandler.Follow)
 	App.Post("/user/Unfollow", middleware.UseExtractor(), UserHandler.Unfollow)
@@ -95,16 +97,26 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 			_ = c.Close()
 		}()
 		token := c.Params("token", "null")
+		var id primitive.ObjectID
+
 		if token != "null" {
-			_, _, _, err := jwt.ExtractDataFromToken(token)
+			_, idToken, _, err := jwt.ExtractDataFromToken(token)
 			if err != nil {
 				return
 			}
-
+			IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(idToken)
+			if errinObjectID != nil {
+				c.WriteMessage(websocket.TextMessage, []byte(errinObjectID.Error()))
+				c.Close()
+			}
+			id = IdUserTokenP
 		}
-
 		errReceiveMessageFromRoom := UserHandler.Pinker_notifications(c)
 		if errReceiveMessageFromRoom != nil {
+			err := UserHandler.UpdateLastConnection(id)
+			if err != nil {
+				fmt.Println(err)
+			}
 			c.WriteMessage(websocket.TextMessage, []byte(errReceiveMessageFromRoom.Error()))
 			c.Close()
 			return

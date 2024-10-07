@@ -1,6 +1,8 @@
 package userinterfaces
 
 import (
+	donationdomain "PINKKER-BACKEND/internal/donation/donation"
+	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	application "PINKKER-BACKEND/internal/user/user-application"
 	domain "PINKKER-BACKEND/internal/user/user-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
@@ -12,6 +14,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -116,6 +119,10 @@ func (h *UserHandler) PanelAdminPinkkerInfoUser(c *fiber.Ctx) error {
 
 }
 
+func (h *UserHandler) UpdateLastConnection(idToken primitive.ObjectID) error {
+	return h.userService.UpdateLastConnection(idToken)
+
+}
 func (h *UserHandler) Pinker_notifications(c *websocket.Conn) error {
 
 	sub := h.userService.SubscribeToRoom("pinker_notifications")
@@ -738,6 +745,48 @@ func (h *UserHandler) GetUserByIdTheToken(c *fiber.Ctx) error {
 
 type IdReq struct {
 	IdUser string `json:"IdUser"`
+}
+
+func (h *UserHandler) GetNotificacionesLastConnection(c *fiber.Ctx) error {
+	// Obtener el ID del token del usuario desde el contexto
+	IdUserToken := c.Context().UserValue("_id").(string)
+	page, errpage := strconv.Atoi(c.Query("page", "1"))
+	if errpage != nil || page < 1 {
+		page = 1
+	}
+	// Convertir el ID del token del usuario a ObjectID
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+
+	// Obtener las notificaciones llamando al servicio de usuario
+	FollowInfo, ResDonation, Subscription, errUpdateUserFollow := h.userService.GetNotificacionesLastConnection(IdUserTokenP, page)
+	if errUpdateUserFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errUpdateUserFollow,
+		})
+	}
+
+	// Estructura de los datos a devolver
+	type dataStruct struct {
+		FollowInfo   []userdomain.FollowInfo            `json:"FollowInfo"`
+		ResDonation  []donationdomain.ResDonation       `json:"ResDonation"`
+		Subscription []subscriptiondomain.ResSubscriber `json:"Subscription"`
+	}
+
+	// Responder con los datos de notificaciones
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data": dataStruct{
+			FollowInfo:   FollowInfo,
+			ResDonation:  ResDonation,
+			Subscription: Subscription,
+		},
+	})
 }
 
 // follow
