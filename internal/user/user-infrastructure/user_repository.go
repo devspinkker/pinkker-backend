@@ -805,7 +805,7 @@ func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.O
 		bson.M{"$project": bson.M{
 			"LastConnection": "$user.LastConnection",
 			"followingList": bson.M{
-				"$objectToArray": "$Following",
+				"$objectToArray": "$Followers",
 			},
 		}},
 		bson.M{"$unwind": "$followingList"},
