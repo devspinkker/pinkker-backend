@@ -968,10 +968,9 @@ func (u *UserRepository) UpdateLastConnection(userID primitive.ObjectID) error {
 	usersCollection := db.Collection("Users")
 
 	filter := bson.M{"_id": userID}
-	lastConnection := time.Now().Add(-1 * time.Minute)
 	update := bson.M{
 		"$set": bson.M{
-			"LastConnection": lastConnection,
+			"LastConnection": time.Now(),
 		},
 	}
 

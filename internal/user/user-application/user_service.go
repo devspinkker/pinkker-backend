@@ -16,6 +16,7 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UserService struct {
@@ -190,21 +191,30 @@ func (u *UserService) UpdateLastConnection(IdUserTokenP primitive.ObjectID) erro
 }
 
 func (u *UserService) GetNotificacionesLastConnection(IdUserTokenP primitive.ObjectID, page int) ([]userdomain.FollowInfo, []donationdomain.ResDonation, []subscriptiondomain.ResSubscriber, error) {
+	// Inicializar variables para evitar nil returns
+	var GetRecentFollows []userdomain.FollowInfo
+	var AllMyPixelesDonors []donationdomain.ResDonation
+	var GetSubsChat []subscriptiondomain.ResSubscriber
+
+	// Obtener FollowInfo, manejar errores nil y mongo.ErrNoDocuments
 	GetRecentFollows, err := u.roomRepository.GetRecentFollowsLastConnection(IdUserTokenP, page)
-	if err != nil {
+	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, nil, nil, err
 	}
 
-	AllMyPixelesDonors, err := u.roomRepository.AllMyPixelesDonorsLastConnection(IdUserTokenP, page)
-	if err != nil {
+	// Obtener Pixeles Donors, manejar errores nil y mongo.ErrNoDocuments
+	AllMyPixelesDonors, err = u.roomRepository.AllMyPixelesDonorsLastConnection(IdUserTokenP, page)
+	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, nil, nil, err
 	}
 
-	GetSubsChat, err := u.roomRepository.GetSubsChatLastConnection(IdUserTokenP, page)
-	if err != nil {
+	// Obtener Subs Chat, manejar errores nil y mongo.ErrNoDocuments
+	GetSubsChat, err = u.roomRepository.GetSubsChatLastConnection(IdUserTokenP, page)
+	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, nil, nil, err
 	}
 
+	// Si no hay error o el error es ErrNoDocuments, retorna los datos (vacíos si ErrNoDocuments)
 	return GetRecentFollows, AllMyPixelesDonors, GetSubsChat, nil
 }
 
