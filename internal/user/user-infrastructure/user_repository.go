@@ -794,29 +794,28 @@ func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.O
 	limit := 10
 	skip := (page - 1) * limit
 
+	// Pipeline de agregación
 	pipeline := bson.A{
-		bson.M{"$lookup": bson.M{
-			"from":         "Users",
-			"localField":   "_id",
-			"foreignField": "_id",
-			"as":           "user",
-		}},
-		bson.M{"$unwind": "$user"},
+		bson.M{"$match": bson.M{"_id": IdUserTokenP}},
 		bson.M{"$project": bson.M{
-			"LastConnection": "$user.LastConnection",
-			"followingList": bson.M{
-				"$objectToArray": "$Followers",
+			"LastConnection": 1,
+			"Followers": bson.M{
+				"$ifNull": bson.A{"$Followers", bson.M{}}, // Si Followers es nulo, reemplazar por un objeto vacío
 			},
 		}},
-		bson.M{"$unwind": "$followingList"},
-		bson.M{"$match": bson.M{"followingList.v.since": bson.M{"$gt": "$LastConnection"}}},
-		bson.M{"$sort": bson.M{"followingList.v.since": -1}},
+		bson.M{"$project": bson.M{
+			"LastConnection": 1,
+			"FollowersArray": bson.M{"$objectToArray": "$Followers"}, // Convertimos los seguidores en un array de objetos
+		}},
+		bson.M{"$unwind": "$FollowersArray"},                                                 // Descomponemos el array de seguidores
+		bson.M{"$match": bson.M{"FollowersArray.v.since": bson.M{"$gt": "$LastConnection"}}}, // Filtramos los que siguieron después de la última conexión
+		bson.M{"$sort": bson.M{"FollowersArray.v.since": -1}},                                // Ordenamos por fecha descendente
 		bson.M{"$skip": skip},
 		bson.M{"$limit": limit},
 		bson.M{"$project": bson.M{
-			"Email":         "$followingList.v.Email",
-			"since":         "$followingList.v.since",
-			"notifications": "$followingList.v.notifications",
+			"Email":         "$FollowersArray.v.Email",
+			"since":         "$FollowersArray.v.since",
+			"notifications": "$FollowersArray.v.notifications",
 		}},
 	}
 
@@ -835,6 +834,10 @@ func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.O
 		results = append(results, followInfo)
 	}
 
+	// Revisamos si hubo error en el cursor
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
 	return results, nil
 }
 
