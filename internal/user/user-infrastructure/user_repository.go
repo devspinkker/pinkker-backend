@@ -796,29 +796,40 @@ func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.O
 
 	// Pipeline de agregación
 	pipeline := bson.A{
+		// 1. Filtramos por el usuario con el ID proporcionado
 		bson.M{"$match": bson.M{"_id": IdUserTokenP}},
+		// 2. Proyectamos los campos necesarios y convertimos el campo Followers a un arreglo
 		bson.M{"$project": bson.M{
 			"LastConnection": 1,
 			"Followers": bson.M{
-				"$ifNull": bson.A{"$Followers", bson.M{}}, // Si Followers es nulo, reemplazar por un objeto vacío
+				"$objectToArray": "$Followers",
 			},
 		}},
-		bson.M{"$project": bson.M{
-			"LastConnection": 1,
-			"FollowersArray": bson.M{"$objectToArray": "$Followers"}, // Convertimos los seguidores en un array de objetos
+		// 3. "Unwind" para descomponer el arreglo de Followers en documentos individuales
+		bson.M{"$unwind": "$Followers"},
+		// 4. Filtramos los seguidores que tienen la fecha 'since' mayor a la fecha 'LastConnection'
+		bson.M{"$match": bson.M{
+			"$expr": bson.M{
+				"$gt": []interface{}{
+					"$Followers.v.since", "$LastConnection",
+				},
+			},
 		}},
-		bson.M{"$unwind": "$FollowersArray"},                                                 // Descomponemos el array de seguidores
-		bson.M{"$match": bson.M{"FollowersArray.v.since": bson.M{"$gt": "$LastConnection"}}}, // Filtramos los que siguieron después de la última conexión
-		bson.M{"$sort": bson.M{"FollowersArray.v.since": -1}},                                // Ordenamos por fecha descendente
+		// 5. Ordenamos los resultados por la fecha de 'since' en orden descendente
+		bson.M{"$sort": bson.M{"Followers.v.since": -1}},
+		// 6. Aplicamos el skip para la paginación
 		bson.M{"$skip": skip},
+		// 7. Aplicamos el limit para limitar la cantidad de resultados
 		bson.M{"$limit": limit},
+		// 8. Proyectamos los campos finales que queremos devolver
 		bson.M{"$project": bson.M{
-			"Email":         "$FollowersArray.v.Email",
-			"since":         "$FollowersArray.v.since",
-			"notifications": "$FollowersArray.v.notifications",
+			"Email":         "$Followers.v.Email",
+			"since":         "$Followers.v.since",
+			"notifications": "$Followers.v.notifications",
 		}},
 	}
 
+	// Ejecutamos el pipeline de agregación
 	cursor, err := GoMongoDBCollUsers.Aggregate(context.Background(), pipeline)
 	if err != nil {
 		return nil, err
@@ -838,70 +849,88 @@ func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.O
 	if err := cursor.Err(); err != nil {
 		return nil, err
 	}
+
 	return results, nil
 }
-
 func (d *UserRepository) AllMyPixelesDonorsLastConnection(id primitive.ObjectID, page int) ([]donationdomain.ResDonation, error) {
 	GoMongoDBCollDonations := d.mongoClient.Database("PINKKER-BACKEND").Collection("Donations")
 
 	limit := 10
 	skip := (page - 1) * limit
 
-	pipeline := []bson.D{
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "ToUser"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "user"},
-		}}},
-		{{Key: "$unwind", Value: "$user"}},
-		{{Key: "$match", Value: bson.M{
-			"ToUser":    id,
+	// Pipeline de agregación
+	pipeline := bson.A{
+		// 1. Filtrar donaciones hechas al usuario destino (ToUser)
+		bson.M{"$match": bson.M{"ToUser": id}},
+		// 2. Lookup para obtener información del usuario destino y su LastConnection
+		bson.M{"$lookup": bson.M{
+			"from":         "Users",
+			"localField":   "ToUser",
+			"foreignField": "_id",
+			"as":           "user",
+		}},
+		// 3. Descomponer el array de usuarios
+		bson.M{"$unwind": "$user"},
+		// 4. Filtrar solo las donaciones hechas después de la última conexión del usuario destino
+		bson.M{"$match": bson.M{
 			"TimeStamp": bson.M{"$gt": "$user.LastConnection"},
-		}}},
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "FromUser"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "FromUserInfo"},
-		}}},
-		{{Key: "$unwind", Value: "$FromUserInfo"}},
-		{{Key: "$project", Value: bson.D{
-			{Key: "FromUser", Value: "$FromUser"},
-			{Key: "FromUserInfo.Avatar", Value: "$FromUserInfo.Avatar"},
-			{Key: "FromUserInfo.NameUser", Value: "$FromUserInfo.NameUser"},
-			{Key: "Pixeles", Value: 1},
-			{Key: "Text", Value: 1},
-			{Key: "TimeStamp", Value: 1},
-			{Key: "Notified", Value: 1},
-			{Key: "ToUser", Value: 1},
-			{Key: "id", Value: "$_id"},
-		}}},
-		{{Key: "$sort", Value: bson.D{{Key: "TimeStamp", Value: -1}}}},
-		{{Key: "$skip", Value: skip}},
-		{{Key: "$limit", Value: limit}},
+		}},
+		// 5. Lookup para obtener información del usuario que hizo la donación (FromUser)
+		bson.M{"$lookup": bson.M{
+			"from":         "Users",
+			"localField":   "FromUser",
+			"foreignField": "_id",
+			"as":           "FromUserInfo",
+		}},
+		// 6. Descomponer el array de usuarios que hicieron la donación
+		bson.M{"$unwind": "$FromUserInfo"},
+		// 7. Proyectar los campos finales que queremos devolver
+		bson.M{"$project": bson.M{
+			"FromUser":              "$FromUser",
+			"FromUserInfo.Avatar":   "$FromUserInfo.Avatar",
+			"FromUserInfo.NameUser": "$FromUserInfo.NameUser",
+			"Pixeles":               1,
+			"Text":                  1,
+			"TimeStamp":             1,
+			"Notified":              1,
+			"ToUser":                1,
+			"id":                    "$_id",
+		}},
+		// 8. Ordenar por la fecha de donación en orden descendente
+		bson.M{"$sort": bson.M{"TimeStamp": -1}},
+		// 9. Aplicar el skip para la paginación
+		bson.M{"$skip": skip},
+		// 10. Limitar la cantidad de resultados
+		bson.M{"$limit": limit},
 	}
 
+	// Ejecutar el pipeline de agregación
 	cursor, err := GoMongoDBCollDonations.Aggregate(context.Background(), pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(context.Background())
 
-	var Donations []donationdomain.ResDonation
+	var donations []donationdomain.ResDonation
 	for cursor.Next(context.Background()) {
 		var donation donationdomain.ResDonation
 		if err := cursor.Decode(&donation); err != nil {
 			return nil, err
 		}
-		Donations = append(Donations, donation)
+		donations = append(donations, donation)
 	}
 
-	if len(Donations) == 0 {
+	// Verificar si hubo error en el cursor
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	// Si no se encontraron resultados, devolver un error
+	if len(donations) == 0 {
 		return nil, errors.New("no documents found")
 	}
 
-	return Donations, nil
+	return donations, nil
 }
 
 func (r *UserRepository) GetSubsChatLastConnection(id primitive.ObjectID, page int) ([]subscriptiondomain.ResSubscriber, error) {
@@ -910,60 +939,79 @@ func (r *UserRepository) GetSubsChatLastConnection(id primitive.ObjectID, page i
 	limit := 10
 	skip := (page - 1) * limit
 
-	pipeline := []bson.D{
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "destinationUserID"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "user"},
-		}}},
-		{{Key: "$unwind", Value: "$user"}},
-		{{Key: "$match", Value: bson.D{
-			{Key: "destinationUserID", Value: id},
-			{Key: "SubscriptionStart", Value: bson.M{"$gt": "$user.LastConnection"}},
-		}}},
-		{{Key: "$sort", Value: bson.D{{Key: "SubscriptionStart", Value: -1}}}},
-		{{Key: "$skip", Value: skip}},
-		{{Key: "$limit", Value: limit}},
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "sourceUserID"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "FromUserInfo"},
-		}}},
-		{{Key: "$unwind", Value: "$FromUserInfo"}},
-		{{Key: "$project", Value: bson.D{
-			{Key: "SubscriberNameUser", Value: 1},
-			{Key: "FromUserInfo.Avatar", Value: 1},
-			{Key: "FromUserInfo.NameUser", Value: 1},
-			{Key: "SubscriptionStart", Value: 1},
-			{Key: "SubscriptionEnd", Value: 1},
-			{Key: "Notified", Value: 1},
-			{Key: "Text", Value: 1},
-			{Key: "id", Value: "$_id"},
-		}}},
+	// Definimos el pipeline para la consulta de agregación
+	pipeline := bson.A{
+		// 1. Lookup para obtener el usuario de destino (destinationUserID)
+		bson.M{"$lookup": bson.M{
+			"from":         "Users",
+			"localField":   "destinationUserID",
+			"foreignField": "_id",
+			"as":           "user",
+		}},
+		// 2. Unwind para descomponer el array de usuarios
+		bson.M{"$unwind": "$user"},
+		// 3. Filtramos las suscripciones activas desde la última conexión
+		bson.M{"$match": bson.M{
+			"destinationUserID": id,
+			"$expr": bson.M{
+				"$gt": []interface{}{"$SubscriptionStart", "$user.LastConnection"},
+			},
+		}},
+		// 4. Ordenamos por la fecha de inicio de suscripción en orden descendente
+		bson.M{"$sort": bson.M{"SubscriptionStart": -1}},
+		// 5. Aplicamos el skip para la paginación
+		bson.M{"$skip": skip},
+		// 6. Limitamos la cantidad de resultados
+		bson.M{"$limit": limit},
+		// 7. Lookup para obtener información del usuario que inició la suscripción (sourceUserID)
+		bson.M{"$lookup": bson.M{
+			"from":         "Users",
+			"localField":   "sourceUserID",
+			"foreignField": "_id",
+			"as":           "FromUserInfo",
+		}},
+		// 8. Unwind para descomponer el array de usuarios
+		bson.M{"$unwind": "$FromUserInfo"},
+		// 9. Proyectamos los campos necesarios para la respuesta final
+		bson.M{"$project": bson.M{
+			"SubscriberNameUser":    "$SubscriberNameUser",
+			"FromUserInfo.Avatar":   "$FromUserInfo.Avatar",
+			"FromUserInfo.NameUser": "$FromUserInfo.NameUser",
+			"SubscriptionStart":     "$SubscriptionStart",
+			"SubscriptionEnd":       "$SubscriptionEnd",
+			"Notified":              "$Notified",
+			"Text":                  "$Text",
+			"id":                    "$_id",
+		}},
 	}
 
+	// Ejecutamos el pipeline de agregación
 	cursor, err := GoMongoDBCollSubscribers.Aggregate(context.Background(), pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(context.Background())
 
-	var Subscriber []subscriptiondomain.ResSubscriber
+	var subscribers []subscriptiondomain.ResSubscriber
 	for cursor.Next(context.Background()) {
 		var subscriber subscriptiondomain.ResSubscriber
 		if err := cursor.Decode(&subscriber); err != nil {
 			return nil, err
 		}
-		Subscriber = append(Subscriber, subscriber)
+		subscribers = append(subscribers, subscriber)
 	}
 
-	if len(Subscriber) == 0 {
+	// Revisamos si hubo error en el cursor
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	// Si no se encontraron resultados, devolvemos un error
+	if len(subscribers) == 0 {
 		return nil, errors.New("no documents found")
 	}
 
-	return Subscriber, nil
+	return subscribers, nil
 }
 
 func (u *UserRepository) UpdateLastConnection(userID primitive.ObjectID) error {
