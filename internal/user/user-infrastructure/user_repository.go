@@ -986,7 +986,7 @@ func (r *UserRepository) GetSubsChatLastConnection(id primitive.ObjectID, page i
 			},
 		}},
 		// 4. Ordenamos por la fecha de inicio de suscripción en orden descendente
-		bson.M{"$sort": bson.M{"SubscriptionStart": -1}},
+		bson.M{"$sort": bson.M{"TimeStamp": -1}},
 		// 5. Aplicamos el skip para la paginación
 		bson.M{"$skip": skip},
 		// 6. Limitamos la cantidad de resultados
