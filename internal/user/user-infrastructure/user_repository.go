@@ -952,9 +952,17 @@ func (r *UserRepository) GetSubsChatLastConnection(id primitive.ObjectID, page i
 		}},
 		// 2. Unwind para descomponer el array de usuarios
 		bson.M{"$unwind": "$user"},
-		// 3. Agregamos un campo calculado para verificar si SubscriptionStart es mayor que LastConnection
-		bson.M{"$addFields": bson.M{
-			"IsActiveAfterLastConnection": bson.M{"$expr": bson.M{"$gt": bson.A{"$TimeStamp", "$user.LastConnection"}}},
+		// 3. Proyectamos un campo calculado para verificar si SubscriptionStart es mayor que LastConnection
+		bson.M{"$project": bson.M{
+			"SubscriberNameUser":          1,
+			"FromUserInfo.Avatar":         1,
+			"FromUserInfo.NameUser":       1,
+			"SubscriptionStart":           1,
+			"SubscriptionEnd":             1,
+			"Notified":                    1,
+			"Text":                        1,
+			"id":                          1,
+			"IsActiveAfterLastConnection": bson.M{"$gt": bson.A{"$TimeStamp", "$user.LastConnection"}},
 		}},
 		// 4. Filtramos las suscripciones activas desde la última conexión
 		bson.M{"$match": bson.M{
