@@ -815,17 +815,30 @@ func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.O
 				},
 			},
 		}},
-		// 5. Ordenamos los resultados por la fecha de 'since' en orden descendente
+		// 5. Lookup para obtener el NameUser de la colección Users basado en el ID del seguidor
+		bson.M{"$lookup": bson.M{
+			"from":         "Users",        // Colección Users
+			"localField":   "Followers.k",  // ID del seguidor (clave en el mapa de Followers)
+			"foreignField": "_id",          // Campo _id de la colección Users
+			"as":           "FollowerInfo", // Nombre del campo para la información del usuario
+		}},
+		// 6. Descomponemos el array FollowerInfo para obtener el primer documento
+		bson.M{"$unwind": bson.M{
+			"path":                       "$FollowerInfo",
+			"preserveNullAndEmptyArrays": true, // En caso de que no haya coincidencia
+		}},
+		// 7. Ordenamos los resultados por la fecha de 'since' en orden descendente
 		bson.M{"$sort": bson.M{"Followers.v.since": -1}},
-		// 6. Aplicamos el skip para la paginación
+		// 8. Aplicamos el skip para la paginación
 		bson.M{"$skip": skip},
-		// 7. Aplicamos el limit para limitar la cantidad de resultados
+		// 9. Aplicamos el limit para limitar la cantidad de resultados
 		bson.M{"$limit": limit},
-		// 8. Proyectamos los campos finales que queremos devolver
+		// 10. Proyectamos los campos finales que queremos devolver
 		bson.M{"$project": bson.M{
 			"Email":         "$Followers.v.Email",
 			"since":         "$Followers.v.since",
 			"notifications": "$Followers.v.notifications",
+			"NameUser":      "$FollowerInfo.NameUser", // Nombre del seguidor
 		}},
 	}
 
@@ -852,6 +865,7 @@ func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.O
 
 	return results, nil
 }
+
 func (d *UserRepository) AllMyPixelesDonorsLastConnection(id primitive.ObjectID, page int) ([]donationdomain.ResDonation, error) {
 	GoMongoDBCollDonations := d.mongoClient.Database("PINKKER-BACKEND").Collection("Donations")
 

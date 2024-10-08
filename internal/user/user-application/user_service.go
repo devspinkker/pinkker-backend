@@ -16,7 +16,6 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UserService struct {
@@ -195,20 +194,14 @@ func (u *UserService) GetNotificacionesLastConnection(IdUserTokenP primitive.Obj
 	var AllMyPixelesDonors []donationdomain.ResDonation
 	var GetSubsChat []subscriptiondomain.ResSubscriber
 	GetRecentFollows, err := u.roomRepository.GetRecentFollowsLastConnection(IdUserTokenP, page)
-	if err != nil && err != mongo.ErrNoDocuments {
-		return nil, nil, nil, err
-	}
 
 	AllMyPixelesDonors, err = u.roomRepository.AllMyPixelesDonorsLastConnection(IdUserTokenP, page)
-	if err != nil && err != mongo.ErrNoDocuments {
-		return nil, nil, nil, err
-	}
 
 	GetSubsChat, err = u.roomRepository.GetSubsChatLastConnection(IdUserTokenP, page)
-	if err != nil && err != mongo.ErrNoDocuments {
+
+	if err != nil && err.Error() != "no documents found" {
 		return nil, nil, nil, err
 	}
-
 	return GetRecentFollows, AllMyPixelesDonors, GetSubsChat, nil
 }
 
