@@ -79,8 +79,15 @@ type FollowInfo struct {
 	Since         time.Time `json:"since" bson:"since"`
 	Notifications bool      `json:"notifications" bson:"notifications"`
 	Email         string    `json:"Email" bson:"Email"`
-	NameUser      string    `json:"NameUser" bson:"NameUser"`
 }
+type FollowInfoRes struct {
+	Since         time.Time `json:"since" bson:"since"`
+	Notifications bool      `json:"notifications" bson:"notifications"`
+	Email         string    `json:"Email" bson:"Email"`
+	NameUser      string    `json:"NameUser" bson:"NameUser"`
+	Avatar        string    `json:"Avatar" bson:"Avatar"`
+}
+
 type UserModelValidator struct {
 	FullName      string    `json:"fullName" validate:"required,min=8,max=70"`
 	NameUser      string    `json:"NameUser" validate:"nameuser" `

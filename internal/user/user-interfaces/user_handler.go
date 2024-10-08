@@ -770,7 +770,7 @@ func (h *UserHandler) GetNotificacionesLastConnection(c *fiber.Ctx) error {
 
 	// Estructura de los datos a devolver
 	type dataStruct struct {
-		FollowInfo   []userdomain.FollowInfo            `json:"FollowInfo"`
+		FollowInfo   []userdomain.FollowInfoRes         `json:"FollowInfo"`
 		ResDonation  []donationdomain.ResDonation       `json:"ResDonation"`
 		Subscription []subscriptiondomain.ResSubscriber `json:"Subscription"`
 	}

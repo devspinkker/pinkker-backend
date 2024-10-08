@@ -787,7 +787,7 @@ func (u *UserRepository) EditSocialNetworks(SocialNetwork domain.SocialNetwork, 
 }
 
 // get follows notis
-func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.ObjectID, page int) ([]domain.FollowInfo, error) {
+func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.ObjectID, page int) ([]domain.FollowInfoRes, error) {
 	db := u.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollUsers := db.Collection("Users")
 
@@ -815,30 +815,42 @@ func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.O
 				},
 			},
 		}},
-		// 5. Lookup para obtener el NameUser de la colección Users basado en el ID del seguidor
+		// 5. Convertimos Followers.k a ObjectId si no lo es ya
+		bson.M{"$addFields": bson.M{
+			"followerId": bson.M{
+				"$cond": bson.M{
+					"if":   bson.M{"$eq": bson.A{bson.M{"$type": "$Followers.k"}, "objectId"}},
+					"then": "$Followers.k",
+					"else": bson.M{"$toObjectId": "$Followers.k"},
+				},
+			},
+		}},
+		// 6. Lookup para obtener el NameUser de la colección Users basado en el ID del seguidor
 		bson.M{"$lookup": bson.M{
 			"from":         "Users",        // Colección Users
-			"localField":   "Followers.k",  // ID del seguidor (clave en el mapa de Followers)
+			"localField":   "followerId",   // ID convertido del seguidor
 			"foreignField": "_id",          // Campo _id de la colección Users
 			"as":           "FollowerInfo", // Nombre del campo para la información del usuario
 		}},
-		// 6. Descomponemos el array FollowerInfo para obtener el primer documento
+		// 7. Descomponemos el array FollowerInfo para obtener el primer documento
 		bson.M{"$unwind": bson.M{
 			"path":                       "$FollowerInfo",
 			"preserveNullAndEmptyArrays": true, // En caso de que no haya coincidencia
 		}},
-		// 7. Ordenamos los resultados por la fecha de 'since' en orden descendente
+		// 8. Ordenamos los resultados por la fecha de 'since' en orden descendente
 		bson.M{"$sort": bson.M{"Followers.v.since": -1}},
-		// 8. Aplicamos el skip para la paginación
+		// 9. Aplicamos el skip para la paginación
 		bson.M{"$skip": skip},
-		// 9. Aplicamos el limit para limitar la cantidad de resultados
+		// 10. Aplicamos el limit para limitar la cantidad de resultados
 		bson.M{"$limit": limit},
-		// 10. Proyectamos los campos finales que queremos devolver
+		// 11. Proyectamos los campos finales que queremos devolver
 		bson.M{"$project": bson.M{
 			"Email":         "$Followers.v.Email",
 			"since":         "$Followers.v.since",
 			"notifications": "$Followers.v.notifications",
 			"NameUser":      "$FollowerInfo.NameUser", // Nombre del seguidor
+			"Avatar":        "$FollowerInfo.Avatar",   // Nombre del seguidor
+
 		}},
 	}
 
@@ -849,9 +861,9 @@ func (u *UserRepository) GetRecentFollowsLastConnection(IdUserTokenP primitive.O
 	}
 	defer cursor.Close(context.Background())
 
-	var results []domain.FollowInfo
+	var results []domain.FollowInfoRes
 	for cursor.Next(context.Background()) {
-		var followInfo domain.FollowInfo
+		var followInfo domain.FollowInfoRes
 		if err := cursor.Decode(&followInfo); err != nil {
 			return nil, err
 		}
@@ -957,7 +969,7 @@ func (r *UserRepository) GetSubsChatLastConnection(id primitive.ObjectID, page i
 
 	// Definimos el pipeline para la consulta de agregación
 	pipeline := bson.A{
-		// 1. Lookup para obtener el usuario de destino
+		// 1. Lookup para obtener el usuario de destino (destinationUserID)
 		bson.M{"$lookup": bson.M{
 			"from":         "Users",
 			"localField":   "destinationUserID",
@@ -966,39 +978,29 @@ func (r *UserRepository) GetSubsChatLastConnection(id primitive.ObjectID, page i
 		}},
 		// 2. Unwind para descomponer el array de usuarios
 		bson.M{"$unwind": "$user"},
-		// 3. Proyectamos un campo calculado para verificar si SubscriptionStart es mayor que LastConnection
-		bson.M{"$project": bson.M{
-			"SubscriberNameUser":          1,
-			"FromUserInfo.Avatar":         1,
-			"FromUserInfo.NameUser":       1,
-			"SubscriptionStart":           1,
-			"SubscriptionEnd":             1,
-			"Notified":                    1,
-			"Text":                        1,
-			"id":                          1,
-			"IsActiveAfterLastConnection": bson.M{"$gt": bson.A{"$TimeStamp", "$user.LastConnection"}},
-		}},
-		// 4. Filtramos las suscripciones activas desde la última conexión
+		// 3. Match para comparar si el TimeStamp es mayor que LastConnection
 		bson.M{"$match": bson.M{
-			"destinationUserID":           id,
-			"IsActiveAfterLastConnection": true,
+			"destinationUserID": id,
+			"$expr": bson.M{
+				"$gt": bson.A{"$TimeStamp", "$user.LastConnection"},
+			},
 		}},
-		// 5. Ordenamos por la fecha de inicio de suscripción en orden descendente
+		// 4. Ordenamos por la fecha de inicio de suscripción en orden descendente
 		bson.M{"$sort": bson.M{"SubscriptionStart": -1}},
-		// 6. Aplicamos el skip para la paginación
+		// 5. Aplicamos el skip para la paginación
 		bson.M{"$skip": skip},
-		// 7. Limitamos la cantidad de resultados
+		// 6. Limitamos la cantidad de resultados
 		bson.M{"$limit": limit},
-		// 8. Lookup para obtener información del usuario que inició la suscripción
+		// 7. Lookup para obtener información del usuario que inició la suscripción (sourceUserID)
 		bson.M{"$lookup": bson.M{
 			"from":         "Users",
 			"localField":   "sourceUserID",
 			"foreignField": "_id",
 			"as":           "FromUserInfo",
 		}},
-		// 9. Unwind para descomponer el array de usuarios
+		// 8. Unwind para descomponer el array de usuarios
 		bson.M{"$unwind": "$FromUserInfo"},
-		// 10. Proyectamos los campos necesarios para la respuesta final
+		// 9. Proyectamos los campos necesarios para la respuesta final
 		bson.M{"$project": bson.M{
 			"SubscriberNameUser":    "$SubscriberNameUser",
 			"FromUserInfo.Avatar":   "$FromUserInfo.Avatar",

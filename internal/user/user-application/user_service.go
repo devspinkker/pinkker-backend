@@ -189,15 +189,13 @@ func (u *UserService) UpdateLastConnection(IdUserTokenP primitive.ObjectID) erro
 
 }
 
-func (u *UserService) GetNotificacionesLastConnection(IdUserTokenP primitive.ObjectID, page int) ([]userdomain.FollowInfo, []donationdomain.ResDonation, []subscriptiondomain.ResSubscriber, error) {
-	var GetRecentFollows []userdomain.FollowInfo
+func (u *UserService) GetNotificacionesLastConnection(IdUserTokenP primitive.ObjectID, page int) ([]userdomain.FollowInfoRes, []donationdomain.ResDonation, []subscriptiondomain.ResSubscriber, error) {
+	var GetRecentFollows []userdomain.FollowInfoRes
 	var AllMyPixelesDonors []donationdomain.ResDonation
 	var GetSubsChat []subscriptiondomain.ResSubscriber
-	GetRecentFollows, err := u.roomRepository.GetRecentFollowsLastConnection(IdUserTokenP, page)
-
-	AllMyPixelesDonors, err = u.roomRepository.AllMyPixelesDonorsLastConnection(IdUserTokenP, page)
-
-	GetSubsChat, err = u.roomRepository.GetSubsChatLastConnection(IdUserTokenP, page)
+	GetRecentFollows, _ = u.roomRepository.GetRecentFollowsLastConnection(IdUserTokenP, page)
+	AllMyPixelesDonors, _ = u.roomRepository.AllMyPixelesDonorsLastConnection(IdUserTokenP, page)
+	GetSubsChat, err := u.roomRepository.GetSubsChatLastConnection(IdUserTokenP, page)
 
 	if err != nil && err.Error() != "no documents found" {
 		return nil, nil, nil, err
