@@ -104,7 +104,6 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 		if err != nil {
 			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
-
 	} else {
 		err = r.updateSubscription(existingSubscription.ID, subscriptionStart, subscriptionEnd, text)
 		if err != nil {
@@ -194,6 +193,7 @@ func (r *SubscriptionRepository) addSubscription(sourceUser *userdomain.User, de
 		MonthsSubscribed:     monthsSubscribed,
 		Notified:             false,
 		Text:                 text,
+		TimeStamp:            time.Now(),
 	}
 
 	subscriptionID, err := r.insertSubscription(subscription)
@@ -203,7 +203,6 @@ func (r *SubscriptionRepository) addSubscription(sourceUser *userdomain.User, de
 
 	return subscriptionID, nil
 
-	return primitive.NilObjectID, errors.New("pixeles insufficient")
 }
 
 func (r *SubscriptionRepository) insertSubscription(subscription subscriptiondomain.Subscription) (primitive.ObjectID, error) {
@@ -338,6 +337,7 @@ func (r *SubscriptionRepository) addSubscriber(destUser *userdomain.User, source
 		SubscriptionEnd:    subscriptionEnd,
 		Notified:           false,
 		Text:               text,
+		TimeStamp:          time.Now(),
 	}
 
 	subscriberID, err := r.insertSubscriber(subscriber)
@@ -358,6 +358,7 @@ func (r *SubscriptionRepository) updateSubscriber(subscriberID string, subscript
 	update := bson.M{
 		"$set": bson.M{
 			"SubscriptionEnd": subscriptionEnd,
+			"TimeStamp":       time.Now(),
 			"Text":            text,
 		},
 	}

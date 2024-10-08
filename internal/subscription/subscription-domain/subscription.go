@@ -15,6 +15,7 @@ type Subscription struct {
 	SubscriptionEnd      time.Time          `bson:"SubscriptionEnd"`
 	MonthsSubscribed     int                `bson:"MonthsSubscribed"`
 	Notified             bool               `bson:"Notified"`
+	TimeStamp            time.Time          `json:"TimeStamp"`
 	Text                 string             `bson:"Text"`
 }
 
@@ -26,6 +27,7 @@ type Subscriber struct {
 	SubscriptionStart  time.Time          `bson:"SubscriptionStart"`
 	SubscriptionEnd    time.Time          `bson:"SubscriptionEnd"`
 	Notified           bool               `bson:"Notified"`
+	TimeStamp          time.Time          `json:"TimeStamp"`
 	Text               string             `bson:"Text"`
 }
 type ResSubscriber struct {
@@ -36,6 +38,7 @@ type ResSubscriber struct {
 	SubscriptionStart  time.Time          `bson:"SubscriptionStart"`
 	SubscriptionEnd    time.Time          `bson:"SubscriptionEnd"`
 	Notified           bool               `bson:"Notified"`
+	TimeStamp          time.Time          `json:"TimeStamp"`
 	Text               string             `bson:"Text"`
 	FromUserInfo       struct {
 		Avatar   string `json:"Avatar"`

@@ -862,39 +862,42 @@ func (d *UserRepository) AllMyPixelesDonorsLastConnection(id primitive.ObjectID,
 	pipeline := bson.A{
 		// 1. Filtrar donaciones hechas al usuario destino (ToUser)
 		bson.M{"$match": bson.M{"ToUser": id}},
-		// 2. Lookup para obtener información del usuario destino y su LastConnection
+		// 2. Lookup para obtener información del usuario destino (ToUser) y su LastConnection
 		bson.M{"$lookup": bson.M{
 			"from":         "Users",
 			"localField":   "ToUser",
 			"foreignField": "_id",
-			"as":           "user",
+			"as":           "toUserInfo",
 		}},
-		// 3. Descomponer el array de usuarios
-		bson.M{"$unwind": "$user"},
-		// 4. Filtrar solo las donaciones hechas después de la última conexión del usuario destino
+		// 3. Descomponer el array de usuarios destino (ToUser)
+		bson.M{"$unwind": "$toUserInfo"},
+		// 4. Filtrar donaciones hechas después de la última conexión del usuario destino usando $expr
+		// para comparar el campo TimeStamp con LastConnection
 		bson.M{"$match": bson.M{
-			"TimeStamp": bson.M{"$gt": "$user.LastConnection"},
+			"$expr": bson.M{
+				"$gt": bson.A{"$TimeStamp", "$toUserInfo.LastConnection"},
+			},
 		}},
 		// 5. Lookup para obtener información del usuario que hizo la donación (FromUser)
 		bson.M{"$lookup": bson.M{
 			"from":         "Users",
 			"localField":   "FromUser",
 			"foreignField": "_id",
-			"as":           "FromUserInfo",
+			"as":           "fromUserInfo",
 		}},
 		// 6. Descomponer el array de usuarios que hicieron la donación
-		bson.M{"$unwind": "$FromUserInfo"},
-		// 7. Proyectar los campos finales que queremos devolver
+		bson.M{"$unwind": "$fromUserInfo"},
+		// 7. Proyectar los campos que queremos devolver, incluyendo los detalles de FromUser
 		bson.M{"$project": bson.M{
 			"FromUser":              "$FromUser",
-			"FromUserInfo.Avatar":   "$FromUserInfo.Avatar",
-			"FromUserInfo.NameUser": "$FromUserInfo.NameUser",
+			"fromUserInfo.Avatar":   "$fromUserInfo.Avatar",
+			"fromUserInfo.NameUser": "$fromUserInfo.NameUser",
 			"Pixeles":               1,
 			"Text":                  1,
 			"TimeStamp":             1,
 			"Notified":              1,
 			"ToUser":                1,
-			"id":                    "$_id",
+			"_id":                   1,
 		}},
 		// 8. Ordenar por la fecha de donación en orden descendente
 		bson.M{"$sort": bson.M{"TimeStamp": -1}},
@@ -932,7 +935,6 @@ func (d *UserRepository) AllMyPixelesDonorsLastConnection(id primitive.ObjectID,
 
 	return donations, nil
 }
-
 func (r *UserRepository) GetSubsChatLastConnection(id primitive.ObjectID, page int) ([]subscriptiondomain.ResSubscriber, error) {
 	GoMongoDBCollSubscribers := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscribers")
 
@@ -941,7 +943,7 @@ func (r *UserRepository) GetSubsChatLastConnection(id primitive.ObjectID, page i
 
 	// Definimos el pipeline para la consulta de agregación
 	pipeline := bson.A{
-		// 1. Lookup para obtener el usuario de destino (destinationUserID)
+		// 1. Lookup para obtener el usuario de destino
 		bson.M{"$lookup": bson.M{
 			"from":         "Users",
 			"localField":   "destinationUserID",
@@ -950,29 +952,31 @@ func (r *UserRepository) GetSubsChatLastConnection(id primitive.ObjectID, page i
 		}},
 		// 2. Unwind para descomponer el array de usuarios
 		bson.M{"$unwind": "$user"},
-		// 3. Filtramos las suscripciones activas desde la última conexión
-		bson.M{"$match": bson.M{
-			"destinationUserID": id,
-			"$expr": bson.M{
-				"$gt": []interface{}{"$SubscriptionStart", "$user.LastConnection"},
-			},
+		// 3. Agregamos un campo calculado para verificar si SubscriptionStart es mayor que LastConnection
+		bson.M{"$addFields": bson.M{
+			"IsActiveAfterLastConnection": bson.M{"$expr": bson.M{"$gt": bson.A{"$TimeStamp", "$user.LastConnection"}}},
 		}},
-		// 4. Ordenamos por la fecha de inicio de suscripción en orden descendente
+		// 4. Filtramos las suscripciones activas desde la última conexión
+		bson.M{"$match": bson.M{
+			"destinationUserID":           id,
+			"IsActiveAfterLastConnection": true,
+		}},
+		// 5. Ordenamos por la fecha de inicio de suscripción en orden descendente
 		bson.M{"$sort": bson.M{"SubscriptionStart": -1}},
-		// 5. Aplicamos el skip para la paginación
+		// 6. Aplicamos el skip para la paginación
 		bson.M{"$skip": skip},
-		// 6. Limitamos la cantidad de resultados
+		// 7. Limitamos la cantidad de resultados
 		bson.M{"$limit": limit},
-		// 7. Lookup para obtener información del usuario que inició la suscripción (sourceUserID)
+		// 8. Lookup para obtener información del usuario que inició la suscripción
 		bson.M{"$lookup": bson.M{
 			"from":         "Users",
 			"localField":   "sourceUserID",
 			"foreignField": "_id",
 			"as":           "FromUserInfo",
 		}},
-		// 8. Unwind para descomponer el array de usuarios
+		// 9. Unwind para descomponer el array de usuarios
 		bson.M{"$unwind": "$FromUserInfo"},
-		// 9. Proyectamos los campos necesarios para la respuesta final
+		// 10. Proyectamos los campos necesarios para la respuesta final
 		bson.M{"$project": bson.M{
 			"SubscriberNameUser":    "$SubscriberNameUser",
 			"FromUserInfo.Avatar":   "$FromUserInfo.Avatar",
