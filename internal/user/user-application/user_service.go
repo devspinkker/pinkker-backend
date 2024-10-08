@@ -10,7 +10,6 @@ import (
 	"PINKKER-BACKEND/pkg/authGoogleAuthenticator"
 	"PINKKER-BACKEND/pkg/helpers"
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -195,28 +194,20 @@ func (u *UserService) GetNotificacionesLastConnection(IdUserTokenP primitive.Obj
 	var GetRecentFollows []userdomain.FollowInfo
 	var AllMyPixelesDonors []donationdomain.ResDonation
 	var GetSubsChat []subscriptiondomain.ResSubscriber
-	fmt.Println("1")
 	GetRecentFollows, err := u.roomRepository.GetRecentFollowsLastConnection(IdUserTokenP, page)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, nil, nil, err
 	}
-	fmt.Println(GetRecentFollows)
-
-	fmt.Println("2")
 
 	AllMyPixelesDonors, err = u.roomRepository.AllMyPixelesDonorsLastConnection(IdUserTokenP, page)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, nil, nil, err
 	}
-	fmt.Println(AllMyPixelesDonors)
-
-	fmt.Println("3")
 
 	GetSubsChat, err = u.roomRepository.GetSubsChatLastConnection(IdUserTokenP, page)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, nil, nil, err
 	}
-	fmt.Println(GetSubsChat)
 
 	return GetRecentFollows, AllMyPixelesDonors, GetSubsChat, nil
 }

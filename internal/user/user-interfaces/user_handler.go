@@ -12,7 +12,6 @@ import (
 	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/jwt"
 	"context"
-	"fmt"
 	"log"
 	"strconv"
 
@@ -323,13 +322,11 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
 
 	if err := c.BodyParser(&newUser); err != nil {
-		fmt.Println(err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"messages": "Bad Request",
 		})
 	}
 	if err := newUser.ValidateUser(); err != nil {
-		fmt.Println(err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad Request",
 			"error":   err.Error(),
@@ -765,12 +762,6 @@ func (h *UserHandler) GetNotificacionesLastConnection(c *fiber.Ctx) error {
 	// Obtener las notificaciones llamando al servicio de usuario
 	FollowInfo, ResDonation, Subscription, errUpdateUserFollow := h.userService.GetNotificacionesLastConnection(IdUserTokenP, page)
 	if errUpdateUserFollow != nil {
-		fmt.Println(errUpdateUserFollow.Error())
-		fmt.Println(FollowInfo)
-		fmt.Println(ResDonation)
-
-		fmt.Println(Subscription)
-
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
 			"data":    errUpdateUserFollow.Error(),
@@ -1002,7 +993,6 @@ func (h *UserHandler) GetUserByNameUser(c *fiber.Ctx) error {
 
 	user, errGetUserBykey := h.userService.FindNameUserNoSensitiveInformationApli(Req.NameUser, "")
 	if errGetUserBykey != nil {
-		fmt.Println(errGetUserBykey)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
 		})
