@@ -1,6 +1,7 @@
 package userinfrastructure
 
 import (
+	"PINKKER-BACKEND/config"
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
@@ -35,6 +36,56 @@ func NewUserRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Us
 		redisClient: redisClient,
 		mongoClient: mongoClient,
 	}
+}
+func (u *UserRepository) PurchasePinkkerPrime(userID primitive.ObjectID) (bool, error) {
+	PinkkerPrimeCostStr := config.PinkkerPrimeCost()
+	PinkkerPrimeCost, err := strconv.Atoi(PinkkerPrimeCostStr)
+	if err != nil {
+		return false, fmt.Errorf("error converting PinkkerPrime cost to integer: %v", err)
+	}
+
+	var result struct {
+		Pixeles      float64 `bson:"Pixeles"`
+		PinkkerPrime struct {
+			SubscriptionEnd time.Time `bson:"SubscriptionEnd"`
+		} `bson:"PinkkerPrime"`
+	}
+
+	collection := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	err = collection.FindOne(
+		context.TODO(),
+		bson.M{"_id": userID},
+		options.FindOne().SetProjection(bson.M{"Pixeles": 1, "PinkkerPrime.SubscriptionEnd": 1}),
+	).Decode(&result)
+
+	if err != nil {
+		return false, fmt.Errorf("error finding user: %v", err)
+	}
+
+	// Verificar si el usuario ya tiene una suscripción activa
+	if time.Now().Before(result.PinkkerPrime.SubscriptionEnd) {
+		return false, fmt.Errorf("user already has an active PinkkerPrime subscription until %v", result.PinkkerPrime.SubscriptionEnd)
+	}
+
+	if result.Pixeles < float64(PinkkerPrimeCost) {
+		return false, fmt.Errorf("not enough Pixeles. User has %.2f Pixeles, but PinkkerPrime costs %d", result.Pixeles, PinkkerPrimeCost)
+	}
+
+	update := bson.M{
+		"$inc": bson.M{"Pixeles": -PinkkerPrimeCost},
+		"$set": bson.M{
+			"PinkkerPrime.MonthsSubscribed":  bson.M{"$inc": 1},
+			"PinkkerPrime.SubscriptionStart": time.Now(),
+			"PinkkerPrime.SubscriptionEnd":   time.Now().AddDate(0, 1, 0),
+		},
+	}
+
+	_, err = collection.UpdateOne(context.TODO(), bson.M{"_id": userID}, update)
+	if err != nil {
+		return false, fmt.Errorf("error updating user with PinkkerPrime: %v", err)
+	}
+
+	return true, nil
 }
 
 func (u *UserRepository) IsUserBlocked(nameUser string) (bool, error) {

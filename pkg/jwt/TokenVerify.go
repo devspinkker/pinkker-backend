@@ -39,9 +39,9 @@ func ExtractDataFromToken(tokenString string) (string, string, bool, error) {
 	if !ok {
 		return "", "", false, fmt.Errorf("Invalid _id")
 	}
-	pinkkerPrime, ok := claims["pinkkerPrime"].(bool)
+	pinkkerPrime, ok := claims["partner"].(bool)
 	if !ok {
-		return "", "", false, fmt.Errorf("Invalid verified")
+		return "", "", false, fmt.Errorf("Invalid Partner")
 	}
 	return nameUser, _id, pinkkerPrime, nil
 }

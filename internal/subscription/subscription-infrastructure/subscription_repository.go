@@ -522,26 +522,51 @@ func (u *SubscriptionRepository) StateTheUserInChat(Donado primitive.ObjectID, D
 	if err != nil {
 		return true, err
 	}
-	collection := db.Collection("UserInformationInAllRooms")
-	userFilter := bson.M{"NameUser": userDonante}
 
-	var infoUser userdomain.InfoUser
-	err = collection.FindOne(ctx, userFilter).Decode(&infoUser)
-	if err != nil {
-		return true, fmt.Errorf("error finding user by NameUser: %v", err)
+	infoUser, err := u.GetInfoUserInRoom(userDonante, stream.ID)
+	return infoUser.Baneado, err
+}
+func (r *SubscriptionRepository) GetInfoUserInRoom(nameUser string, getInfoUserInRoom primitive.ObjectID) (*userdomain.UserInfo, error) {
+	database := r.mongoClient.Database("PINKKER-BACKEND")
+	var room *userdomain.UserInfo
+	filter := bson.D{
+		{Key: "NameUser", Value: nameUser},
+		{Key: "Rooms.Room", Value: getInfoUserInRoom},
 	}
 
-	for _, room := range infoUser.Rooms {
-		if roomID, ok := room["Room"].(primitive.ObjectID); ok && roomID == stream.ID {
+	pipeline := mongo.Pipeline{
+		{
+			{Key: "$match", Value: filter},
+		},
+		{
+			{Key: "$unwind", Value: "$Rooms"},
+		},
+		{
+			{Key: "$match", Value: bson.D{{Key: "Rooms.Room", Value: getInfoUserInRoom}}},
+		},
+		{
+			{Key: "$replaceRoot", Value: bson.D{{Key: "newRoot", Value: "$Rooms"}}},
+		},
+	}
 
-			fmt.Println(room["Baneado"])
-			if banned, ok := room["Baneado"].(bool); ok {
-				return banned, nil
-			}
+	// Obtener el cursor
+	cursor, err := database.Collection("UserInformationInAllRooms").Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return room, err
+	}
+	defer cursor.Close(context.Background())
+
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&room); err != nil {
+			return room, err
 		}
 	}
 
-	return true, fmt.Errorf("room with ID %s not found for user %s", stream.ID, userDonante)
+	if err := cursor.Err(); err != nil {
+		return room, err
+	}
+
+	return room, nil
 }
 
 func (u *SubscriptionRepository) GetUserID(ctx context.Context, db *mongo.Database, userID primitive.ObjectID) (string, error) {

@@ -43,27 +43,52 @@ func (D *DonationRepository) StateTheUserInChat(Donado primitive.ObjectID, Donan
 	if err != nil {
 		return true, avatar, err
 	}
-	collection := db.Collection("UserInformationInAllRooms")
-	userFilter := bson.M{"NameUser": userDonante}
 
-	var infoUser userdomain.InfoUser
-	err = collection.FindOne(ctx, userFilter).Decode(&infoUser)
-	if err != nil {
-		return true, avatar, fmt.Errorf("error finding user by NameUser: %v", err)
+	userinfo, err := D.GetInfoUserInRoom(userDonante, stream.ID)
+	return userinfo.Baneado, avatar, fmt.Errorf("room with ID %s not found for user %s", stream.ID, userDonante)
+}
+
+func (r *DonationRepository) GetInfoUserInRoom(nameUser string, getInfoUserInRoom primitive.ObjectID) (*userdomain.UserInfo, error) {
+	database := r.mongoClient.Database("PINKKER-BACKEND")
+	var room *userdomain.UserInfo
+	filter := bson.D{
+		{Key: "NameUser", Value: nameUser},
+		{Key: "Rooms.Room", Value: getInfoUserInRoom},
 	}
 
-	for _, room := range infoUser.Rooms {
-		if roomID, ok := room["Room"].(primitive.ObjectID); ok && roomID == stream.ID {
-			fmt.Println(room["Baneado"])
+	pipeline := mongo.Pipeline{
+		{
+			{Key: "$match", Value: filter},
+		},
+		{
+			{Key: "$unwind", Value: "$Rooms"},
+		},
+		{
+			{Key: "$match", Value: bson.D{{Key: "Rooms.Room", Value: getInfoUserInRoom}}},
+		},
+		{
+			{Key: "$replaceRoot", Value: bson.D{{Key: "newRoot", Value: "$Rooms"}}},
+		},
+	}
 
-			fmt.Println(room["Baneado"])
-			if banned, ok := room["Baneado"].(bool); ok {
-				return banned, avatar, nil
-			}
+	// Obtener el cursor
+	cursor, err := database.Collection("UserInformationInAllRooms").Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return room, err
+	}
+	defer cursor.Close(context.Background())
+
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&room); err != nil {
+			return room, err
 		}
 	}
 
-	return true, avatar, fmt.Errorf("room with ID %s not found for user %s", stream.ID, userDonante)
+	if err := cursor.Err(); err != nil {
+		return room, err
+	}
+
+	return room, nil
 }
 
 func (u *DonationRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {

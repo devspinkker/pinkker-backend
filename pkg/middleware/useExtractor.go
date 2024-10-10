@@ -22,7 +22,7 @@ func UseExtractor() fiber.Handler {
 		}
 		c.Context().SetUserValue("nameUser", nameUser)
 		c.Context().SetUserValue("_id", _id)
-		c.Context().SetUserValue("verified", verified)
+		c.Context().SetUserValue("partner", verified)
 		return c.Next()
 	}
 

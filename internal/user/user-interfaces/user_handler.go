@@ -785,6 +785,27 @@ func (h *UserHandler) GetNotificacionesLastConnection(c *fiber.Ctx) error {
 		},
 	})
 }
+func (h *UserHandler) PurchasePinkkerPrime(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+
+	_, errUpdateUserFollow := h.userService.PurchasePinkkerPrime(IdUserTokenP)
+	if errUpdateUserFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errUpdateUserFollow,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
 
 // follow
 func (h *UserHandler) Follow(c *fiber.Ctx) error {

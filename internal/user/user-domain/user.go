@@ -10,7 +10,8 @@ import (
 )
 
 type User struct {
-	ID                primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
+	ID primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+
 	Avatar            string                 `json:"Avatar" default:"https://res.cloudinary.com/pinkker/image/upload/v1680478837/foto_default_obyind.png" bson:"Avatar"`
 	FullName          string                 `json:"FullName" bson:"FullName"`
 	NameUser          string                 `json:"NameUser" bson:"NameUser"`
@@ -71,15 +72,31 @@ type User struct {
 		Code  string    `json:"Code,omitempty" bson:"Code"`
 		Date  time.Time `json:"date,omitempty" bson:"Date,omitempty"`
 	} `json:"PanelAdminPinkker,omitempty" bson:"PanelAdminPinkker"`
-	Banned         bool      `json:"Banned" bson:"Banned"`
-	TOTPSecret     string    `json:"TOTPSecret" bson:"TOTPSecret"`
-	LastConnection time.Time `json:"LastConnection" bson:"LastConnection"`
+	Banned         bool         `json:"Banned" bson:"Banned"`
+	TOTPSecret     string       `json:"TOTPSecret" bson:"TOTPSecret"`
+	LastConnection time.Time    `json:"LastConnection" bson:"LastConnection"`
+	PinkkerPrime   PinkkerPrime `json:"PinkkerPrime" bson:"PinkkerPrime"`
+}
+type PinkkerPrime struct {
+	MonthsSubscribed  int       `bson:"MonthsSubscribed"`
+	SubscriptionStart time.Time `bson:"SubscriptionStart"`
+	SubscriptionEnd   time.Time `bson:"SubscriptionEnd"`
 }
 type FollowInfo struct {
 	Since         time.Time `json:"since" bson:"since"`
 	Notifications bool      `json:"notifications" bson:"notifications"`
 	Email         string    `json:"Email" bson:"Email"`
 }
+
+type Subscription struct {
+	ID                   primitive.ObjectID `bson:"_id,omitempty"`
+	SubscriptionNameUser string             `bson:"SubscriptionNameUser"`
+	SourceUserID         primitive.ObjectID `bson:"sourceUserID"`
+	DestinationUserID    primitive.ObjectID `bson:"destinationUserID"`
+	SubscriptionStart    time.Time          `bson:"SubscriptionStart"`
+	SubscriptionEnd      time.Time          `bson:"SubscriptionEnd"`
+}
+
 type FollowInfoRes struct {
 	Since         time.Time `json:"since" bson:"since"`
 	Notifications bool      `json:"notifications" bson:"notifications"`
@@ -296,6 +313,7 @@ type GetUser struct {
 	CategoryPreferences map[string]float64 `json:"categoryPreferences" bson:"categoryPreferences"`
 	Banned              bool               `json:"Banned" bson:"Banned"`
 	IsFollowedByUser    bool               `json:"isFollowedByUser" bson:"isFollowedByUser"`
+	PinkkerPrime        PinkkerPrime       `json:"PinkkerPrime" bson:"PinkkerPrime"`
 }
 type UserInfoOAuth2 struct {
 	ID      string `json:"id"`

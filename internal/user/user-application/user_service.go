@@ -202,6 +202,9 @@ func (u *UserService) GetNotificacionesLastConnection(IdUserTokenP primitive.Obj
 	}
 	return GetRecentFollows, AllMyPixelesDonors, GetSubsChat, nil
 }
+func (u *UserService) PurchasePinkkerPrime(IdUser primitive.ObjectID) (bool, error) {
+	return u.roomRepository.PurchasePinkkerPrime(IdUser)
+}
 
 // follow
 func (u *UserService) FollowUser(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) (string, error) {
@@ -209,6 +212,7 @@ func (u *UserService) FollowUser(IdUserTokenP primitive.ObjectID, IdUser primiti
 
 	return avatar, err
 }
+
 func (u *UserService) Unfollow(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) error {
 	err := u.roomRepository.UnfollowUser(IdUserTokenP, IdUser)
 	if err != nil {
