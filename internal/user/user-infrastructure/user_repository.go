@@ -2013,7 +2013,7 @@ func (r *UserRepository) GetStreamByNameUser(nameUser string) (*streamdomain.Str
 	errCollStreams := GoMongoDBCollStreams.FindOne(context.Background(), FindStreamInDb).Decode(&FindStreamsByStreamer)
 	return FindStreamsByStreamer, errCollStreams
 }
-func (r *UserRepository) GetStreamAndUserData(nameUser string, id primitive.ObjectID, GetInfoUserInRoom primitive.ObjectID, nameUserToken string) (*streamdomain.Stream, *userdomain.GetUser, *domain.UserInfo, error) {
+func (r *UserRepository) GetStreamAndUserData(nameUser string, id primitive.ObjectID, nameUserToken string) (*streamdomain.Stream, *userdomain.GetUser, *domain.UserInfo, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 	FindStreamInDb := bson.D{
 		{Key: "Streamer", Value: nameUser},
@@ -2036,8 +2036,7 @@ func (r *UserRepository) GetStreamAndUserData(nameUser string, id primitive.Obje
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	UserInfo, err := r.GetInfoUserInRoom(nameUserToken, GetInfoUserInRoom)
-
+	UserInfo, err := r.GetInfoUserInRoom(nameUserToken, FindStreamsByStreamer.ID)
 	return stream, user, UserInfo, err
 }
 func (r *UserRepository) GetInfoUserInRoom(nameUser string, getInfoUserInRoom primitive.ObjectID) (*domain.UserInfo, error) {
@@ -2075,7 +2074,6 @@ func (r *UserRepository) GetInfoUserInRoom(nameUser string, getInfoUserInRoom pr
 			return room, err
 		}
 	}
-
 	if err := cursor.Err(); err != nil {
 		return room, err
 	}

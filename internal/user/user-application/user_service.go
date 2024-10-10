@@ -157,9 +157,9 @@ func (u *UserService) FindNameUserNoSensitiveInformationApli(NameUser string, Em
 	user, err := u.roomRepository.FindNameUserNoSensitiveInformation(NameUser, Email)
 	return user, err
 }
-func (u *UserService) GetStreamAndUserData(NameUser string, id, GetInfoUserInRoom primitive.ObjectID, nameUserToken string) (*streamdomain.Stream, *domain.GetUser, *domain.UserInfo, error) {
+func (u *UserService) GetStreamAndUserData(NameUser string, id primitive.ObjectID, nameUserToken string) (*streamdomain.Stream, *domain.GetUser, *domain.UserInfo, error) {
 
-	return u.roomRepository.GetStreamAndUserData(NameUser, id, GetInfoUserInRoom, nameUserToken)
+	return u.roomRepository.GetStreamAndUserData(NameUser, id, nameUserToken)
 }
 func (u *UserService) GetUserByNameUserIndex(NameUser string) ([]*domain.GetUser, error) {
 	NameUserLower := strings.ToLower(NameUser)

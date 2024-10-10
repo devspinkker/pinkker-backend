@@ -82,6 +82,8 @@ func (r *DonationRepository) GetInfoUserInRoom(nameUser string, getInfoUserInRoo
 		if err := cursor.Decode(&room); err != nil {
 			return room, err
 		}
+	} else {
+		return nil, fmt.Errorf("no room found for user %s in room %s", nameUser, getInfoUserInRoom.Hex())
 	}
 
 	if err := cursor.Err(); err != nil {

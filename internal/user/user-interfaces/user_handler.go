@@ -999,8 +999,7 @@ func (h *UserHandler) GetUserByCmt(c *fiber.Ctx) error {
 }
 
 type ReqGetUserByNameUser struct {
-	NameUser          string             `json:"nameUser" query:"nameUser"`
-	GetInfoUserInRoom primitive.ObjectID `json:"GetInfoUserInRoom" query:"GetInfoUserInRoom"`
+	NameUser string `json:"nameUser" query:"nameUser"`
 }
 
 func (h *UserHandler) GetUserByNameUser(c *fiber.Ctx) error {
@@ -1348,7 +1347,7 @@ func (h *UserHandler) GetStreamAndUserData(c *fiber.Ctx) error {
 		})
 	}
 
-	stream, User, UserInfoRoom, err := h.userService.GetStreamAndUserData(Req.NameUser, idValueObj, Req.GetInfoUserInRoom, nameUserToken)
+	stream, User, UserInfoRoom, err := h.userService.GetStreamAndUserData(Req.NameUser, idValueObj, nameUserToken)
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
