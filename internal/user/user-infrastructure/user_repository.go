@@ -1609,18 +1609,9 @@ func (u *UserRepository) getFullUserInternalOperations(filter bson.D) (*domain.U
 
 	pipeline := mongo.Pipeline{
 		bson.D{{Key: "$match", Value: filter}},
-		// bson.D{{Key: "$addFields", Value: bson.D{
-		// 	{Key: "FollowersCount", Value: bson.D{
-		// 		{Key: "$size", Value: bson.D{
-		// 			{Key: "$objectToArray", Value: bson.D{
-		// 				{Key: "$ifNull", Value: bson.A{"$Followers", bson.D{}}},
-		// 			}},
-		// 		}},
-		// 	}},
-		// }}},
 		bson.D{{Key: "$project", Value: bson.D{
-			{Key: "Followers", Value: 0},   // Excluir el campo Followers si es necesario
-			{Key: "Subscribers", Value: 0}, //new
+			{Key: "Followers", Value: 0},
+			{Key: "Subscribers", Value: 0},
 			{Key: "ClipsComment", Value: 0},
 			{Key: "Following", Value: 0},
 			{Key: "ClipsLikes", Value: 0},
@@ -1639,10 +1630,14 @@ func (u *UserRepository) getFullUserInternalOperations(filter bson.D) (*domain.U
 		if err := cursor.Decode(&user); err != nil {
 			return nil, err
 		}
+	} else {
+		// Si no se encuentra un usuario, devuelve mongo.ErrNoDocuments
+		return nil, mongo.ErrNoDocuments
 	}
 
 	return &user, nil
 }
+
 func (u *UserRepository) getFullUser(filter bson.D) (*domain.User, error) {
 	GoMongoDBCollUsers := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 

@@ -138,21 +138,6 @@ func (u *UserModelValidator) ValidateUser() error {
 	return validate.Struct(u)
 }
 
-func nameUserValidator(fl validator.FieldLevel) bool {
-	nameUser := fl.Field().String()
-
-	if len(nameUser) < 5 || len(nameUser) > 20 {
-		return false
-	}
-
-	// Verifica que no contenga espacios
-	if regexp.MustCompile(`\s`).MatchString(nameUser) {
-		return false
-	}
-
-	return true
-}
-
 type SocialNetwork struct {
 	Facebook  string `json:"facebook,omitempty" bson:"facebook"`
 	Twitter   string `json:"twitter,omitempty" bson:"twitter"`
@@ -185,17 +170,16 @@ type ReqGetUserByNameUser struct {
 	UserInfo *UserInfo            `json:"UserInfo"`
 }
 
-// Valida que NameUserNew tenga al menos 5 caracteres y no tenga espacios
-func nameUserNewValidator(fl validator.FieldLevel) bool {
-	nameUserNew := fl.Field().String()
+func nameUserValidator(fl validator.FieldLevel) bool {
+	nameUser := fl.Field().String()
 
-	// Verifica longitud
-	if len(nameUserNew) < 5 {
+	// Verifica la longitud
+	if len(nameUser) < 5 || len(nameUser) > 20 {
 		return false
 	}
 
-	// Verifica que no contenga espacios
-	if regexp.MustCompile(`\s`).MatchString(nameUserNew) {
+	// Verifica que solo contenga caracteres alfanuméricos
+	if !regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString(nameUser) {
 		return false
 	}
 
@@ -207,7 +191,7 @@ func (u *ChangeNameUser) ValidateUser() error {
 	validate := validator.New()
 
 	// Registro de validación personalizada
-	validate.RegisterValidation("NameUserNew", nameUserNewValidator)
+	validate.RegisterValidation("NameUserNew", nameUserValidator)
 
 	// Validar estructura con la etiqueta personalizada
 	return validate.Struct(u)
