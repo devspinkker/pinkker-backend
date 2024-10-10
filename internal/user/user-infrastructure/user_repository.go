@@ -70,11 +70,9 @@ func (u *UserRepository) PurchasePinkkerPrime(userID primitive.ObjectID) (bool, 
 	if result.Pixeles < float64(PinkkerPrimeCost) {
 		return false, fmt.Errorf("not enough Pixeles. User has %.2f Pixeles, but PinkkerPrime costs %d", result.Pixeles, PinkkerPrimeCost)
 	}
-
 	update := bson.M{
-		"$inc": bson.M{"Pixeles": -PinkkerPrimeCost},
+		"$inc": bson.M{"Pixeles": -PinkkerPrimeCost, "PinkkerPrime.MonthsSubscribed": 1},
 		"$set": bson.M{
-			"PinkkerPrime.MonthsSubscribed":  bson.M{"$inc": 1},
 			"PinkkerPrime.SubscriptionStart": time.Now(),
 			"PinkkerPrime.SubscriptionEnd":   time.Now().AddDate(0, 1, 0),
 		},
