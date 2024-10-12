@@ -12,6 +12,7 @@ import (
 	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/jwt"
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -338,6 +339,7 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 	go helpers.HashPassword(newUser.Password, passwordHashChan)
 
 	_, existUser := h.userService.FindNameUser(newUser.NameUser, newUser.Email)
+	fmt.Println(existUser)
 	if existUser != nil {
 		if existUser == mongo.ErrNoDocuments {
 			passwordHash := <-passwordHashChan

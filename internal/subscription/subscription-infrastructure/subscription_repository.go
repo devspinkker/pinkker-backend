@@ -109,13 +109,15 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 		if err != nil {
 			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
-		subscriberID, err := r.getSubscribersByUserIDs(sourceUser.ID, destUser.ID)
+		subscriberIDgetSubscriber, err := r.getSubscribersByUserIDs(sourceUser.ID, destUser.ID)
+		subscriberID = subscriberIDgetSubscriber.ID
+
 		if err != nil {
 			if err != mongo.ErrNoDocuments {
 				return sourceUser.NameUser, sourceUser.Avatar, err
 			}
 		}
-		err = r.updateSubscriber(subscriberID.ID.Hex(), subscriptionEnd, text)
+		err = r.updateSubscriber(subscriberIDgetSubscriber.ID.Hex(), subscriptionEnd, text)
 		if err != nil {
 			return sourceUser.NameUser, sourceUser.Avatar, err
 		}
@@ -313,6 +315,10 @@ func (r *SubscriptionRepository) updateUserSource(ctx context.Context, user *use
 
 func (r *SubscriptionRepository) updateUserDest(ctx context.Context, user *userdomain.User, usersCollection *mongo.Collection, subscriptionID primitive.ObjectID, moneySubs int) error {
 	filter := bson.M{"_id": user.ID}
+	fmt.Println("subscriptionID")
+	fmt.Println(subscriptionID)
+
+	fmt.Println("subscriptionID")
 	update := bson.M{
 
 		"$addToSet": bson.M{

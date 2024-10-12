@@ -45,7 +45,7 @@ func (D *DonationRepository) StateTheUserInChat(Donado primitive.ObjectID, Donan
 	}
 
 	userinfo, err := D.GetInfoUserInRoom(userDonante, stream.ID)
-	return userinfo.Baneado, avatar, fmt.Errorf("room with ID %s not found for user %s", stream.ID, userDonante)
+	return userinfo.Baneado, avatar, err
 }
 
 func (r *DonationRepository) GetInfoUserInRoom(nameUser string, getInfoUserInRoom primitive.ObjectID) (*userdomain.UserInfo, error) {

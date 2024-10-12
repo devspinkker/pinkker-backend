@@ -1677,6 +1677,8 @@ func (u *UserRepository) getFullUser(filter bson.D) (*domain.User, error) {
 		if err := cursor.Decode(&user); err != nil {
 			return nil, err
 		}
+	} else {
+		return nil, mongo.ErrNoDocuments
 	}
 
 	return &user, nil
