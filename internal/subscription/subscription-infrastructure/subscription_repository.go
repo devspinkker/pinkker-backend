@@ -315,10 +315,6 @@ func (r *SubscriptionRepository) updateUserSource(ctx context.Context, user *use
 
 func (r *SubscriptionRepository) updateUserDest(ctx context.Context, user *userdomain.User, usersCollection *mongo.Collection, subscriptionID primitive.ObjectID, moneySubs int) error {
 	filter := bson.M{"_id": user.ID}
-	fmt.Println("subscriptionID")
-	fmt.Println(subscriptionID)
-
-	fmt.Println("subscriptionID")
 	update := bson.M{
 
 		"$addToSet": bson.M{
@@ -384,14 +380,14 @@ func (r *SubscriptionRepository) insertSubscriber(subscriber subscriptiondomain.
 	return result.InsertedID.(primitive.ObjectID), nil
 }
 
-func (r *SubscriptionRepository) getSubscriberByID(subscriberID primitive.ObjectID) subscriptiondomain.Subscription {
-	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscribers")
+// func (r *SubscriptionRepository) getSubscriberByID(subscriberID primitive.ObjectID) subscriptiondomain.Subscription {
+// 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscribers")
 
-	var subscriber subscriptiondomain.Subscription
-	collection.FindOne(context.Background(), bson.M{"_id": subscriberID}).Decode(&subscriber)
+// 	var subscriber subscriptiondomain.Subscription
+// 	collection.FindOne(context.Background(), bson.M{"_id": subscriberID}).Decode(&subscriber)
 
-	return subscriber
-}
+//		return subscriber
+//	}
 func (r *SubscriptionRepository) GetSubsChat(id primitive.ObjectID) ([]subscriptiondomain.ResSubscriber, error) {
 	GoMongoDBCollDonations := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscribers")
 	pipeline := []bson.D{
