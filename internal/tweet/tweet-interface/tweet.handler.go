@@ -53,7 +53,7 @@ func (th *TweetHandler) CreatePost(c *fiber.Ctx) error {
 	for {
 		select {
 		case PostImage := <-PostImageChanel:
-			idTweet, err := th.TweetServise.SaveTweet(newTweet.Status, PostImage, idValueObj)
+			idTweet, err := th.TweetServise.SaveTweet(newTweet.Status, newTweet.CommunityID, PostImage, idValueObj)
 			if err != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"message": err.Error(),

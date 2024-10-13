@@ -25,7 +25,7 @@ func (ts *TweetService) GetAdsMuroAndPost() (tweetdomain.PostAds, error) {
 }
 
 // save
-func (ts *TweetService) SaveTweet(status string, img string, user primitive.ObjectID) (primitive.ObjectID, error) {
+func (ts *TweetService) SaveTweet(status string, idCommunity primitive.ObjectID, img string, user primitive.ObjectID) (primitive.ObjectID, error) {
 	var modelNewTweet tweetdomain.Post
 	modelNewTweet.Status = status
 	modelNewTweet.PostImage = img
@@ -38,6 +38,7 @@ func (ts *TweetService) SaveTweet(status string, img string, user primitive.Obje
 	Hashtags := extractHashtags(status)
 	modelNewTweet.Hashtags = Hashtags
 	modelNewTweet.Views = 0
+	modelNewTweet.CommunityID = idCommunity
 	idTweet, err := ts.TweetRepository.TweetSave(modelNewTweet)
 	if err != nil {
 		return idTweet, err

@@ -15,17 +15,18 @@ type Trend struct {
 	LastSeen time.Time `json:"last_seen" bson:"last_seen"`
 }
 type Post struct {
-	ID        primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	Type      string               `json:"Type" default:"Post" bson:"Type"`
-	Status    string               `json:"Status" bson:"Status"`
-	PostImage string               `json:"PostImage" bson:"PostImage"`
-	TimeStamp time.Time            `json:"TimeStamp" bson:"TimeStamp"`
-	UserID    primitive.ObjectID   `json:"UserID" bson:"UserID"`
-	Likes     []primitive.ObjectID `json:"Likes" bson:"Likes"`
-	Comments  []primitive.ObjectID `json:"Comments" bson:"Comments"`
-	RePosts   []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
-	Hashtags  []string             `json:"hashtags" bson:"Hashtags"`
-	Views     int                  `json:"Views" bson:"Views"`
+	ID          primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Type        string               `json:"Type" default:"Post" bson:"Type"`
+	Status      string               `json:"Status" bson:"Status"`
+	PostImage   string               `json:"PostImage" bson:"PostImage"`
+	TimeStamp   time.Time            `json:"TimeStamp" bson:"TimeStamp"`
+	UserID      primitive.ObjectID   `json:"UserID" bson:"UserID"`
+	Likes       []primitive.ObjectID `json:"Likes" bson:"Likes"`
+	Comments    []primitive.ObjectID `json:"Comments" bson:"Comments"`
+	RePosts     []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
+	Hashtags    []string             `json:"hashtags" bson:"Hashtags"`
+	Views       int                  `json:"Views" bson:"Views"`
+	CommunityID primitive.ObjectID   `json:"communityID" bson:"communityID,omitempty"`
 }
 type PostComment struct {
 	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
@@ -63,7 +64,8 @@ type CitaPost struct {
 	Views        int                  `json:"Views" bson:"Views"`
 }
 type TweetModelValidator struct {
-	Status string `json:"status" validate:"required,min=3,max=100"`
+	Status      string             `json:"status" validate:"required,min=3,max=100"`
+	CommunityID primitive.ObjectID `json:"communityID" bson:"communityID,omitempty"`
 }
 type TweetCommentModelValidator struct {
 	Status       string             `json:"status" validate:"required,min=3,max=100"`
