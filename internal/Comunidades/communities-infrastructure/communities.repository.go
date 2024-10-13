@@ -200,7 +200,7 @@ func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, commun
 	db := repo.mongoClient.Database("PINKKER-BACKEND")
 	collPosts := db.Collection("Post")
 
-	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: ExcludeFilterlID}}}}
+	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: ExcludeFilterlID}}}}
 
 	includeFilter := bson.D{
 		{Key: "CommunityID", Value: communityID},
@@ -216,7 +216,6 @@ func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, commun
 
 	pipeline := bson.A{
 		bson.D{{Key: "$match", Value: matchFilter}},
-		bson.D{{Key: "$match", Value: includeFilter}},
 
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
