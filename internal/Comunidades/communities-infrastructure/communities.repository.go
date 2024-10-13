@@ -196,14 +196,20 @@ func (repo *CommunitiesRepository) BanMember(ctx context.Context, communityID, u
 	return nil
 }
 
-func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, communityIDs []primitive.ObjectID, idT primitive.ObjectID, limit int) ([]communitiesdomain.PostGetCommunityReq, error) {
+func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, communityID primitive.ObjectID, ExcludeFilterlID []primitive.ObjectID, idT primitive.ObjectID, limit int) ([]communitiesdomain.PostGetCommunityReq, error) {
 	db := repo.mongoClient.Database("PINKKER-BACKEND")
 	collPosts := db.Collection("Post")
 
-	excludeFilter := bson.D{{Key: "CommunityID", Value: bson.D{{Key: "$in", Value: communityIDs}}}}
+	exclude := bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: ExcludeFilterlID}}}}
+	includeFilter := bson.A{
+		bson.D{{Key: "CommunityID", Value: communityID}},
+		bson.D{{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}}},
+	}
 
 	pipeline := bson.A{
-		bson.D{{Key: "$match", Value: excludeFilter}},
+		bson.D{{Key: "$match", Value: exclude}},
+		bson.D{{Key: "$match", Value: includeFilter}},
+
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
@@ -357,12 +363,12 @@ func (repo *CommunitiesRepository) FindCommunityByName(ctx context.Context, comm
 			{Key: "updatedAt", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$members"}}}, // Contar miembros
 			{Key: "creator", Value: bson.D{
-				{Key: "userID", Value: "$creatorDetails._id"},
-				{Key: "avatar", Value: "$creatorDetails.Avatar"},
-				{Key: "banner", Value: "$creatorDetails.Banner"},
-				{Key: "nameUser", Value: "$creatorDetails.NameUser"},
-				{Key: "fullName", Value: "$creatorDetails.FullName"},
-				{Key: "email", Value: "$creatorDetails.Email"},
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 0}}}},
+				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 0}}}},
 			}},
 		}}},
 		bson.D{{Key: "$limit", Value: 5}},
@@ -405,12 +411,12 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 			{Key: "updatedAt", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$members"}}}, // Contar miembros
 			{Key: "creator", Value: bson.D{
-				{Key: "userID", Value: "$creatorDetails._id"},
-				{Key: "avatar", Value: "$creatorDetails.Avatar"},
-				{Key: "banner", Value: "$creatorDetails.Banner"},
-				{Key: "nameUser", Value: "$creatorDetails.NameUser"},
-				{Key: "fullName", Value: "$creatorDetails.FullName"}, // Agregar nombre completo
-				{Key: "email", Value: "$creatorDetails.Email"},       // Agregar email
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 0}}}},
+				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 0}}}},
 			}},
 		}}},
 		bson.D{{Key: "$sort", Value: bson.M{"membersCount": -1}}}, // Ordenar por membersCount descendente
@@ -456,10 +462,12 @@ func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID
 			{Key: "updatedAt", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$members"}}}, // Contar miembros
 			{Key: "creator", Value: bson.D{
-				{Key: "userID", Value: "$creatorDetails._id"},
-				{Key: "avatar", Value: "$creatorDetails.Avatar"},
-				{Key: "banner", Value: "$creatorDetails.Banner"},
-				{Key: "nameUser", Value: "$creatorDetails.NameUser"},
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 0}}}},
+				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 0}}}},
 			}},
 		}}},
 	}

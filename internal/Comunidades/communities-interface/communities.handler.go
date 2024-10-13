@@ -115,7 +115,8 @@ func (h *CommunitiesHandler) BanMember(c *fiber.Ctx) error {
 }
 func (h *CommunitiesHandler) GetCommunityPosts(c *fiber.Ctx) error {
 	var req struct {
-		CommunityIDs []primitive.ObjectID `json:"community_ids"`
+		CommunityIDs     primitive.ObjectID   `json:"community_ids"`
+		ExcludeFilterIDs []primitive.ObjectID `json:"ExcludeFilterIDs"`
 	}
 
 	if err := c.BodyParser(&req); err != nil {
@@ -132,7 +133,7 @@ func (h *CommunitiesHandler) GetCommunityPosts(c *fiber.Ctx) error {
 	}
 
 	// Llamar al servicio para obtener los posts de las comunidades
-	posts, err := h.Service.GetCommunityPosts(c.Context(), req.CommunityIDs, idValueToken)
+	posts, err := h.Service.GetCommunityPosts(c.Context(), req.CommunityIDs, req.ExcludeFilterIDs, idValueToken)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Error fetching community posts",

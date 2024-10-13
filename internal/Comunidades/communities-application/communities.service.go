@@ -32,8 +32,8 @@ func (s *CommunitiesService) AddMember(ctx context.Context, communityID, userID 
 func (s *CommunitiesService) BanMember(ctx context.Context, communityID, userID, mod primitive.ObjectID) error {
 	return s.communitiesRepository.BanMember(ctx, communityID, userID, mod)
 }
-func (s *CommunitiesService) GetCommunityPosts(ctx context.Context, communityIDs []primitive.ObjectID, idT primitive.ObjectID) ([]communitiesdomain.PostGetCommunityReq, error) {
-	return s.communitiesRepository.GetCommunityPosts(ctx, communityIDs, idT, 10)
+func (s *CommunitiesService) GetCommunityPosts(ctx context.Context, CommunityID primitive.ObjectID, ExcludeFilterIDs []primitive.ObjectID, idT primitive.ObjectID) ([]communitiesdomain.PostGetCommunityReq, error) {
+	return s.communitiesRepository.GetCommunityPosts(ctx, CommunityID, ExcludeFilterIDs, idT, 10)
 }
 func (s *CommunitiesService) AddModerator(ctx context.Context, communityID, newModID, modID primitive.ObjectID) error {
 	return s.communitiesRepository.AddModerator(ctx, communityID, newModID, modID)
