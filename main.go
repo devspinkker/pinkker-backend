@@ -3,6 +3,7 @@ package main
 import (
 	"PINKKER-BACKEND/config"
 	Chatsroutes "PINKKER-BACKEND/internal/Chat/Chats-routes"
+	communitiesroutes "PINKKER-BACKEND/internal/Comunidades/communities-routes"
 	Emotesroutes "PINKKER-BACKEND/internal/Emotes/Emotes-routes"
 	PinkkerProfitPerMonthroutes "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-routes"
 	StreamSummaryroutes "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-routes"
@@ -76,6 +77,8 @@ func main() {
 	Chatsroutes.ChatsRoutes(app, redisClient, newMongoDB)
 
 	PinkkerProfitPerMonthroutes.PinkkerProfitPerMonthRoutes(app, redisClient, newMongoDB)
+
+	communitiesroutes.CommunitiesRoutes(app, redisClient, newMongoDB)
 
 	PORT := config.PORT()
 	if PORT == "" {
