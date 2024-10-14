@@ -28,8 +28,6 @@ func (th *TweetHandler) CreatePost(c *fiber.Ctx) error {
 
 	PostImageChanel := make(chan string)
 	errChanel := make(chan error)
-	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
-
 	var newTweet tweetdomain.TweetModelValidator
 	if err := c.BodyParser(&newTweet); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -49,6 +47,16 @@ func (th *TweetHandler) CreatePost(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
+
+	if newTweet.CommunityID != primitive.NilObjectID {
+		member, _ := th.TweetServise.IsUserMemberOfCommunity(idValueObj, newTweet.CommunityID)
+		if !member {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "no member",
+			})
+		}
+	}
+	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
 
 	for {
 		select {

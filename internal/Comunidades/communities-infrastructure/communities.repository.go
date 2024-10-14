@@ -203,7 +203,7 @@ func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, commun
 	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: ExcludeFilterlID}}}}
 
 	includeFilter := bson.D{
-		{Key: "CommunityID", Value: communityID},
+		{Key: "communityID", Value: communityID},
 		{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
 	}
 

@@ -1905,3 +1905,27 @@ func (t *TweetRepository) GetTrendsByPrefix(prefix string, limit int) ([]tweetdo
 
 	return trends, nil
 }
+func (t *TweetRepository) IsUserMemberOfCommunity(communityID, userID primitive.ObjectID) (bool, error) {
+	db := t.mongoClient.Database("PINKKER-BACKEND")
+	collCommunities := db.Collection("communities")
+
+	filter := bson.D{
+		{Key: "_id", Value: communityID},
+		{Key: "Members", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}},
+	}
+
+	// Realiza la búsqueda en la base de datos
+	var community struct {
+		ID primitive.ObjectID `bson:"_id"`
+	}
+
+	err := collCommunities.FindOne(context.Background(), filter).Decode(&community)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}

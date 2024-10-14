@@ -23,6 +23,11 @@ func (ts *TweetService) GetAdsMuroAndPost() (tweetdomain.PostAds, error) {
 	Tweet, errGetFollowedUsers := ts.TweetRepository.GetAdsMuroAndPost()
 	return Tweet, errGetFollowedUsers
 }
+func (ts *TweetService) IsUserMemberOfCommunity(communityID primitive.ObjectID, userID primitive.ObjectID) (bool, error) {
+
+	return ts.TweetRepository.IsUserMemberOfCommunity(communityID, userID)
+
+}
 
 // save
 func (ts *TweetService) SaveTweet(status string, idCommunity primitive.ObjectID, img string, user primitive.ObjectID) (primitive.ObjectID, error) {
