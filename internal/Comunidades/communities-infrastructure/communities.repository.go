@@ -55,22 +55,20 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communit
 func (repo *CommunitiesRepository) AddModerator(ctx context.Context, communityID, newModID, modID primitive.ObjectID) error {
 	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 
-	// Obtener los detalles de la comunidad
 	var community struct {
 		CreatorID  primitive.ObjectID   `bson:"CreatorID"`
-		Moderators []primitive.ObjectID `bson:"Moderators"`
+		Moderators []primitive.ObjectID `bson:"Mods"`
 	}
 
 	err := collection.FindOne(ctx, primitive.M{"_id": communityID}, options.FindOne().SetProjection(primitive.M{
-		"CreatorID":  1,
-		"Moderators": 1,
+		"creatorID": 1,
+		"CreatorID": 1,
 	})).Decode(&community)
 
 	if err != nil {
 		return err
 	}
 
-	// Verificar si el mod (quien hace la acción) es el creador o moderador
 	isCreator := community.CreatorID == modID
 	isModerator := false
 	for _, moderatorID := range community.Moderators {
@@ -80,29 +78,25 @@ func (repo *CommunitiesRepository) AddModerator(ctx context.Context, communityID
 		}
 	}
 
-	// Si el mod no es ni creador ni moderador, no puede agregar un nuevo moderador
 	if !isCreator && !isModerator {
 		return fiber.NewError(fiber.StatusForbidden, "You are not authorized to add moderators")
 	}
 
-	// Verificar si el nuevo moderador ya es un moderador
 	for _, moderatorID := range community.Moderators {
 		if moderatorID == newModID {
 			return fiber.NewError(fiber.StatusBadRequest, "User is already a moderator")
 		}
 	}
 
-	// Verificar el límite de moderadores
 	if len(community.Moderators) >= 5 {
 		return fiber.NewError(fiber.StatusBadRequest, "Cannot add more than 5 moderators")
 	}
 
-	// Agregar el nuevo moderador a la lista
 	_, err = collection.UpdateOne(
 		ctx,
 		primitive.M{"_id": communityID},
 		primitive.M{
-			"$addToSet": primitive.M{"Moderators": newModID}, // Añadir el nuevo moderador
+			"$addToSet": primitive.M{"Members": newModID}, // Añadir el nuevo moderador
 		},
 	)
 	if err != nil {
@@ -112,15 +106,114 @@ func (repo *CommunitiesRepository) AddModerator(ctx context.Context, communityID
 	return nil
 }
 
-// AddMember agrega un miembro a la comunidad especificada
 func (repo *CommunitiesRepository) AddMember(ctx context.Context, communityID primitive.ObjectID, userID primitive.ObjectID) error {
-	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+	session, err := repo.mongoClient.StartSession()
+	if err != nil {
+		return err
+	}
+	defer session.EndSession(ctx)
 
-	_, err := collection.UpdateOne(
-		ctx,
-		primitive.M{"_id": communityID},
-		primitive.M{"$addToSet": primitive.M{"Members": userID}},
-	)
+	err = mongo.WithSession(ctx, session, func(sc mongo.SessionContext) error {
+		if err := session.StartTransaction(); err != nil {
+			return err
+		}
+
+		communitiesCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+		usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+		// Verificar si el usuario está en la lista de baneados
+		err := communitiesCollection.FindOne(sc, primitive.M{
+			"_id":         communityID,
+			"BannedUsers": primitive.M{"$in": []primitive.ObjectID{userID}},
+		}).Err()
+
+		if err == nil {
+			session.AbortTransaction(sc)
+			return fiber.NewError(fiber.StatusForbidden, "This user is banned from the community")
+		}
+
+		// Si el usuario no está baneado, añadirlo a la comunidad
+		_, err = communitiesCollection.UpdateOne(
+			sc,
+			primitive.M{"_id": communityID},
+			primitive.M{"$addToSet": primitive.M{"Members": userID}},
+		)
+		if err != nil {
+			session.AbortTransaction(sc)
+			return err
+		}
+
+		// Añadir la comunidad al usuario
+		_, err = usersCollection.UpdateOne(
+			sc,
+			primitive.M{"_id": userID},
+			primitive.M{"$addToSet": primitive.M{"InCommunities": communityID}},
+		)
+		if err != nil {
+			session.AbortTransaction(sc)
+			return err
+		}
+
+		// Commit de la transacción
+		if err := session.CommitTransaction(sc); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (repo *CommunitiesRepository) RemoveMember(ctx context.Context, communityID primitive.ObjectID, userID primitive.ObjectID) error {
+	session, err := repo.mongoClient.StartSession()
+	if err != nil {
+		return err
+	}
+	defer session.EndSession(ctx)
+
+	err = mongo.WithSession(ctx, session, func(sc mongo.SessionContext) error {
+		if err := session.StartTransaction(); err != nil {
+			return err
+		}
+
+		communitiesCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+		usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+		// Remover el usuario de la comunidad (del campo "Members")
+		_, err := communitiesCollection.UpdateOne(
+			sc,
+			primitive.M{"_id": communityID},
+			primitive.M{"$pull": primitive.M{"Members": userID}},
+		)
+		if err != nil {
+			session.AbortTransaction(sc)
+			return err
+		}
+
+		// Remover la comunidad del usuario (del campo "InCommunities")
+		_, err = usersCollection.UpdateOne(
+			sc,
+			primitive.M{"_id": userID},
+			primitive.M{"$pull": primitive.M{"InCommunities": communityID}},
+		)
+		if err != nil {
+			session.AbortTransaction(sc)
+			return err
+		}
+
+		// Commit de la transacción
+		if err := session.CommitTransaction(sc); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return err
 	}
@@ -129,66 +222,104 @@ func (repo *CommunitiesRepository) AddMember(ctx context.Context, communityID pr
 }
 
 func (repo *CommunitiesRepository) BanMember(ctx context.Context, communityID, userID, mod primitive.ObjectID) error {
-	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
-
-	// Obtener solo el creador y los moderadores de la comunidad
-	var community struct {
-		CreatorID  primitive.ObjectID   `bson:"CreatorID"`
-		Moderators []primitive.ObjectID `bson:"Moderators"`
-	}
-
-	err := collection.FindOne(ctx, primitive.M{"_id": communityID}, options.FindOne().SetProjection(primitive.M{
-		"CreatorID":  1,
-		"Moderators": 1,
-	})).Decode(&community)
-
+	session, err := repo.mongoClient.StartSession()
 	if err != nil {
 		return err
 	}
+	defer session.EndSession(ctx)
 
-	// Verificar si el mod (quien hace la acción) es el creador o moderador
-	isCreator := community.CreatorID == mod
-	isModerator := false
-	for _, moderatorID := range community.Moderators {
-		if moderatorID == mod {
-			isModerator = true
-			break
+	err = mongo.WithSession(ctx, session, func(sc mongo.SessionContext) error {
+		if err := session.StartTransaction(); err != nil {
+			return err
 		}
-	}
 
-	// Verificar si el usuario a banear es un moderador
-	isUserModerator := false
-	for _, moderatorID := range community.Moderators {
-		if moderatorID == userID {
-			isUserModerator = true
-			break
+		communitiesCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+		usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+		var community struct {
+			CreatorID  primitive.ObjectID   `bson:"CreatorID"`
+			Moderators []primitive.ObjectID `bson:"Moderators"`
 		}
-	}
 
-	// Si el mod no es ni creador ni moderador, no puede banear
-	if !isCreator && !isModerator {
-		return fiber.NewError(fiber.StatusForbidden, "You are not authorized to ban members")
-	}
+		err := communitiesCollection.FindOne(sc, primitive.M{"_id": communityID}, options.FindOne().SetProjection(primitive.M{
+			"CreatorID":  1,
+			"Moderators": 1,
+		})).Decode(&community)
+		if err != nil {
+			session.AbortTransaction(sc)
+			return err
+		}
 
-	// Si el mod es un moderador y el usuario a banear es también moderador, denegar la operación
-	if isModerator && isUserModerator {
-		return fiber.NewError(fiber.StatusForbidden, "Moderators cannot ban other moderators")
-	}
+		// Verificar si el moderador es autorizado para banear
+		isCreator := community.CreatorID == mod
+		isModerator := false
+		for _, moderatorID := range community.Moderators {
+			if moderatorID == mod {
+				isModerator = true
+				break
+			}
+		}
 
-	// Solo el creador puede banear a un moderador
-	if isUserModerator && !isCreator {
-		return fiber.NewError(fiber.StatusForbidden, "Only the creator can ban moderators")
-	}
+		// Verificar si el usuario a banear es un moderador
+		isUserModerator := false
+		for _, moderatorID := range community.Moderators {
+			if moderatorID == userID {
+				isUserModerator = true
+				break
+			}
+		}
 
-	// Proceder con el baneo si es autorizado
-	_, err = collection.UpdateOne(
-		ctx,
-		primitive.M{"_id": communityID},
-		primitive.M{
-			"$pull":     primitive.M{"Members": userID},     // Eliminar de la lista de miembros
-			"$addToSet": primitive.M{"BannedUsers": userID}, // Añadir a la lista de baneados
-		},
-	)
+		// Si el moderador no es ni creador ni moderador, no puede banear
+		if !isCreator && !isModerator {
+			session.AbortTransaction(sc)
+			return fiber.NewError(fiber.StatusForbidden, "You are not authorized to ban members")
+		}
+
+		// Si el moderador es un moderador y el usuario a banear es también moderador, denegar la operación
+		if isModerator && isUserModerator {
+			session.AbortTransaction(sc)
+			return fiber.NewError(fiber.StatusForbidden, "Moderators cannot ban other moderators")
+		}
+
+		// Solo el creador puede banear a un moderador
+		if isUserModerator && !isCreator {
+			session.AbortTransaction(sc)
+			return fiber.NewError(fiber.StatusForbidden, "Only the creator can ban moderators")
+		}
+
+		// Proceder con el baneo si es autorizado
+		_, err = communitiesCollection.UpdateOne(
+			sc,
+			primitive.M{"_id": communityID},
+			primitive.M{
+				"$pull":     primitive.M{"Members": userID},     // Eliminar de la lista de miembros
+				"$addToSet": primitive.M{"BannedUsers": userID}, // Añadir a la lista de baneados
+			},
+		)
+		if err != nil {
+			session.AbortTransaction(sc)
+			return err
+		}
+
+		// Remover la comunidad del array InCommunities del usuario
+		_, err = usersCollection.UpdateOne(
+			sc,
+			primitive.M{"_id": userID},
+			primitive.M{"$pull": primitive.M{"InCommunities": communityID}}, // Eliminar la comunidad de InCommunities
+		)
+		if err != nil {
+			session.AbortTransaction(sc)
+			return err
+		}
+
+		// Commit de la transacción
+		if err := session.CommitTransaction(sc); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return err
 	}
@@ -356,18 +487,18 @@ func (repo *CommunitiesRepository) FindCommunityByName(ctx context.Context, comm
 		bson.D{{Key: "$match", Value: bson.M{"communityName": bson.M{"$regex": communityName, "$options": "i"}}}}, // Búsqueda insensible a mayúsculas
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "creatorID"},
+			{Key: "localField", Value: "CreatorID"},
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "creatorDetails"},
 		}}},
 		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$creatorDetails"}, {Key: "preserveNullAndEmptyArrays", Value: true}}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
-			{Key: "communityName", Value: 1},
-			{Key: "description", Value: 1},
-			{Key: "isPrivate", Value: 1},
-			{Key: "createdAt", Value: 1},
-			{Key: "updatedAt", Value: 1},
+			{Key: "CommunityName", Value: 1},
+			{Key: "Description", Value: 1},
+			{Key: "IsPrivate", Value: 1},
+			{Key: "CreatedAt", Value: 1},
+			{Key: "UpdatedAt", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$members"}}}, // Contar miembros
 			{Key: "creator", Value: bson.D{
 				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
@@ -405,17 +536,17 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 	pipeline := bson.A{
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "creatorID"},
+			{Key: "localField", Value: "CreatorID"},
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "creatorDetails"},
 		}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
-			{Key: "communityName", Value: 1},
-			{Key: "description", Value: 1},
-			{Key: "isPrivate", Value: 1},
-			{Key: "createdAt", Value: 1},
-			{Key: "updatedAt", Value: 1},
+			{Key: "CommunityName", Value: 1},
+			{Key: "Description", Value: 1},
+			{Key: "IsPrivate", Value: 1},
+			{Key: "CreatedAt", Value: 1},
+			{Key: "UpdatedAt", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$members"}}}, // Contar miembros
 			{Key: "creator", Value: bson.D{
 				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
@@ -454,18 +585,18 @@ func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID
 		bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: communityID}}}},
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "creatorID"},
+			{Key: "localField", Value: "CreatorID"},
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "creatorDetails"},
 		}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
-			{Key: "communityName", Value: 1},
-			{Key: "description", Value: 1},
-			{Key: "categories", Value: 1},
-			{Key: "isPrivate", Value: 1},
-			{Key: "createdAt", Value: 1},
-			{Key: "updatedAt", Value: 1},
+			{Key: "CommunityName", Value: 1},
+			{Key: "Description", Value: 1},
+			{Key: "IsPrivate", Value: 1},
+			{Key: "CreatedAt", Value: 1},
+			{Key: "UpdatedAt", Value: 1},
+			{Key: "Categories", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$members"}}}, // Contar miembros
 			{Key: "creator", Value: bson.D{
 				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},

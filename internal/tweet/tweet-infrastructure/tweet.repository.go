@@ -1909,7 +1909,7 @@ func (t *TweetRepository) IsUserMemberOfCommunity(communityID, userID primitive.
 	collCommunities := t.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 	filter := bson.D{
 		{Key: "_id", Value: communityID},
-		{Key: "members", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}},
+		{Key: "Members", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}},
 	}
 
 	// Realiza la búsqueda en la base de datos

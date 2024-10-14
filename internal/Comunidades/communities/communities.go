@@ -9,17 +9,17 @@ import (
 
 type Community struct {
 	ID            primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	CommunityName string               `json:"communityName" bson:"communityName" validate:"required"`
-	Description   string               `json:"description" bson:"description"`
-	CreatorID     primitive.ObjectID   `json:"creatorID" bson:"creatorID"`
-	Members       []primitive.ObjectID `json:"members" bson:"members"`
-	Mods          []primitive.ObjectID `json:"mods" bson:"mods"`
-	BannedUsers   []primitive.ObjectID `json:"bannedUsers" bson:"bannedUsers"` // Usuarios expulsados
-	Rules         string               `json:"rules" bson:"rules"`
-	IsPrivate     bool                 `json:"isPrivate" bson:"isPrivate"`
-	Categories    []string             `json:"categories" bson:"categories"`
-	CreatedAt     time.Time            `json:"createdAt" bson:"createdAt"`
-	UpdatedAt     time.Time            `json:"updatedAt" bson:"updatedAt"`
+	CommunityName string               `json:"communityName" bson:"CommunityName" validate:"required"`
+	Description   string               `json:"description" bson:"Description"`
+	CreatorID     primitive.ObjectID   `json:"creatorID" bson:"CreatorID"`
+	Members       []primitive.ObjectID `json:"members" bson:"Members"`
+	Mods          []primitive.ObjectID `json:"mods" bson:"Mods"`
+	BannedUsers   []primitive.ObjectID `json:"bannedUsers" bson:"BannedUsers"` // Usuarios expulsados
+	Rules         string               `json:"rules" bson:"Rules"`
+	IsPrivate     bool                 `json:"isPrivate" bson:"IsPrivate"`
+	Categories    []string             `json:"categories" bson:"Categories"`
+	CreatedAt     time.Time            `json:"createdAt" bson:"CreatedAt"`
+	UpdatedAt     time.Time            `json:"updatedAt" bson:"UpdatedAt"`
 }
 
 func (u *Community) ValidateReqCreateCommunities() error {
@@ -54,14 +54,14 @@ type PostGetCommunityReq struct {
 
 type CommunityDetails struct {
 	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CommunityName string             `json:"communityName" bson:"communityName"`
-	Description   string             `json:"description" bson:"description"`
-	Creator       CreatorInfo        `json:"creator" bson:"creator"`
-	IsPrivate     bool               `json:"isPrivate" bson:"isPrivate"`
+	CommunityName string             `json:"communityName" bson:"CommunityName"`
+	Description   string             `json:"description" bson:"Description"`
+	Creator       CreatorInfo        `json:"creator" bson:"CreatorID"`
+	IsPrivate     bool               `json:"isPrivate" bson:"IsPrivate"`
 	MembersCount  int                `json:"membersCount" bson:"membersCount"`
-	CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
-	UpdatedAt     time.Time          `json:"updatedAt" bson:"updatedAt"`
-	categories    []string           `json:"categories" bson:"categories"`
+	CreatedAt     time.Time          `json:"createdAt" bson:"CreatedAt"`
+	UpdatedAt     time.Time          `json:"updatedAt" bson:"UpdatedAt"`
+	Categories    []string           `json:"categories" bson:"Categories"`
 }
 
 type CreatorInfo struct {

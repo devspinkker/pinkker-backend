@@ -71,10 +71,11 @@ type User struct {
 		Code  string    `json:"Code,omitempty" bson:"Code"`
 		Date  time.Time `json:"date,omitempty" bson:"Date,omitempty"`
 	} `json:"PanelAdminPinkker,omitempty" bson:"PanelAdminPinkker"`
-	Banned         bool         `json:"Banned" bson:"Banned"`
-	TOTPSecret     string       `json:"TOTPSecret" bson:"TOTPSecret"`
-	LastConnection time.Time    `json:"LastConnection" bson:"LastConnection"`
-	PinkkerPrime   PinkkerPrime `json:"PinkkerPrime" bson:"PinkkerPrime"`
+	Banned         bool                 `json:"Banned" bson:"Banned"`
+	TOTPSecret     string               `json:"TOTPSecret" bson:"TOTPSecret"`
+	LastConnection time.Time            `json:"LastConnection" bson:"LastConnection"`
+	PinkkerPrime   PinkkerPrime         `json:"PinkkerPrime" bson:"PinkkerPrime"`
+	InCommunities  []primitive.ObjectID `json:"InCommunities" bson:"InCommunities"`
 }
 type PinkkerPrime struct {
 	MonthsSubscribed  int       `bson:"MonthsSubscribed"`
