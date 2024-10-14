@@ -517,12 +517,12 @@ func (repo *CommunitiesRepository) FindCommunityByName(ctx context.Context, comm
 			{Key: "UpdatedAt", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
-				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 1}}}},
-				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 1}}}},
-				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 1}}}},
-				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 1}}}},
-				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 1}}}},
-				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 1}}}},
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 0}}}},
+				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 0}}}},
 			}},
 		}}},
 		bson.D{{Key: "$limit", Value: 5}},
@@ -551,7 +551,7 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 
 	pipeline := bson.A{
 		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"},
+			{Key: "from", Value: "Users"}, // Asegúrate de que coincide exactamente con el nombre de la colección de usuarios
 			{Key: "localField", Value: "CreatorID"},
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "creatorDetails"},
@@ -565,16 +565,16 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 			{Key: "UpdatedAt", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}}, // Contar miembros
 			{Key: "creator", Value: bson.D{
-				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 1}}}},
-				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 1}}}},
-				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 1}}}},
-				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 1}}}},
-				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 1}}}},
-				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 1}}}},
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}}, // Usar índice 0 en lugar de 1
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 0}}}},
+				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 0}}}},
 			}},
 		}}},
-		bson.D{{Key: "$sort", Value: bson.M{"membersCount": -1}}}, // Ordenar por membersCount descendente
-		bson.D{{Key: "$limit", Value: 10}},                        // Limitar a 10
+		bson.D{{Key: "$sort", Value: bson.M{"membersCount": -1}}},
+		bson.D{{Key: "$limit", Value: 10}},
 	}
 
 	cursor, err := collection.Aggregate(ctx, pipeline)
@@ -615,12 +615,12 @@ func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID
 			{Key: "Categories", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
-				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 1}}}},
-				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 1}}}},
-				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 1}}}},
-				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 1}}}},
-				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 1}}}},
-				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 1}}}},
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 0}}}},
+				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 0}}}},
 			}},
 		}}},
 		bson.D{{Key: "$limit", Value: 1}},
