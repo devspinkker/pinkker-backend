@@ -49,7 +49,7 @@ func (th *TweetHandler) CreatePost(c *fiber.Ctx) error {
 	}
 
 	if newTweet.CommunityID != primitive.NilObjectID {
-		member, _ := th.TweetServise.IsUserMemberOfCommunity(idValueObj, newTweet.CommunityID)
+		member, _ := th.TweetServise.IsUserMemberOfCommunity(newTweet.CommunityID, idValueObj)
 		if !member {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": "no member",
