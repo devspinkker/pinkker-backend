@@ -94,7 +94,7 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.Obj
 	pipelineRandom := bson.A{
 
 		bson.D{{Key: "$match", Value: bson.D{
-			{Key: "CommunityID", Value: primitive.NilObjectID},
+			{Key: "communityID", Value: primitive.NilObjectID},
 			{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}}},
 		}},
 		bson.D{{Key: "$match", Value: excludeFilter}},
@@ -200,7 +200,7 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 
 	tweetPipeline := bson.A{
 		bson.D{{Key: "$match", Value: bson.D{
-			{Key: "CommunityID", Value: primitive.NilObjectID},
+			{Key: "communityID", Value: primitive.NilObjectID},
 			{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
 			{Key: "TimeStamp", Value: bson.M{"$gte": last24Hours}},
 		}}},
@@ -1108,7 +1108,7 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{
 			{Key: "UserID", Value: id},
-			{Key: "CommunityID", Value: primitive.NilObjectID},
+			{Key: "communityID", Value: primitive.NilObjectID},
 		}}},
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
@@ -1259,7 +1259,7 @@ func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, li
 			{Key: "UserID", Value: id},
 			{Key: "Type", Value: bson.M{"$in": []string{"Post", "CitaPost"}}},
 			{Key: "PostImage", Value: bson.D{{Key: "$ne", Value: ""}}},
-			{Key: "CommunityID", Value: primitive.NilObjectID},
+			{Key: "communityID", Value: primitive.NilObjectID},
 		}}},
 		// Realizar lookup para obtener datos de usuario
 		{{Key: "$lookup", Value: bson.D{
@@ -1410,7 +1410,7 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{
 			{Key: "UserID", Value: id},
-			{Key: "CommunityID", Value: primitive.NilObjectID},
+			{Key: "communityID", Value: primitive.NilObjectID},
 		}}},
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
@@ -1564,7 +1564,7 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 	matchStage := bson.D{{Key: "$match", Value: bson.D{
 		{Key: "UserID", Value: bson.D{{Key: "$in", Value: userIDs}}},
 		{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
-		{Key: "CommunityID", Value: primitive.NilObjectID},
+		{Key: "communityID", Value: primitive.NilObjectID},
 	}}}
 
 	// Actualizamos todos los documentos coincidentes incrementando el campo Views en 1
