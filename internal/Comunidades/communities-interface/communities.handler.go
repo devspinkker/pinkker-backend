@@ -81,6 +81,37 @@ func (h *CommunitiesHandler) AddMember(c *fiber.Ctx) error {
 		"message": "Member added successfully",
 	})
 }
+func (h *CommunitiesHandler) RemoveMember(c *fiber.Ctx) error {
+	var req struct {
+		CommunityID primitive.ObjectID `json:"community_id"`
+	}
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Error parsing request",
+		})
+	}
+
+	err := h.Service.RemoveMember(c.Context(), req.CommunityID, idValueToken)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error adding member",
+			"error":   err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Member added successfully",
+	})
+}
+
 func (h *CommunitiesHandler) BanMember(c *fiber.Ctx) error {
 	var req struct {
 		CommunityID primitive.ObjectID `json:"community_id"`
@@ -304,6 +335,36 @@ func (h *CommunitiesHandler) GetCommunity(c *fiber.Ctx) error {
 	}
 
 	community, err := h.Service.GetCommunity(c.Context(), communityID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"error":   err,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "successfully",
+		"data":    community,
+	})
+}
+func (h *CommunitiesHandler) GetCommunityWithUserMembership(c *fiber.Ctx) error {
+	communityIDStr := c.Query("community")
+	communityID, err := primitive.ObjectIDFromHex(communityIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid community ID",
+		})
+	}
+
+	IdToken := c.Context().UserValue("_id").(string)
+	IdTokenObjectID, err := primitive.ObjectIDFromHex(IdToken)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid user ID",
+		})
+	}
+
+	community, err := h.Service.GetCommunityWithUserMembership(c.Context(), communityID, IdTokenObjectID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",

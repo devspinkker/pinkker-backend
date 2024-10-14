@@ -27,6 +27,9 @@ func (s *CommunitiesService) CreateCommunity(ctx context.Context, name string, c
 func (s *CommunitiesService) AddMember(ctx context.Context, communityID, userID primitive.ObjectID) error {
 	return s.communitiesRepository.AddMember(ctx, communityID, userID)
 }
+func (s *CommunitiesService) RemoveMember(ctx context.Context, communityID, userID primitive.ObjectID) error {
+	return s.communitiesRepository.RemoveMember(ctx, communityID, userID)
+}
 
 // Expulsar un miembro de la comunidad
 func (s *CommunitiesService) BanMember(ctx context.Context, communityID, userID, mod primitive.ObjectID) error {
@@ -52,4 +55,7 @@ func (s *CommunitiesService) GetTop10CommunitiesByMembers(ctx context.Context) (
 }
 func (s *CommunitiesService) GetCommunity(ctx context.Context, community primitive.ObjectID) (*communitiesdomain.CommunityDetails, error) {
 	return s.communitiesRepository.GetCommunity(ctx, community)
+}
+func (s *CommunitiesService) GetCommunityWithUserMembership(ctx context.Context, community, user primitive.ObjectID) (*communitiesdomain.CommunityDetails, error) {
+	return s.communitiesRepository.GetCommunityWithUserMembership(ctx, community, user)
 }

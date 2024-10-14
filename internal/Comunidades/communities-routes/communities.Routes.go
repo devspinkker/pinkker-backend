@@ -19,6 +19,9 @@ func CommunitiesRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mo
 
 	App.Post("/communities/CreateCommunity", middleware.UseExtractor(), middleware.TOTPAuthMiddleware(Repository), Handler.CreateCommunity)
 	App.Post("/communities/AddMember", middleware.UseExtractor(), Handler.AddMember)
+
+	App.Post("/communities/RemoveMember", middleware.UseExtractor(), Handler.RemoveMember)
+
 	App.Post("/communities/BanMember", middleware.UseExtractor(), Handler.BanMember)
 	App.Post("/communities/GetCommunityPosts", middleware.UseExtractor(), Handler.GetCommunityPosts)
 	App.Post("/communities/AddModerator", middleware.UseExtractor(), Handler.AddModerator)
@@ -27,6 +30,7 @@ func CommunitiesRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mo
 	App.Post("/communities/DeleteCommunity", middleware.UseExtractor(), middleware.TOTPAuthMiddleware(Repository), Handler.DeleteCommunity)
 	App.Get("/communities/FindCommunityByName", Handler.FindCommunityByName)
 	App.Get("/communities/GetCommunity", middleware.UseExtractor(), Handler.GetCommunity)
+	App.Get("/communities/GetCommunityWithUserMembership", middleware.UseExtractor(), Handler.GetCommunityWithUserMembership)
 	App.Get("/communities/GetTop10CommunitiesByMembers", middleware.UseExtractor(), Handler.GetTop10CommunitiesByMembers)
 
 }

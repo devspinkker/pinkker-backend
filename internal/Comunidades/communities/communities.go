@@ -62,6 +62,7 @@ type CommunityDetails struct {
 	CreatedAt     time.Time          `json:"createdAt" bson:"CreatedAt"`
 	UpdatedAt     time.Time          `json:"updatedAt" bson:"UpdatedAt"`
 	Categories    []string           `json:"categories" bson:"Categories"`
+	IsUserMember  bool               `json:"isUserMember" bson:"isUserMember"`
 }
 
 type CreatorInfo struct {

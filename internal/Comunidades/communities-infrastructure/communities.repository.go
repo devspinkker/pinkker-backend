@@ -641,6 +641,66 @@ func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID
 
 	return nil, mongo.ErrNoDocuments
 }
+func (repo *CommunitiesRepository) GetCommunityWithUserMembership(ctx context.Context, communityID, userID primitive.ObjectID) (*communitiesdomain.CommunityDetails, error) {
+	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+
+	pipeline := bson.A{
+		// Match the community by its ID
+		bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: communityID}}}},
+
+		// Lookup creator details from the "Users" collection
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "CreatorID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "creatorDetails"},
+		}}},
+
+		// Add a projection to select specific fields
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "CommunityName", Value: 1},
+			{Key: "Description", Value: 1},
+			{Key: "IsPrivate", Value: 1},
+			{Key: "CreatedAt", Value: 1},
+			{Key: "UpdatedAt", Value: 1},
+			{Key: "Categories", Value: 1},
+			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
+			{Key: "creator", Value: bson.D{
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+			}},
+			{Key: "isUserMember", Value: bson.D{
+				{Key: "$in", Value: bson.A{userID, "$Members"}},
+			}},
+		}}},
+
+		// Sort by the number of members
+		bson.D{{Key: "$sort", Value: bson.M{"membersCount": -1}}},
+
+		// Limit to 1 result
+		bson.D{{Key: "$limit", Value: 1}},
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	if cursor.Next(ctx) {
+		var community communitiesdomain.CommunityDetails
+		if err := cursor.Decode(&community); err != nil {
+			return nil, err
+		}
+
+		return &community, nil
+	}
+
+	return nil, mongo.ErrNoDocuments
+}
 
 func (r *CommunitiesRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {
 	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
