@@ -69,6 +69,7 @@ type TweetModelValidator struct {
 }
 type TweetCommentModelValidator struct {
 	Status       string             `json:"status" validate:"required,min=3,max=100"`
+	CommunityID  primitive.ObjectID `json:"communityID" bson:"communityID,omitempty"`
 	OriginalPost primitive.ObjectID `json:"OriginalPost" validate:"required"`
 }
 type CitaPostModelValidator struct {

@@ -2,6 +2,7 @@ package communitiestinfrastructure
 
 import (
 	communitiesdomain "PINKKER-BACKEND/internal/Comunidades/communities"
+	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"time"
 
@@ -29,6 +30,21 @@ func NewcommunitiesRepository(redisClient *redis.Client, mongoClient *mongo.Clie
 // CreateCommunity crea una nueva comunidad y la guarda en MongoDB
 func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communityName string, creatorID primitive.ObjectID, description string, isPrivate bool, categories []string) (*communitiesdomain.Community, error) {
 	// Crear una nueva comunidad
+	var user struct {
+		PinkkerPrime *userdomain.PinkkerPrime `bson:"PinkkerPrime"`
+	}
+
+	usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	err := usersCollection.FindOne(ctx, primitive.M{"_id": creatorID}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	if user.PinkkerPrime == nil || user.PinkkerPrime.SubscriptionEnd.Before(time.Now()) {
+		return nil, fiber.NewError(fiber.StatusForbidden, "The user does not have an active PinkkerPrime subscription")
+	}
+
 	community := &communitiesdomain.Community{
 		CommunityName: communityName,
 		Description:   description,
@@ -45,7 +61,7 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communit
 
 	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 
-	_, err := collection.InsertOne(ctx, community)
+	_, err = collection.InsertOne(ctx, community)
 	if err != nil {
 		return nil, err
 	}
