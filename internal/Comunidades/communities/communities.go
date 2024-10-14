@@ -56,7 +56,7 @@ type CommunityDetails struct {
 	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	CommunityName string             `json:"communityName" bson:"CommunityName"`
 	Description   string             `json:"description" bson:"Description"`
-	Creator       CreatorInfo        `json:"creator" bson:"CreatorID"`
+	CreatorID     CreatorInfo        `json:"creator" bson:"CreatorID"`
 	IsPrivate     bool               `json:"isPrivate" bson:"IsPrivate"`
 	MembersCount  int                `json:"membersCount" bson:"membersCount"`
 	CreatedAt     time.Time          `json:"createdAt" bson:"CreatedAt"`
