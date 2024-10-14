@@ -515,7 +515,7 @@ func (repo *CommunitiesRepository) FindCommunityByName(ctx context.Context, comm
 			{Key: "IsPrivate", Value: 1},
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
-			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$members"}}}, // Contar miembros
+			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
 				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
 				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
@@ -563,7 +563,7 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 			{Key: "IsPrivate", Value: 1},
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
-			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$members"}}}, // Contar miembros
+			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}}, // Contar miembros
 			{Key: "creator", Value: bson.D{
 				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
 				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
@@ -613,7 +613,7 @@ func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
 			{Key: "Categories", Value: 1},
-			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$members"}}}, // Contar miembros
+			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
 				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
 				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
