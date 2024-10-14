@@ -61,6 +61,7 @@ type CommunityDetails struct {
 	MembersCount  int                `json:"membersCount" bson:"membersCount"`
 	CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
 	UpdatedAt     time.Time          `json:"updatedAt" bson:"updatedAt"`
+	categories    []string           `json:"categories" bson:"categories"`
 }
 
 type CreatorInfo struct {

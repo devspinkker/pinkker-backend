@@ -447,23 +447,22 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 
 	return topCommunities, nil
 }
-
 func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID primitive.ObjectID) (*communitiesdomain.CommunityDetails, error) {
 	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 
 	pipeline := bson.A{
-		bson.D{{Key: "$match", Value: bson.M{"_id": communityID}}},
+		bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: communityID}}}},
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "creatorID"}, // Usar creatorID para el lookup
+			{Key: "localField", Value: "creatorID"},
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "creatorDetails"},
 		}}},
-		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$creatorDetails"}, {Key: "preserveNullAndEmptyArrays", Value: true}}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
 			{Key: "communityName", Value: 1},
 			{Key: "description", Value: 1},
+			{Key: "categories", Value: 1},
 			{Key: "isPrivate", Value: 1},
 			{Key: "createdAt", Value: 1},
 			{Key: "updatedAt", Value: 1},
@@ -477,6 +476,7 @@ func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID
 				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 0}}}},
 			}},
 		}}},
+		bson.D{{Key: "$limit", Value: 1}},
 	}
 
 	cursor, err := collection.Aggregate(ctx, pipeline)
@@ -485,15 +485,17 @@ func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID
 	}
 	defer cursor.Close(ctx)
 
-	var communityDetails communitiesdomain.CommunityDetails
 	if cursor.Next(ctx) {
-		if err := cursor.Decode(&communityDetails); err != nil {
+		var community communitiesdomain.CommunityDetails
+		if err := cursor.Decode(&community); err != nil {
 			return nil, err
 		}
+		return &community, nil
 	}
 
-	return &communityDetails, nil
+	return nil, mongo.ErrNoDocuments
 }
+
 func (r *CommunitiesRepository) GetTOTPSecret(ctx context.Context, userID primitive.ObjectID) (string, error) {
 	usersCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	var result struct {

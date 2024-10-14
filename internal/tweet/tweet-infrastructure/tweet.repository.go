@@ -1906,12 +1906,10 @@ func (t *TweetRepository) GetTrendsByPrefix(prefix string, limit int) ([]tweetdo
 	return trends, nil
 }
 func (t *TweetRepository) IsUserMemberOfCommunity(communityID, userID primitive.ObjectID) (bool, error) {
-	db := t.mongoClient.Database("PINKKER-BACKEND")
-	collCommunities := db.Collection("communities")
-
+	collCommunities := t.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 	filter := bson.D{
 		{Key: "_id", Value: communityID},
-		{Key: "Members", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}},
+		{Key: "members", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}},
 	}
 
 	// Realiza la búsqueda en la base de datos
