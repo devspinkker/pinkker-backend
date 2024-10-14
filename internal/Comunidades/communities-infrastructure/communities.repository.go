@@ -521,10 +521,10 @@ func (repo *CommunitiesRepository) FindCommunityByName(ctx context.Context, comm
 				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
 				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
 				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
-				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 0}}}},
-				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 0}}}},
 			}},
 		}}},
+		bson.D{{Key: "$sort", Value: bson.M{"membersCount": -1}}},
+
 		bson.D{{Key: "$limit", Value: 5}},
 	}
 
@@ -551,7 +551,7 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 
 	pipeline := bson.A{
 		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"}, // Asegúrate de que coincide exactamente con el nombre de la colección de usuarios
+			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "CreatorID"},
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "creatorDetails"},
@@ -563,14 +563,13 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 			{Key: "IsPrivate", Value: 1},
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
-			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}}, // Contar miembros
+			{Key: "Categories", Value: 1},
+			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
-				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}}, // Usar índice 0 en lugar de 1
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
 				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
 				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
 				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
-				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 0}}}},
-				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 0}}}},
 			}},
 		}}},
 		bson.D{{Key: "$sort", Value: bson.M{"membersCount": -1}}},
@@ -594,6 +593,7 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 
 	return topCommunities, nil
 }
+
 func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID primitive.ObjectID) (*communitiesdomain.CommunityDetails, error) {
 	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 
@@ -619,10 +619,9 @@ func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID
 				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
 				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
 				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
-				{Key: "fullName", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.FullName", 0}}}},
-				{Key: "email", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Email", 0}}}},
 			}},
 		}}},
+		bson.D{{Key: "$sort", Value: bson.M{"membersCount": -1}}},
 		bson.D{{Key: "$limit", Value: 1}},
 	}
 
