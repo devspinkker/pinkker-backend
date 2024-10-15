@@ -29,7 +29,7 @@ func CommunitiesRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mo
 
 	App.Post("/communities/DeleteCommunity", middleware.UseExtractor(), middleware.TOTPAuthMiddleware(Repository), Handler.DeleteCommunity)
 	App.Get("/communities/FindCommunityByName", Handler.FindCommunityByName)
-	App.Get("/communities/GetCommunity", middleware.UseExtractor(), Handler.GetCommunity)
+	App.Get("/communities/GetCommunity", Handler.GetCommunity)
 	App.Get("/communities/GetCommunityWithUserMembership", middleware.UseExtractor(), Handler.GetCommunityWithUserMembership)
 	App.Get("/communities/GetTop10CommunitiesByMembers", middleware.UseExtractor(), Handler.GetTop10CommunitiesByMembers)
 

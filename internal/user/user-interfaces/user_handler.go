@@ -465,7 +465,6 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 
 	IsUserBlocked, err := h.userService.IsUserBlocked(DataForLogin.NameUser)
 	if err != nil {
-
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"message": "login failed",
 		})
@@ -476,7 +475,13 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 			"message": "Too many failed login attempts. Please try again late",
 		})
 	}
+	fmt.Println("AAA")
 	if err := helpers.DecodePassword(user.PasswordHash, DataForLogin.Password); err != nil {
+		fmt.Println("BBB")
+		fmt.Println(err)
+		fmt.Println(user.PasswordHash)
+		fmt.Println(DataForLogin.Password)
+
 		h.userService.HandleLoginFailure(DataForLogin.NameUser)
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"message": "login failed",

@@ -53,16 +53,17 @@ type PostGetCommunityReq struct {
 }
 
 type CommunityDetails struct {
-	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CommunityName string             `json:"communityName" bson:"CommunityName"`
-	Description   string             `json:"description" bson:"Description"`
-	Creator       CreatorInfo        `json:"creator" bson:"creator"`
-	IsPrivate     bool               `json:"isPrivate" bson:"IsPrivate"`
-	MembersCount  int                `json:"membersCount" bson:"membersCount"`
-	CreatedAt     time.Time          `json:"createdAt" bson:"CreatedAt"`
-	UpdatedAt     time.Time          `json:"updatedAt" bson:"UpdatedAt"`
-	Categories    []string           `json:"categories" bson:"Categories"`
-	IsUserMember  bool               `json:"isUserMember" bson:"isUserMember"`
+	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	CommunityName   string             `json:"communityName" bson:"CommunityName"`
+	Description     string             `json:"description" bson:"Description"`
+	Creator         CreatorInfo        `json:"creator" bson:"creator"`
+	IsPrivate       bool               `json:"isPrivate" bson:"IsPrivate"`
+	MembersCount    int                `json:"membersCount" bson:"membersCount"`
+	CreatedAt       time.Time          `json:"createdAt" bson:"CreatedAt"`
+	UpdatedAt       time.Time          `json:"updatedAt" bson:"UpdatedAt"`
+	Categories      []string           `json:"categories" bson:"Categories"`
+	IsUserMember    bool               `json:"isUserMember" bson:"isUserMember"`
+	IsUserModerator bool               `json:"isUserModerator" bson:"isUserModerator"`
 }
 
 type CreatorInfo struct {

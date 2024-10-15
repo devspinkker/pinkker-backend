@@ -675,6 +675,9 @@ func (repo *CommunitiesRepository) GetCommunityWithUserMembership(ctx context.Co
 			{Key: "isUserMember", Value: bson.D{
 				{Key: "$in", Value: bson.A{userID, "$Members"}},
 			}},
+			{Key: "isUserModerator", Value: bson.D{
+				{Key: "$in", Value: bson.A{userID, "$Mods"}},
+			}},
 		}}},
 
 		// Sort by the number of members

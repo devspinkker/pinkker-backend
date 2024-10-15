@@ -43,9 +43,7 @@ func (ts *TweetService) SaveTweet(status string, idCommunity primitive.ObjectID,
 	Hashtags := extractHashtags(status)
 	modelNewTweet.Hashtags = Hashtags
 	modelNewTweet.Views = 0
-
 	modelNewTweet.CommunityID = idCommunity
-
 	idTweet, err := ts.TweetRepository.TweetSave(modelNewTweet)
 	if err != nil {
 		return idTweet, err
