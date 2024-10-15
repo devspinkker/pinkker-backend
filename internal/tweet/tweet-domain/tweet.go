@@ -144,7 +144,7 @@ type GetPostcommunitiesRandom struct {
 	CommentsCount    int                `json:"CommentsCount" bson:"CommentsCount"`
 	IsPrivate        bool               `json:"isPrivate" bson:"IsPrivate"`
 	CommunityID      primitive.ObjectID `json:"communityId" bson:"communityID"`
-	CommunityName    string             `json:"communityName" bson:"communityName"`
+	CommunityName    string             `json:"CommunityName" bson:"CommunityName"`
 }
 
 type TweetCommentsGetReq struct {

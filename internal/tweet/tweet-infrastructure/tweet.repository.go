@@ -309,20 +309,17 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 	return tweetsWithUserInfo, nil
 }
 
-func (t *TweetRepository) GetRandomPostcommunities(idT primitive.ObjectID, excludeIDs []primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) GetRandomPostcommunities(idT primitive.ObjectID, excludeIDs []primitive.ObjectID, limit int) ([]tweetdomain.GetPostcommunitiesRandom, error) {
 
 	ctx := context.Background()
 	db := t.mongoClient.Database("PINKKER-BACKEND")
 	collTweets := db.Collection("Post")
 
 	last24Hours := time.Now().Add(-24 * time.Hour)
-	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludeIDs}}}}
 
-	// Pipeline para obtener tweets con información del usuario y la comunidad
 	pipeline := bson.A{
-		// Coincide con tweets públicos o sin comunidad privada y que no están en excludeIDs
 		bson.D{{Key: "$match", Value: bson.D{
-			{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludeFilter}}},
+			{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludeIDs}}},
 			{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
 			{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
 			{Key: "$or", Value: bson.A{
@@ -405,9 +402,9 @@ func (t *TweetRepository) GetRandomPostcommunities(idT primitive.ObjectID, exclu
 	}
 	defer cursor.Close(ctx)
 
-	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
+	var tweetsWithUserInfo []tweetdomain.GetPostcommunitiesRandom
 	for cursor.Next(ctx) {
-		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
+		var tweetWithUserInfo tweetdomain.GetPostcommunitiesRandom
 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
 			return nil, err
 		}
