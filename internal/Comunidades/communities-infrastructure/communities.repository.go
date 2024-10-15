@@ -741,6 +741,9 @@ func (r *CommunitiesRepository) GetSubscriptionByUserIDs(sourceUserID, community
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener el creador de la comunidad: %v", err)
 	}
+	if community.CreatorID == sourceUserID {
+		return nil, nil
+	}
 	if !community.IsPrivate {
 		return nil, nil
 	}
