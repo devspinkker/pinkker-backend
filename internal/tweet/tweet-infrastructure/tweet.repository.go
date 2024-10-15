@@ -1870,6 +1870,7 @@ func (t *TweetRepository) RePost(rePost *tweetdomain.RePost) error {
 		bson.D{{Key: "$pull", Value: bson.D{{Key: "RePosts", Value: rePost.UserID}}}},
 	)
 	return errPull
+
 }
 func (t *TweetRepository) CitaPost(rePost *tweetdomain.CitaPost) error {
 	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
