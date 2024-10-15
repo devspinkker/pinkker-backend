@@ -14,7 +14,7 @@ type Community struct {
 	CreatorID     primitive.ObjectID   `json:"creatorID" bson:"CreatorID"`
 	Members       []primitive.ObjectID `json:"members" bson:"Members"`
 	Mods          []primitive.ObjectID `json:"mods" bson:"Mods"`
-	BannedUsers   []primitive.ObjectID `json:"bannedUsers" bson:"BannedUsers"` // Usuarios expulsados
+	BannedUsers   []primitive.ObjectID `json:"bannedUsers" bson:"BannedUsers"`
 	Rules         string               `json:"rules" bson:"Rules"`
 	IsPrivate     bool                 `json:"isPrivate" bson:"IsPrivate"`
 	Categories    []string             `json:"categories" bson:"Categories"`

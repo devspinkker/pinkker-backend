@@ -27,6 +27,7 @@ type Post struct {
 	Hashtags    []string             `json:"hashtags" bson:"Hashtags"`
 	Views       int                  `json:"Views" bson:"Views"`
 	CommunityID primitive.ObjectID   `json:"communityID" bson:"communityID,omitempty"`
+	IsPrivate   bool                 `json:"isPrivate" bson:"IsPrivate"`
 }
 type PostComment struct {
 	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
@@ -41,6 +42,7 @@ type PostComment struct {
 	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
 	Hashtags     []string             `json:"hashtags" bson:"Hashtags"`
 	Views        int                  `json:"Views" bson:"Views"`
+	IsPrivate    bool                 `json:"isPrivate" bson:"IsPrivate"`
 }
 type RePost struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`

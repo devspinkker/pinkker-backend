@@ -94,9 +94,11 @@ func (t *TweetRepository) getRandomTweets(ctx context.Context, idT primitive.Obj
 	pipelineRandom := bson.A{
 
 		bson.D{{Key: "$match", Value: bson.D{
-			{Key: "$or", Value: bson.A{
-				bson.D{{Key: "communityID", Value: primitive.NilObjectID}},
-				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: false}}}},
+			{Key: "communityID", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{"$communityID", primitive.NilObjectID}},
+			}},
+			{Key: "IsPrivate", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{"$IsPrivate", false}},
 			}},
 			{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}}},
 		}},
@@ -202,16 +204,19 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 	followingIDs := userResult.FollowingIDs
 
 	tweetPipeline := bson.A{
+		bson.D{{Key: "$match", Value: excludeFilter}},
+
 		bson.D{{Key: "$match", Value: bson.D{
 
-			{Key: "$or", Value: bson.A{
-				bson.D{{Key: "communityID", Value: primitive.NilObjectID}},
-				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: false}}}},
+			{Key: "communityID", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{"$communityID", primitive.NilObjectID}},
+			}},
+			{Key: "IsPrivate", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{"$IsPrivate", false}},
 			}},
 			{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
 			{Key: "TimeStamp", Value: bson.M{"$gte": last24Hours}},
 		}}},
-		bson.D{{Key: "$match", Value: excludeFilter}},
 		bson.D{{Key: "$addFields", Value: bson.D{
 			{Key: "isFollowingUser", Value: bson.D{
 				{Key: "$in", Value: bson.A{"$UserID", bson.D{
@@ -1115,9 +1120,12 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{
 			{Key: "UserID", Value: id},
-			{Key: "$or", Value: bson.A{
-				bson.D{{Key: "communityID", Value: primitive.NilObjectID}},
-				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: false}}}},
+
+			{Key: "communityID", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{"$communityID", primitive.NilObjectID}},
+			}},
+			{Key: "IsPrivate", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{"$IsPrivate", false}},
 			}},
 		}}},
 		{{Key: "$lookup", Value: bson.D{
@@ -1270,9 +1278,11 @@ func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, li
 			{Key: "Type", Value: bson.M{"$in": []string{"Post", "CitaPost"}}},
 			{Key: "PostImage", Value: bson.D{{Key: "$ne", Value: ""}}},
 
-			{Key: "$or", Value: bson.A{
-				bson.D{{Key: "communityID", Value: primitive.NilObjectID}},
-				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: false}}}},
+			{Key: "communityID", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{"$communityID", primitive.NilObjectID}},
+			}},
+			{Key: "IsPrivate", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{"$IsPrivate", false}},
 			}},
 		}}},
 		// Realizar lookup para obtener datos de usuario
@@ -1424,9 +1434,11 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{
 			{Key: "UserID", Value: id},
-			{Key: "$or", Value: bson.A{
-				bson.D{{Key: "communityID", Value: primitive.NilObjectID}},
-				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: false}}}},
+			{Key: "communityID", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{"$communityID", primitive.NilObjectID}},
+			}},
+			{Key: "IsPrivate", Value: bson.D{
+				{Key: "$ifNull", Value: bson.A{"$IsPrivate", false}},
 			}},
 		}}},
 		{{Key: "$lookup", Value: bson.D{
@@ -1581,9 +1593,11 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 	matchStage := bson.D{{Key: "$match", Value: bson.D{
 		{Key: "UserID", Value: bson.D{{Key: "$in", Value: userIDs}}},
 		{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
-		{Key: "$or", Value: bson.A{
-			bson.D{{Key: "communityID", Value: primitive.NilObjectID}},
-			bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: false}}}},
+		{Key: "communityID", Value: bson.D{
+			{Key: "$ifNull", Value: bson.A{"$communityID", primitive.NilObjectID}},
+		}},
+		{Key: "IsPrivate", Value: bson.D{
+			{Key: "$ifNull", Value: bson.A{"$IsPrivate", false}},
 		}},
 	}}}
 
@@ -1789,9 +1803,39 @@ func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int) 
 
 	return comments, nil
 }
+func (t *TweetRepository) isOriginalPostPrivate(originalPostID primitive.ObjectID) (bool, error) {
+	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+
+	originalPost := GoMongoDBColl.FindOne(context.Background(), bson.D{{Key: "_id", Value: originalPostID}})
+
+	if err := originalPost.Err(); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, errors.New("el post original no existe")
+		}
+		return false, err
+	}
+
+	var postData struct {
+		IsPrivate bool `bson:"IsPrivate"`
+	}
+
+	if err := originalPost.Decode(&postData); err != nil {
+		return false, err
+	}
+
+	return postData.IsPrivate, nil
+}
 
 func (t *TweetRepository) RePost(rePost *tweetdomain.RePost) error {
 	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	isPrivate, err := t.isOriginalPostPrivate(rePost.OriginalPost)
+	if err != nil {
+		return err
+	}
+
+	if isPrivate {
+		return errors.New("no se puede repostear un post privado")
+	}
 
 	filterRePost := bson.D{{Key: "UserID", Value: rePost.UserID}, {Key: "OriginalPost", Value: rePost.OriginalPost}}
 	existingRePost := GoMongoDBColl.FindOne(context.Background(), filterRePost)
@@ -1829,8 +1873,15 @@ func (t *TweetRepository) RePost(rePost *tweetdomain.RePost) error {
 }
 func (t *TweetRepository) CitaPost(rePost *tweetdomain.CitaPost) error {
 	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	isPrivate, err := t.isOriginalPostPrivate(rePost.OriginalPost)
+	if err != nil {
+		return err
+	}
 
-	_, err := GoMongoDBColl.InsertOne(context.Background(), rePost)
+	if isPrivate {
+		return errors.New("no se puede repostear un post privado")
+	}
+	_, err = GoMongoDBColl.InsertOne(context.Background(), rePost)
 	return err
 }
 
@@ -1936,7 +1987,7 @@ func (t *TweetRepository) GetTrendsByPrefix(prefix string, limit int) ([]tweetdo
 
 	return trends, nil
 }
-func (t *TweetRepository) IsUserMemberOfCommunity(communityID, userID primitive.ObjectID) (bool, error) {
+func (t *TweetRepository) IsUserMemberOfCommunity(communityID, userID primitive.ObjectID) (bool, bool, error) {
 	collCommunities := t.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 	filter := bson.D{
 		{Key: "_id", Value: communityID},
@@ -1945,16 +1996,17 @@ func (t *TweetRepository) IsUserMemberOfCommunity(communityID, userID primitive.
 
 	// Realiza la búsqueda en la base de datos
 	var community struct {
-		ID primitive.ObjectID `bson:"_id"`
+		ID        primitive.ObjectID `bson:"_id"`
+		IsPrivate bool               `bson:"IsPrivate"`
 	}
 
 	err := collCommunities.FindOne(context.Background(), filter).Decode(&community)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return false, nil
+			return false, false, nil
 		}
-		return false, err
+		return false, false, err
 	}
 
-	return true, nil
+	return true, community.IsPrivate, nil
 }

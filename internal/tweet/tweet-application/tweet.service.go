@@ -23,14 +23,14 @@ func (ts *TweetService) GetAdsMuroAndPost() (tweetdomain.PostAds, error) {
 	Tweet, errGetFollowedUsers := ts.TweetRepository.GetAdsMuroAndPost()
 	return Tweet, errGetFollowedUsers
 }
-func (ts *TweetService) IsUserMemberOfCommunity(communityID primitive.ObjectID, userID primitive.ObjectID) (bool, error) {
+func (ts *TweetService) IsUserMemberOfCommunity(communityID primitive.ObjectID, userID primitive.ObjectID) (bool, bool, error) {
 
 	return ts.TweetRepository.IsUserMemberOfCommunity(communityID, userID)
 
 }
 
 // save
-func (ts *TweetService) SaveTweet(status string, idCommunity primitive.ObjectID, img string, user primitive.ObjectID) (primitive.ObjectID, error) {
+func (ts *TweetService) SaveTweet(status string, idCommunity primitive.ObjectID, img string, user primitive.ObjectID, IsPrivate bool) (primitive.ObjectID, error) {
 	var modelNewTweet tweetdomain.Post
 	modelNewTweet.Status = status
 	modelNewTweet.PostImage = img
@@ -44,6 +44,7 @@ func (ts *TweetService) SaveTweet(status string, idCommunity primitive.ObjectID,
 	modelNewTweet.Hashtags = Hashtags
 	modelNewTweet.Views = 0
 	modelNewTweet.CommunityID = idCommunity
+	modelNewTweet.IsPrivate = IsPrivate
 	idTweet, err := ts.TweetRepository.TweetSave(modelNewTweet)
 	if err != nil {
 		return idTweet, err
@@ -66,7 +67,7 @@ func extractHashtags(status string) []string {
 	}
 	return hashtags
 }
-func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID, img string, user primitive.ObjectID) (primitive.ObjectID, error) {
+func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID, img string, user primitive.ObjectID, IsPrivate bool) (primitive.ObjectID, error) {
 	var modelNewTweet tweetdomain.PostComment
 	modelNewTweet.Status = status
 	modelNewTweet.PostImage = img
@@ -78,6 +79,7 @@ func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID,
 	modelNewTweet.TimeStamp = time.Now()
 	modelNewTweet.RePosts = []primitive.ObjectID{}
 	modelNewTweet.Type = "PostComment"
+	modelNewTweet.IsPrivate = IsPrivate
 
 	insertedID, err := ts.TweetRepository.SaveComment(&modelNewTweet)
 	return insertedID, err

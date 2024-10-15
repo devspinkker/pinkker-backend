@@ -47,22 +47,23 @@ func (th *TweetHandler) CreatePost(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
-
+	var IsPrivate bool = false
 	if newTweet.CommunityID != primitive.NilObjectID {
-		member, _ := th.TweetServise.IsUserMemberOfCommunity(newTweet.CommunityID, idValueObj)
+		member, Private, _ := th.TweetServise.IsUserMemberOfCommunity(newTweet.CommunityID, idValueObj)
 
 		if !member {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": "no member",
 			})
 		}
+		IsPrivate = Private
 	}
 	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
 
 	for {
 		select {
 		case PostImage := <-PostImageChanel:
-			idTweet, err := th.TweetServise.SaveTweet(newTweet.Status, newTweet.CommunityID, PostImage, idValueObj)
+			idTweet, err := th.TweetServise.SaveTweet(newTweet.Status, newTweet.CommunityID, PostImage, idValueObj, IsPrivate)
 			if err != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"message": err.Error(),
@@ -419,22 +420,23 @@ func (th *TweetHandler) CommentPost(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
-
+	var IsPrivate bool = false
 	if TweetComment.CommunityID != primitive.NilObjectID {
-		member, _ := th.TweetServise.IsUserMemberOfCommunity(TweetComment.CommunityID, idValueObj)
+		member, private, _ := th.TweetServise.IsUserMemberOfCommunity(TweetComment.CommunityID, idValueObj)
 
 		if !member {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": "no member",
 			})
 		}
+		IsPrivate = private
 	}
 	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
 
 	for {
 		select {
 		case PostImage := <-PostImageChanel:
-			insertedID, err := th.TweetServise.SaveComment(TweetComment.Status, TweetComment.OriginalPost, PostImage, idValueObj)
+			insertedID, err := th.TweetServise.SaveComment(TweetComment.Status, TweetComment.OriginalPost, PostImage, idValueObj, IsPrivate)
 			if err != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"message": err.Error(),

@@ -429,14 +429,13 @@ func (repo *CommunitiesRepository) FindCommunityByName(ctx context.Context, comm
 	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 
 	pipeline := bson.A{
-		bson.D{{Key: "$match", Value: bson.M{"communityName": bson.M{"$regex": communityName, "$options": "i"}}}}, // Búsqueda insensible a mayúsculas
+		bson.D{{Key: "$match", Value: bson.M{"CommunityName": bson.M{"$regex": communityName, "$options": "i"}}}}, // Búsqueda insensible a mayúsculas
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "CreatorID"},
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "creatorDetails"},
 		}}},
-		bson.D{{Key: "$unwind", Value: bson.D{{Key: "path", Value: "$creatorDetails"}, {Key: "preserveNullAndEmptyArrays", Value: true}}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
 			{Key: "CommunityName", Value: 1},
@@ -444,6 +443,7 @@ func (repo *CommunitiesRepository) FindCommunityByName(ctx context.Context, comm
 			{Key: "IsPrivate", Value: 1},
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
+			{Key: "Categories", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
 				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
@@ -453,8 +453,7 @@ func (repo *CommunitiesRepository) FindCommunityByName(ctx context.Context, comm
 			}},
 		}}},
 		bson.D{{Key: "$sort", Value: bson.M{"membersCount": -1}}},
-
-		bson.D{{Key: "$limit", Value: 5}},
+		bson.D{{Key: "$limit", Value: 10}},
 	}
 
 	cursor, err := collection.Aggregate(ctx, pipeline)
@@ -656,7 +655,6 @@ func (r *CommunitiesRepository) GetTOTPSecret(ctx context.Context, userID primit
 func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, communityID primitive.ObjectID, ExcludeFilterlID []primitive.ObjectID, idT primitive.ObjectID, limit int) ([]communitiesdomain.PostGetCommunityReq, error) {
 	db := repo.mongoClient.Database("PINKKER-BACKEND")
 	collPosts := db.Collection("Post")
-
 	_, err := repo.GetSubscriptionByUserIDs(idT, communityID)
 	if err != nil {
 		return nil, err
@@ -731,12 +729,17 @@ func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, commun
 }
 func (r *CommunitiesRepository) GetSubscriptionByUserIDs(sourceUserID, communityID primitive.ObjectID) (*subscriptiondomain.Subscription, error) {
 	communitiesCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+	fmt.Println("pasa")
 
 	var community struct {
 		CreatorID primitive.ObjectID `bson:"CreatorID"`
 		IsPrivate bool               `bson:"IsPrivate"`
 	}
+
 	err := communitiesCollection.FindOne(context.Background(), bson.M{"_id": communityID}).Decode(&community)
+	fmt.Println(community)
+	fmt.Println(communityID)
+	fmt.Println(sourceUserID)
 
 	if err != nil {
 		return nil, fmt.Errorf("error al obtener el creador de la comunidad: %v", err)
@@ -754,19 +757,17 @@ func (r *CommunitiesRepository) GetSubscriptionByUserIDs(sourceUserID, community
 		"sourceUserID":      sourceUserID,
 		"destinationUserID": community.CreatorID,
 	}
-
 	var subscription subscriptiondomain.Subscription
 	err = subscriptionsCollection.FindOne(context.Background(), filter).Decode(&subscription)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, fmt.Errorf("no se encontró ninguna suscripción entre el usuario y el creador")
 		}
-		return nil, fmt.Errorf("error al buscar la suscripción: %v", err)
+		return nil, fmt.Errorf("error al buscar la suscripción")
 	}
 
 	if subscription.SubscriptionEnd.Before(time.Now()) {
 		return nil, fmt.Errorf("la suscripción ha expirado")
 	}
-
 	return &subscription, nil
 }
