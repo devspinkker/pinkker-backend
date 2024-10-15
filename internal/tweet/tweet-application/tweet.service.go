@@ -118,6 +118,12 @@ func (ts *TweetService) GetTweetsRecommended(idT primitive.ObjectID, excludeIDs 
 	Tweets, err := ts.TweetRepository.GetTweetsRecommended(idT, excludeIDs, limit)
 	return Tweets, err
 }
+func (ts *TweetService) GetRandomPostcommunities(idT primitive.ObjectID, excludeIDs []primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
+	limit := 15
+	Tweets, err := ts.TweetRepository.GetRandomPostcommunities(idT, excludeIDs, limit)
+	return Tweets, err
+}
+
 func (ts *TweetService) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, error) {
 
 	Tweets, errGetFollowedUsers := ts.TweetRepository.GetPost(page)

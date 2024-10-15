@@ -309,6 +309,114 @@ func (t *TweetRepository) getRelevantTweets(ctx context.Context, idT primitive.O
 	return tweetsWithUserInfo, nil
 }
 
+func (t *TweetRepository) GetRandomPostcommunities(idT primitive.ObjectID, excludeIDs []primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+
+	ctx := context.Background()
+	db := t.mongoClient.Database("PINKKER-BACKEND")
+	collTweets := db.Collection("Post")
+
+	last24Hours := time.Now().Add(-24 * time.Hour)
+	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludeIDs}}}}
+
+	// Pipeline para obtener tweets con información del usuario y la comunidad
+	pipeline := bson.A{
+		// Coincide con tweets públicos o sin comunidad privada y que no están en excludeIDs
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludeFilter}}},
+			{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
+			{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
+			{Key: "$or", Value: bson.A{
+				bson.D{{Key: "IsPrivate", Value: false}},
+				bson.D{{Key: "IsPrivate", Value: bson.D{{Key: "$exists", Value: false}}}},
+			}},
+			{Key: "$and", Value: bson.A{
+				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: true}}}},
+				bson.D{{Key: "communityID", Value: bson.D{{Key: "$ne", Value: primitive.NilObjectID}}}}}},
+		}}},
+
+		// Unimos la información de la comunidad
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "communities"},
+			{Key: "localField", Value: "communityID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "CommunityInfo"},
+		}}},
+
+		// Unimos la información del usuario
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+
+		// Descomponemos la información del usuario y de la comunidad
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$unwind", Value: "$CommunityInfo"}},
+
+		// Añadimos campos adicionales (likes, reposts, comentarios, etc.)
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "RePostsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$RePosts", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+		}}},
+
+		// Ordenamos por relevancia (basado en el conteo de likes y la antigüedad del tweet)
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "relevanceScore", Value: bson.D{{Key: "$add", Value: bson.A{
+				bson.D{{Key: "$multiply", Value: bson.A{"$likeCount", 5}}},
+				bson.D{{Key: "$subtract", Value: bson.A{1000, bson.D{{Key: "$divide", Value: bson.A{bson.D{{Key: "$subtract", Value: bson.A{time.Now(), "$TimeStamp"}}}, 3600000}}}}}}}}}}},
+		}},
+
+		// Ordenamos por relevancia
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "relevanceScore", Value: -1}}}},
+
+		// Limitamos los resultados
+		bson.D{{Key: "$limit", Value: limit}},
+
+		// Proyectamos los campos necesarios
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: 1},
+			{Key: "PostImage", Value: 1},
+			{Key: "Type", Value: 1},
+			{Key: "TimeStamp", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "OriginalPost", Value: 1},
+			{Key: "Views", Value: 1},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
+			{Key: "CommunityInfo.CommunityName", Value: 1},
+			{Key: "CommunityInfo._id", Value: 1},
+			{Key: "likeCount", Value: 1},
+			{Key: "RePostsCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
+		}}},
+	}
+
+	cursor, err := collTweets.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
+	for cursor.Next(ctx) {
+		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
+		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
+			return nil, err
+		}
+		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
+	}
+
+	return tweetsWithUserInfo, nil
+}
+
 func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetGetFollowReq) error {
 	var tweetIDs []primitive.ObjectID
 	for _, tweet := range tweets {

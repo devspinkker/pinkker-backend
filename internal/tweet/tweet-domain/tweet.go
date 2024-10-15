@@ -98,12 +98,11 @@ type OriginalPostReference struct {
 }
 
 type TweetGetFollowReq struct {
-	ID        primitive.ObjectID `json:"_id" bson:"_id"`
-	Status    string             `json:"Status" bson:"Status"`
-	PostImage string             `json:"PostImage" bson:"PostImage"`
-	TimeStamp time.Time          `json:"TimeStamp"  bson:"TimeStamp"`
-	UserID    primitive.ObjectID `json:"UserID" bson:"UserID"`
-	// Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
+	ID           primitive.ObjectID `json:"_id" bson:"_id"`
+	Status       string             `json:"Status" bson:"Status"`
+	PostImage    string             `json:"PostImage" bson:"PostImage"`
+	TimeStamp    time.Time          `json:"TimeStamp"  bson:"TimeStamp"`
+	UserID       primitive.ObjectID `json:"UserID" bson:"UserID"`
 	OriginalPost primitive.ObjectID `json:"OriginalPost"`
 	Type         string             `json:"Type" bson:"Type"`
 	Hashtags     []string           `json:"hashtags" bson:"Hashtags"`
@@ -119,7 +118,35 @@ type TweetGetFollowReq struct {
 	LikeCount        int                `json:"likeCount" bson:"likeCount"`
 	RePostsCount     int                `json:"RePostsCount" bson:"RePostsCount"`
 	CommentsCount    int                `json:"CommentsCount" bson:"CommentsCount"`
+	CommunityID      primitive.ObjectID `json:"communityID" bson:"communityID,omitempty"`
+	IsPrivate        bool               `json:"isPrivate" bson:"IsPrivate"`
 }
+type GetPostcommunitiesRandom struct {
+	ID           primitive.ObjectID `json:"_id" bson:"_id"`
+	Status       string             `json:"Status" bson:"Status"`
+	PostImage    string             `json:"PostImage" bson:"PostImage"`
+	TimeStamp    time.Time          `json:"TimeStamp"  bson:"TimeStamp"`
+	UserID       primitive.ObjectID `json:"UserID" bson:"UserID"`
+	OriginalPost primitive.ObjectID `json:"OriginalPost"`
+	Type         string             `json:"Type" bson:"Type"`
+	Hashtags     []string           `json:"hashtags" bson:"Hashtags"`
+	UserInfo     struct {
+		FullName string `json:"FullName"`
+		Avatar   string `json:"Avatar"`
+		NameUser string `json:"NameUser"`
+		Online   bool   `json:"Online"`
+	} `json:"UserInfo"`
+	OriginalPostData *TweetGetFollowReq `json:"OriginalPostData"`
+	Views            int                `json:"Views" bson:"Views"`
+	IsLikedByID      bool               `json:"isLikedByID" bson:"isLikedByID"`
+	LikeCount        int                `json:"likeCount" bson:"likeCount"`
+	RePostsCount     int                `json:"RePostsCount" bson:"RePostsCount"`
+	CommentsCount    int                `json:"CommentsCount" bson:"CommentsCount"`
+	IsPrivate        bool               `json:"isPrivate" bson:"IsPrivate"`
+	CommunityID      primitive.ObjectID `json:"communityId" bson:"communityID"`
+	CommunityName    string             `json:"communityName" bson:"communityName"`
+}
+
 type TweetCommentsGetReq struct {
 	ID           primitive.ObjectID   `json:"_id" bson:"_id"`
 	Status       string               `json:"Status" bson:"Status"`
