@@ -294,10 +294,11 @@ type GetUser struct {
 	// Likes                    []primitive.ObjectID              `json:"Likes" bson:"Likes"`
 	Wallet string `json:"Wallet" bson:"Wallet"`
 	// ClipsComment             []primitive.ObjectID              `json:"ClipsComment" bson:"ClipsComment"`
-	CategoryPreferences map[string]float64 `json:"categoryPreferences" bson:"categoryPreferences"`
-	Banned              bool               `json:"Banned" bson:"Banned"`
-	IsFollowedByUser    bool               `json:"isFollowedByUser" bson:"isFollowedByUser"`
-	PinkkerPrime        PinkkerPrime       `json:"PinkkerPrime" bson:"PinkkerPrime"`
+	CategoryPreferences map[string]float64   `json:"categoryPreferences" bson:"categoryPreferences"`
+	Banned              bool                 `json:"Banned" bson:"Banned"`
+	IsFollowedByUser    bool                 `json:"isFollowedByUser" bson:"isFollowedByUser"`
+	PinkkerPrime        PinkkerPrime         `json:"PinkkerPrime" bson:"PinkkerPrime"`
+	InCommunities       []primitive.ObjectID `json:"InCommunities" bson:"InCommunities"`
 }
 type UserInfoOAuth2 struct {
 	ID      string `json:"id"`

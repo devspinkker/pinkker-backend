@@ -2,8 +2,10 @@ package communitiestinfrastructure
 
 import (
 	communitiesdomain "PINKKER-BACKEND/internal/Comunidades/communities"
+	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -77,7 +79,6 @@ func (repo *CommunitiesRepository) AddModerator(ctx context.Context, communityID
 	}
 
 	err := collection.FindOne(ctx, primitive.M{"_id": communityID}, options.FindOne().SetProjection(primitive.M{
-		"creatorID": 1,
 		"CreatorID": 1,
 	})).Decode(&community)
 
@@ -112,7 +113,7 @@ func (repo *CommunitiesRepository) AddModerator(ctx context.Context, communityID
 		ctx,
 		primitive.M{"_id": communityID},
 		primitive.M{
-			"$addToSet": primitive.M{"Members": newModID}, // Añadir el nuevo moderador
+			"$addToSet": primitive.M{"Mods": newModID},
 		},
 	)
 	if err != nil {
@@ -343,78 +344,6 @@ func (repo *CommunitiesRepository) BanMember(ctx context.Context, communityID, u
 	return nil
 }
 
-func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, communityID primitive.ObjectID, ExcludeFilterlID []primitive.ObjectID, idT primitive.ObjectID, limit int) ([]communitiesdomain.PostGetCommunityReq, error) {
-	db := repo.mongoClient.Database("PINKKER-BACKEND")
-	collPosts := db.Collection("Post")
-
-	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: ExcludeFilterlID}}}}
-
-	includeFilter := bson.D{
-		{Key: "communityID", Value: communityID},
-		{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
-	}
-
-	matchFilter := bson.D{
-		{Key: "$and", Value: bson.A{
-			excludeFilter,
-			includeFilter,
-		}},
-	}
-
-	pipeline := bson.A{
-		bson.D{{Key: "$match", Value: matchFilter}},
-
-		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "UserID"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "UserInfo"},
-		}}},
-		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
-		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
-			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
-		}}},
-		bson.D{{Key: "$sort", Value: bson.D{
-			{Key: "TimeStamp", Value: -1}, // Ordenar por fecha de creación
-		}}},
-		bson.D{{Key: "$limit", Value: limit}},
-		bson.D{{Key: "$project", Value: bson.D{
-			{Key: "id", Value: "$_id"},
-			{Key: "Status", Value: 1},
-			{Key: "PostImage", Value: 1},
-			{Key: "Type", Value: 1},
-			{Key: "TimeStamp", Value: 1},
-			{Key: "UserID", Value: 1},
-			{Key: "Comments", Value: 1},
-			{Key: "UserInfo.FullName", Value: 1},
-			{Key: "UserInfo.Avatar", Value: 1},
-			{Key: "UserInfo.NameUser", Value: 1},
-			{Key: "UserInfo.Online", Value: 1},
-			{Key: "likeCount", Value: 1},
-			{Key: "CommentsCount", Value: 1},
-			{Key: "isLikedByID", Value: 1},
-		}}},
-	}
-
-	cursor, err := collPosts.Aggregate(ctx, pipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var postsWithUserInfo []communitiesdomain.PostGetCommunityReq
-	for cursor.Next(ctx) {
-		var postWithUserInfo communitiesdomain.PostGetCommunityReq
-		if err := cursor.Decode(&postWithUserInfo); err != nil {
-			return nil, err
-		}
-		postsWithUserInfo = append(postsWithUserInfo, postWithUserInfo)
-	}
-
-	return postsWithUserInfo, nil
-}
 func (repo *CommunitiesRepository) DeletePost(ctx context.Context, communityID, postID, userID primitive.ObjectID) error {
 	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 
@@ -722,4 +651,119 @@ func (r *CommunitiesRepository) GetTOTPSecret(ctx context.Context, userID primit
 
 	return result.TOTPSecret, nil
 
+}
+
+func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, communityID primitive.ObjectID, ExcludeFilterlID []primitive.ObjectID, idT primitive.ObjectID, limit int) ([]communitiesdomain.PostGetCommunityReq, error) {
+	db := repo.mongoClient.Database("PINKKER-BACKEND")
+	collPosts := db.Collection("Post")
+
+	_, err := repo.GetSubscriptionByUserIDs(idT, communityID)
+	if err != nil {
+		return nil, err
+	}
+	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: ExcludeFilterlID}}}}
+
+	includeFilter := bson.D{
+		{Key: "communityID", Value: communityID},
+		{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
+	}
+
+	matchFilter := bson.D{
+		{Key: "$and", Value: bson.A{
+			excludeFilter,
+			includeFilter,
+		}},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: matchFilter}},
+
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "TimeStamp", Value: -1}, // Ordenar por fecha de creación
+		}}},
+		bson.D{{Key: "$limit", Value: limit}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: 1},
+			{Key: "PostImage", Value: 1},
+			{Key: "Type", Value: 1},
+			{Key: "TimeStamp", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
+			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
+		}}},
+	}
+
+	cursor, err := collPosts.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var postsWithUserInfo []communitiesdomain.PostGetCommunityReq
+	for cursor.Next(ctx) {
+		var postWithUserInfo communitiesdomain.PostGetCommunityReq
+		if err := cursor.Decode(&postWithUserInfo); err != nil {
+			return nil, err
+		}
+		postsWithUserInfo = append(postsWithUserInfo, postWithUserInfo)
+	}
+
+	return postsWithUserInfo, nil
+}
+func (r *CommunitiesRepository) GetSubscriptionByUserIDs(sourceUserID, communityID primitive.ObjectID) (*subscriptiondomain.Subscription, error) {
+	communitiesCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+
+	var community struct {
+		CreatorID primitive.ObjectID `bson:"CreatorID"`
+		IsPrivate bool               `bson:"IsPrivate"`
+	}
+	err := communitiesCollection.FindOne(context.Background(), bson.M{"_id": communityID}).Decode(&community)
+
+	if err != nil {
+		return nil, fmt.Errorf("error al obtener el creador de la comunidad: %v", err)
+	}
+	if !community.IsPrivate {
+		return nil, nil
+	}
+	subscriptionsCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscriptions")
+
+	// Crear el filtro para buscar la suscripción
+	filter := bson.M{
+		"sourceUserID":      sourceUserID,
+		"destinationUserID": community.CreatorID,
+	}
+
+	var subscription subscriptiondomain.Subscription
+	err = subscriptionsCollection.FindOne(context.Background(), filter).Decode(&subscription)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, fmt.Errorf("no se encontró ninguna suscripción entre el usuario y el creador")
+		}
+		return nil, fmt.Errorf("error al buscar la suscripción: %v", err)
+	}
+
+	if subscription.SubscriptionEnd.Before(time.Now()) {
+		return nil, fmt.Errorf("la suscripción ha expirado")
+	}
+
+	return &subscription, nil
 }
