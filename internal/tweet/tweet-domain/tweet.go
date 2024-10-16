@@ -187,9 +187,9 @@ func (u *GetRecommended) GetRecommended() error {
 }
 
 type UserInfo struct {
-	FullName      string `json:"FullName"`
-	Avatar        string `json:"Avatar"`
-	NameUser      string `json:"NameUser"`
-	Online        bool   `json:"Online"`
-	InCommunities bool   `json:"InCommunities"`
+	FullName      string               `json:"FullName"`
+	Avatar        string               `json:"Avatar"`
+	NameUser      string               `json:"NameUser"`
+	Online        bool                 `json:"Online"`
+	InCommunities []primitive.ObjectID `json:"InCommunities"`
 }
