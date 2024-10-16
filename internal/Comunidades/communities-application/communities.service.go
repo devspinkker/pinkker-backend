@@ -25,6 +25,10 @@ func (s *CommunitiesService) CreateCommunity(ctx context.Context, name string, c
 
 // Agregar un miembro a la comunidad
 func (s *CommunitiesService) AddMember(ctx context.Context, communityID, userID primitive.ObjectID) error {
+	_, err := s.communitiesRepository.GetSubscriptionByUserIDs(userID, communityID)
+	if err != nil {
+		return err
+	}
 	return s.communitiesRepository.AddMember(ctx, communityID, userID)
 }
 func (s *CommunitiesService) RemoveMember(ctx context.Context, communityID, userID primitive.ObjectID) error {

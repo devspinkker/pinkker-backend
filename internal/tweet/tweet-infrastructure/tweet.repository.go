@@ -994,7 +994,13 @@ func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGet
 
 	// Ejecutamos el pipeline de agregación para obtener los datos
 	pipeline := []bson.D{
-		{{Key: "$match", Value: bson.D{{Key: "_id", Value: id}}}}, // Filtrar por el _id proporcionado
+		{{Key: "$match", Value: bson.D{
+			{Key: "_id", Value: id},
+			{Key: "$or", Value: bson.A{
+				bson.D{{Key: "IsPrivate", Value: false}},
+				bson.D{{Key: "IsPrivate", Value: bson.D{{Key: "$exists", Value: false}}}},
+			}},
+		}}},
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
@@ -1113,10 +1119,8 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 	if err != nil {
 		return tweetdomain.TweetGetFollowReq{}, err
 	}
-
-	// Ejecutamos el pipeline de agregación para obtener los datos
 	pipeline := []bson.D{
-		{{Key: "$match", Value: bson.D{{Key: "_id", Value: id}}}}, // Filtrar por el _id proporcionado
+		{{Key: "$match", Value: bson.D{{Key: "_id", Value: id}}}},
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
@@ -1129,6 +1133,25 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
 			{Key: "isLikedByUser", Value: bson.D{{Key: "$in", Value: bson.A{userID, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 			{Key: "RePostsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$RePosts", bson.A{}}}}}}},
+		}}},
+		// Añadimos un campo que verifica si el usuario es miembro de la comunidad
+		{{Key: "$addFields", Value: bson.D{
+			{Key: "isMemberOfCommunity", Value: bson.D{
+				{Key: "$in", Value: bson.A{"$CommunityID", "$UserInfo.InCommunities"}},
+			}},
+		}}},
+		{{Key: "$match", Value: bson.D{
+			{Key: "$expr", Value: bson.D{
+				{Key: "$or", Value: bson.A{
+					// Si es público o no tiene la propiedad IsPrivate
+					bson.D{{Key: "$eq", Value: bson.A{"$IsPrivate", false}}},
+					// Si es privado, verificar que sea miembro de la comunidad
+					bson.D{
+						{Key: "$eq", Value: bson.A{"$IsPrivate", true}},
+						{Key: "$eq", Value: bson.A{"$isMemberOfCommunity", true}},
+					},
+				}},
+			}},
 		}}},
 		{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},

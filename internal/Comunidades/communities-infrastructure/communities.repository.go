@@ -5,6 +5,7 @@ import (
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -522,53 +523,6 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 	return topCommunities, nil
 }
 
-func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID primitive.ObjectID) (*communitiesdomain.CommunityDetails, error) {
-	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
-
-	pipeline := bson.A{
-		bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: communityID}}}},
-		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "CreatorID"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "creatorDetails"},
-		}}},
-		bson.D{{Key: "$project", Value: bson.D{
-			{Key: "_id", Value: 1},
-			{Key: "CommunityName", Value: 1},
-			{Key: "Description", Value: 1},
-			{Key: "IsPrivate", Value: 1},
-			{Key: "CreatedAt", Value: 1},
-			{Key: "UpdatedAt", Value: 1},
-			{Key: "Categories", Value: 1},
-			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
-			{Key: "creator", Value: bson.D{
-				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
-				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
-				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
-				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
-			}},
-		}}},
-		bson.D{{Key: "$sort", Value: bson.M{"membersCount": -1}}},
-		bson.D{{Key: "$limit", Value: 1}},
-	}
-
-	cursor, err := collection.Aggregate(ctx, pipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	if cursor.Next(ctx) {
-		var community communitiesdomain.CommunityDetails
-		if err := cursor.Decode(&community); err != nil {
-			return nil, err
-		}
-		return &community, nil
-	}
-
-	return nil, mongo.ErrNoDocuments
-}
 func (repo *CommunitiesRepository) GetCommunityWithUserMembership(ctx context.Context, communityID, userID primitive.ObjectID) (*communitiesdomain.CommunityDetails, error) {
 	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 
@@ -727,47 +681,113 @@ func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, commun
 
 	return postsWithUserInfo, nil
 }
+
+// solo lo pase abajo
+func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID primitive.ObjectID) (*communitiesdomain.CommunityDetails, error) {
+	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: communityID}}}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "CreatorID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "creatorDetails"},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "CommunityName", Value: 1},
+			{Key: "Description", Value: 1},
+			{Key: "IsPrivate", Value: 1},
+			{Key: "CreatedAt", Value: 1},
+			{Key: "UpdatedAt", Value: 1},
+			{Key: "Categories", Value: 1},
+			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
+			{Key: "creator", Value: bson.D{
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+			}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.M{"membersCount": -1}}},
+		bson.D{{Key: "$limit", Value: 1}},
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	if cursor.Next(ctx) {
+		var community communitiesdomain.CommunityDetails
+		if err := cursor.Decode(&community); err != nil {
+			return nil, err
+		}
+		return &community, nil
+	}
+
+	return nil, mongo.ErrNoDocuments
+}
 func (r *CommunitiesRepository) GetSubscriptionByUserIDs(sourceUserID, communityID primitive.ObjectID) (*subscriptiondomain.Subscription, error) {
 	communitiesCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
-	fmt.Println("pasa")
+
+	redisKey := fmt.Sprintf("community:%s", communityID.Hex())
+	redisData, err := r.redisClient.Get(context.Background(), redisKey).Result()
 
 	var community struct {
 		CreatorID primitive.ObjectID `bson:"CreatorID"`
 		IsPrivate bool               `bson:"IsPrivate"`
 	}
 
-	err := communitiesCollection.FindOne(context.Background(), bson.M{"_id": communityID}).Decode(&community)
-	fmt.Println(community)
-	fmt.Println(communityID)
-	fmt.Println(sourceUserID)
+	if err == redis.Nil {
+		err := communitiesCollection.FindOne(context.Background(), bson.M{"_id": communityID}).Decode(&community)
+		if err != nil {
+			return nil, fmt.Errorf("error al obtener el creador de la comunidad: %v", err)
+		}
 
-	if err != nil {
-		return nil, fmt.Errorf("error al obtener el creador de la comunidad: %v", err)
+		communityJSON, err := json.Marshal(community)
+		if err == nil {
+			r.redisClient.Set(context.Background(), redisKey, communityJSON, time.Minute*2)
+		}
+	} else if err != nil {
+		return nil, fmt.Errorf("error al obtener datos de Redis: %v", err)
+	} else {
+		// fmt.Println("Encontrado en Redis")
+		err = json.Unmarshal([]byte(redisData), &community)
+		if err != nil {
+			return nil, fmt.Errorf("error al deserializar datos de Redis: %v", err)
+		}
 	}
+
 	if community.CreatorID == sourceUserID {
 		return nil, nil
 	}
+
 	if !community.IsPrivate {
 		return nil, nil
 	}
+
 	subscriptionsCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscriptions")
 
-	// Crear el filtro para buscar la suscripción
 	filter := bson.M{
 		"sourceUserID":      sourceUserID,
 		"destinationUserID": community.CreatorID,
 	}
+
 	var subscription subscriptiondomain.Subscription
 	err = subscriptionsCollection.FindOne(context.Background(), filter).Decode(&subscription)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, fmt.Errorf("no se encontró ninguna suscripción entre el usuario y el creador")
 		}
-		return nil, fmt.Errorf("error al buscar la suscripción")
+		return nil, fmt.Errorf("error al buscar la suscripción: %v", err)
 	}
 
 	if subscription.SubscriptionEnd.Before(time.Now()) {
 		return nil, fmt.Errorf("la suscripción ha expirado")
 	}
+
 	return &subscription, nil
 }
