@@ -32,7 +32,6 @@ func NewcommunitiesRepository(redisClient *redis.Client, mongoClient *mongo.Clie
 
 // CreateCommunity crea una nueva comunidad y la guarda en MongoDB
 func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communityName string, creatorID primitive.ObjectID, description string, isPrivate bool, categories []string) (*communitiesdomain.Community, error) {
-	// Crear una nueva comunidad
 	var user struct {
 		PinkkerPrime *userdomain.PinkkerPrime `bson:"PinkkerPrime"`
 	}
@@ -62,15 +61,27 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communit
 		UpdatedAt:     time.Now(),
 	}
 
-	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+	communitiesCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 
-	_, err = collection.InsertOne(ctx, community)
+	result, err := communitiesCollection.InsertOne(ctx, community)
+	if err != nil {
+		return nil, err
+	}
+
+	communityID := result.InsertedID.(primitive.ObjectID)
+
+	_, err = usersCollection.UpdateOne(
+		ctx,
+		primitive.M{"_id": creatorID},
+		primitive.M{"$addToSet": primitive.M{"InCommunities": communityID}},
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	return community, nil
 }
+
 func (repo *CommunitiesRepository) AddModerator(ctx context.Context, communityID, newModID, modID primitive.ObjectID) error {
 	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 

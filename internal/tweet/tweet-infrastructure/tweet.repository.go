@@ -1134,7 +1134,19 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 			{Key: "isLikedByUser", Value: bson.D{{Key: "$in", Value: bson.A{userID, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 			{Key: "RePostsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$RePosts", bson.A{}}}}}}},
 		}}},
-		// Añadimos un campo que verifica si el usuario es miembro de la comunidad
+
+		// usuario token
+		{{Key: "$addFields", Value: bson.D{
+			{Key: "userIdParam", Value: userID},
+		}}},
+
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "userIdParam"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfoParam"},
+		}}},
+		{{Key: "$unwind", Value: "$UserInfoParam"}},
 		{{Key: "$match", Value: bson.D{
 			{Key: "$expr", Value: bson.D{
 				{Key: "$or", Value: bson.A{
@@ -1143,7 +1155,7 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 					// Si es privado, verificar que sea miembro de la comunidad
 					bson.D{{Key: "$and", Value: bson.A{
 						bson.D{{Key: "$eq", Value: bson.A{"$IsPrivate", true}}},
-						bson.D{{Key: "$in", Value: bson.A{"$communityID", "$UserInfo.InCommunities"}}},
+						bson.D{{Key: "$in", Value: bson.A{"$communityID", "$UserInfoParam.InCommunities"}}},
 					}}},
 				}},
 			}},
