@@ -749,7 +749,7 @@ func (r *CommunitiesRepository) GetSubscriptionByUserIDs(sourceUserID, community
 
 		communityJSON, err := json.Marshal(community)
 		if err == nil {
-			r.redisClient.Set(context.Background(), redisKey, communityJSON, time.Minute*2)
+			r.redisClient.Set(context.Background(), redisKey, communityJSON, time.Minute*1)
 		}
 	} else if err != nil {
 		return nil, fmt.Errorf("error al obtener datos de Redis: %v", err)

@@ -98,20 +98,15 @@ type OriginalPostReference struct {
 }
 
 type TweetGetFollowReq struct {
-	ID           primitive.ObjectID `json:"_id" bson:"_id"`
-	Status       string             `json:"Status" bson:"Status"`
-	PostImage    string             `json:"PostImage" bson:"PostImage"`
-	TimeStamp    time.Time          `json:"TimeStamp"  bson:"TimeStamp"`
-	UserID       primitive.ObjectID `json:"UserID" bson:"UserID"`
-	OriginalPost primitive.ObjectID `json:"OriginalPost"`
-	Type         string             `json:"Type" bson:"Type"`
-	Hashtags     []string           `json:"hashtags" bson:"Hashtags"`
-	UserInfo     struct {
-		FullName string `json:"FullName"`
-		Avatar   string `json:"Avatar"`
-		NameUser string `json:"NameUser"`
-		Online   bool   `json:"Online"`
-	} `json:"UserInfo"`
+	ID               primitive.ObjectID `json:"_id" bson:"_id"`
+	Status           string             `json:"Status" bson:"Status"`
+	PostImage        string             `json:"PostImage" bson:"PostImage"`
+	TimeStamp        time.Time          `json:"TimeStamp"  bson:"TimeStamp"`
+	UserID           primitive.ObjectID `json:"UserID" bson:"UserID"`
+	OriginalPost     primitive.ObjectID `json:"OriginalPost"`
+	Type             string             `json:"Type" bson:"Type"`
+	Hashtags         []string           `json:"hashtags" bson:"Hashtags"`
+	UserInfo         UserInfo           `json:"UserInfo"`
 	OriginalPostData *TweetGetFollowReq `json:"OriginalPostData"`
 	Views            int                `json:"Views" bson:"Views"`
 	IsLikedByID      bool               `json:"isLikedByID" bson:"isLikedByID"`
@@ -122,20 +117,15 @@ type TweetGetFollowReq struct {
 	IsPrivate        bool               `json:"isPrivate" bson:"IsPrivate"`
 }
 type GetPostcommunitiesRandom struct {
-	ID           primitive.ObjectID `json:"_id" bson:"_id"`
-	Status       string             `json:"Status" bson:"Status"`
-	PostImage    string             `json:"PostImage" bson:"PostImage"`
-	TimeStamp    time.Time          `json:"TimeStamp"  bson:"TimeStamp"`
-	UserID       primitive.ObjectID `json:"UserID" bson:"UserID"`
-	OriginalPost primitive.ObjectID `json:"OriginalPost"`
-	Type         string             `json:"Type" bson:"Type"`
-	Hashtags     []string           `json:"hashtags" bson:"Hashtags"`
-	UserInfo     struct {
-		FullName string `json:"FullName"`
-		Avatar   string `json:"Avatar"`
-		NameUser string `json:"NameUser"`
-		Online   bool   `json:"Online"`
-	} `json:"UserInfo"`
+	ID               primitive.ObjectID `json:"_id" bson:"_id"`
+	Status           string             `json:"Status" bson:"Status"`
+	PostImage        string             `json:"PostImage" bson:"PostImage"`
+	TimeStamp        time.Time          `json:"TimeStamp"  bson:"TimeStamp"`
+	UserID           primitive.ObjectID `json:"UserID" bson:"UserID"`
+	OriginalPost     primitive.ObjectID `json:"OriginalPost"`
+	Type             string             `json:"Type" bson:"Type"`
+	Hashtags         []string           `json:"hashtags" bson:"Hashtags"`
+	UserInfo         UserInfo           `json:"UserInfo"`
 	OriginalPostData *TweetGetFollowReq `json:"OriginalPostData"`
 	Views            int                `json:"Views" bson:"Views"`
 	IsLikedByID      bool               `json:"isLikedByID" bson:"isLikedByID"`
@@ -162,12 +152,7 @@ type TweetCommentsGetReq struct {
 	Type         string               `json:"Type" bson:"Type"`
 	Hashtags     []string             `json:"hashtags" bson:"hashtags"`
 	Views        int                  `json:"Views" bson:"Views"`
-	UserInfo     struct {
-		FullName string `json:"FullName"`
-		Avatar   string `json:"Avatar"`
-		NameUser string `json:"NameUser"`
-		Online   bool   `json:"Online"`
-	} `json:"UserInfo"`
+	UserInfo     UserInfo             `json:"UserInfo"`
 }
 type PostAds struct {
 	ID        primitive.ObjectID `json:"_id" bson:"_id"`
@@ -176,14 +161,9 @@ type PostAds struct {
 	TimeStamp time.Time          `json:"TimeStamp"  bson:"TimeStamp"`
 	UserID    primitive.ObjectID `json:"UserID" bson:"UserID"`
 	// Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
-	Type     string   `json:"Type" bson:"Type"`
-	Hashtags []string `json:"hashtags" bson:"Hashtags"`
-	UserInfo struct {
-		FullName string `json:"FullName"`
-		Avatar   string `json:"Avatar"`
-		NameUser string `json:"NameUser"`
-		Online   bool   `json:"Online"`
-	} `json:"UserInfo"`
+	Type             string             `json:"Type" bson:"Type"`
+	Hashtags         []string           `json:"hashtags" bson:"Hashtags"`
+	UserInfo         UserInfo           `json:"UserInfo"`
 	OriginalPostData *TweetGetFollowReq `json:"OriginalPostData"`
 	Views            int                `json:"Views" bson:"Views"`
 	IsLikedByID      bool               `json:"isLikedByID" bson:"isLikedByID"`
@@ -204,4 +184,12 @@ func (u *GetRecommended) GetRecommended() error {
 		return errors.New("clip debe ser del tipo primitive.ObjectId")
 	}
 	return validate.Struct(u)
+}
+
+type UserInfo struct {
+	FullName      string `json:"FullName"`
+	Avatar        string `json:"Avatar"`
+	NameUser      string `json:"NameUser"`
+	Online        bool   `json:"Online"`
+	InCommunities bool   `json:"InCommunities"`
 }

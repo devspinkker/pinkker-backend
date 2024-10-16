@@ -1137,7 +1137,7 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 		// Añadimos un campo que verifica si el usuario es miembro de la comunidad
 		{{Key: "$addFields", Value: bson.D{
 			{Key: "isMemberOfCommunity", Value: bson.D{
-				{Key: "$in", Value: bson.A{"$CommunityID", "$UserInfo.InCommunities"}},
+				{Key: "$in", Value: bson.A{"$communityID", "$UserInfo.InCommunities"}},
 			}},
 		}}},
 		{{Key: "$match", Value: bson.D{
@@ -1146,10 +1146,10 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 					// Si es público o no tiene la propiedad IsPrivate
 					bson.D{{Key: "$eq", Value: bson.A{"$IsPrivate", false}}},
 					// Si es privado, verificar que sea miembro de la comunidad
-					bson.D{
-						{Key: "$eq", Value: bson.A{"$IsPrivate", true}},
-						{Key: "$eq", Value: bson.A{"$isMemberOfCommunity", true}},
-					},
+					bson.D{{Key: "$and", Value: bson.A{
+						bson.D{{Key: "$eq", Value: bson.A{"$IsPrivate", true}}},
+						bson.D{{Key: "$eq", Value: bson.A{"$isMemberOfCommunity", true}}},
+					}}},
 				}},
 			}},
 		}}},
