@@ -339,7 +339,6 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 	go helpers.HashPassword(newUser.Password, passwordHashChan)
 
 	_, existUser := h.userService.FindNameUser(newUser.NameUser, newUser.Email)
-	fmt.Println(existUser)
 	if existUser != nil {
 		if existUser == mongo.ErrNoDocuments {
 			passwordHash := <-passwordHashChan
@@ -1154,7 +1153,6 @@ func (h *UserHandler) Google_callback_Complete_Profile_And_Username(c *fiber.Ctx
 	req.Password = passwordHash
 	user, err := h.userService.FindEmailForOauth2Updata(&req)
 	if err != nil {
-
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "StatusBadRequest",
 			"data":    err.Error(),

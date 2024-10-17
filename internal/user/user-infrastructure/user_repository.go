@@ -1357,7 +1357,7 @@ func (u *UserRepository) FindEmailForOauth2Updata(user *domain.Google_callback_C
 		update := bson.M{
 			"$set": bson.M{
 				"NameUser":     user.NameUser,
-				"PasswordHash": "",
+				"PasswordHash": user.Password,
 				"Email":        user.Email,
 				"Pais":         user.Pais,
 				"Ciudad":       user.Ciudad,
