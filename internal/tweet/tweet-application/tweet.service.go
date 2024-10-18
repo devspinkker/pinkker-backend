@@ -46,6 +46,7 @@ func (ts *TweetService) SaveTweet(status string, idCommunity primitive.ObjectID,
 	modelNewTweet.CommunityID = idCommunity
 	modelNewTweet.IsPrivate = IsPrivate
 	idTweet, err := ts.TweetRepository.TweetSave(modelNewTweet)
+	modelNewTweet.IdOfTheUsersWhoViewed = []primitive.ObjectID{}
 	if err != nil {
 		return idTweet, err
 
@@ -80,6 +81,7 @@ func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID,
 	modelNewTweet.RePosts = []primitive.ObjectID{}
 	modelNewTweet.Type = "PostComment"
 	modelNewTweet.IsPrivate = IsPrivate
+	modelNewTweet.IdOfTheUsersWhoViewed = []primitive.ObjectID{}
 
 	insertedID, err := ts.TweetRepository.SaveComment(&modelNewTweet)
 	return insertedID, err
@@ -170,6 +172,7 @@ func (ts *TweetService) RePost(userid primitive.ObjectID, IdPost primitive.Objec
 	Repost.OriginalPost = IdPost
 	Repost.TimeStamp = time.Now()
 	Repost.Type = "RePost"
+	Repost.IdOfTheUsersWhoViewed = []primitive.ObjectID{}
 
 	err := ts.TweetRepository.RePost(&Repost)
 	return err
@@ -186,6 +189,7 @@ func (ts *TweetService) CitaPost(userid primitive.ObjectID, IdPost primitive.Obj
 	CitaPost.RePosts = []primitive.ObjectID{}
 	CitaPost.Comments = []primitive.ObjectID{}
 	CitaPost.Type = "CitaPost"
+	CitaPost.IdOfTheUsersWhoViewed = []primitive.ObjectID{}
 
 	err := ts.TweetRepository.CitaPost(&CitaPost)
 	return err
