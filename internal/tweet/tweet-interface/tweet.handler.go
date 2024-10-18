@@ -541,7 +541,14 @@ func (th *TweetHandler) GetCommentPost(c *fiber.Ctx) error {
 	if err != nil || page < 1 {
 		page = 1
 	}
-	GetCommentPost, errTweetGetFollow := th.TweetServise.GetCommentPost(id, page)
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	GetCommentPost, errTweetGetFollow := th.TweetServise.GetCommentPost(id, page, idValueObj)
 	if errTweetGetFollow != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",

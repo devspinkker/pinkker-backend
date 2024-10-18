@@ -65,7 +65,7 @@ func (t *TweetRepository) GetTweetsRecommended(idT primitive.ObjectID, excludeID
 	}
 
 	// Actualizar el campo Views sumando 1 para los posts obtenidos en ambos pipelines
-	if err := t.updateTweetViews(ctx, collTweets, tweetsWithUserInfo); err != nil {
+	if err := t.updateTweetViews(ctx, collTweets, tweetsWithUserInfo, idT); err != nil {
 		return nil, err
 	}
 
@@ -414,22 +414,82 @@ func (t *TweetRepository) GetRandomPostcommunities(idT primitive.ObjectID, exclu
 	return tweetsWithUserInfo, nil
 }
 
-func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetGetFollowReq) error {
+func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetGetFollowReq, idt primitive.ObjectID) error {
+	// Obtener los IDs de los tweets
 	var tweetIDs []primitive.ObjectID
 	for _, tweet := range tweets {
 		tweetIDs = append(tweetIDs, tweet.ID)
 	}
+
+	// Asegurarse de que haya tweets para actualizar
 	if len(tweetIDs) > 0 {
-		filter := bson.M{"_id": bson.M{"$in": tweetIDs}}
-		update := bson.M{"$inc": bson.M{"Views": 1}}
+		// Crear un único filtro para todos los tweets
+		filter := bson.M{
+			"_id":                   bson.M{"$in": tweetIDs}, // Filtro para los tweets seleccionados
+			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
+		}
+
+		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
+		update := bson.M{
+			"$push": bson.M{
+				"IdOfTheUsersWhoViewed": bson.M{
+					"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
+					"$position": -1,                        // Agregar al final del array
+					"$slice":    -50,                       // Mantener solo los últimos 50 usuarios
+				},
+			},
+			"$inc": bson.M{
+				"Views": 1, // Incrementar las vistas
+			},
+		}
+
+		// Usamos UpdateMany para actualizar todos los tweets de una sola vez
 		_, err := collTweets.UpdateMany(ctx, filter, update)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
+func (t *TweetRepository) updatePostCommentViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetCommentsGetReq, idt primitive.ObjectID) error {
+	// Obtener los IDs de los tweets
+	var tweetIDs []primitive.ObjectID
+	for _, tweet := range tweets {
+		tweetIDs = append(tweetIDs, tweet.ID)
+	}
 
+	// Asegurarse de que haya tweets para actualizar
+	if len(tweetIDs) > 0 {
+		// Crear un único filtro para todos los tweets
+		filter := bson.M{
+			"_id":                   bson.M{"$in": tweetIDs}, // Filtro para los tweets seleccionados
+			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
+		}
+
+		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
+		update := bson.M{
+			"$push": bson.M{
+				"IdOfTheUsersWhoViewed": bson.M{
+					"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
+					"$position": -1,                        // Agregar al final del array
+					"$slice":    -50,                       // Mantener solo los últimos 50 usuarios
+				},
+			},
+			"$inc": bson.M{
+				"Views": 1, // Incrementar las vistas
+			},
+		}
+
+		// Usamos UpdateMany para actualizar todos los tweets de una sola vez
+		_, err := collTweets.UpdateMany(ctx, filter, update)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 func (t *TweetRepository) addOriginalPostData(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetGetFollowReq) error {
 	var originalPostIDs []primitive.ObjectID
 	for _, tweet := range tweets {
@@ -660,7 +720,7 @@ func (t *TweetRepository) FindTweetbyId(idTweet, idT primitive.ObjectID) (tweetd
 
 	pipeline := bson.A{
 		bson.D{{Key: "$match", Value: bson.M{"_id": idTweet}}},
-		bson.D{{Key: "$addFields", Value: bson.D{{Key: "Views", Value: bson.D{{Key: "$add", Value: bson.A{"$Views", 1}}}}}}},
+
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Likes"},
 			{Key: "localField", Value: "_id"},
@@ -711,6 +771,12 @@ func (t *TweetRepository) FindTweetbyId(idTweet, idT primitive.ObjectID) (tweetd
 		if err := cursor.Decode(&PostDocument); err != nil {
 			return tweetdomain.TweetGetFollowReq{}, err
 		}
+	}
+	var posts []tweetdomain.TweetGetFollowReq
+	posts = append(posts, PostDocument)
+
+	if err := t.updateTweetViews(context.TODO(), GoMongoDBCollUsers, posts, idT); err != nil {
+		return tweetdomain.TweetGetFollowReq{}, err
 	}
 
 	return PostDocument, nil
@@ -951,18 +1017,6 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 			originalPostMap[originalPost.ID] = originalPost
 		}
 
-		// Actualizamos los documentos del segundo pipeline
-		updateFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: originalPostIDs}}}}
-		update := bson.D{
-			{Key: "$inc", Value: bson.D{
-				{Key: "Views", Value: 1},
-			}},
-		}
-		_, err = GoMongoDBCollTweets.UpdateMany(context.Background(), updateFilter, update)
-		if err != nil {
-			return nil, err
-		}
-
 		// Vinculamos los datos del originalPost con los tweets
 		for i, tweet := range tweetsWithUserInfo {
 			if tweet.OriginalPost != primitive.NilObjectID {
@@ -979,18 +1033,6 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 
 func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGetFollowReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
-
-	// Actualizamos el campo Views incrementándolo en 1
-	updateFilter := bson.D{{Key: "_id", Value: id}}
-	update := bson.D{
-		{Key: "$inc", Value: bson.D{
-			{Key: "Views", Value: 1},
-		}},
-	}
-	_, err := GoMongoDBCollTweets.UpdateOne(context.Background(), updateFilter, update)
-	if err != nil {
-		return tweetdomain.TweetGetFollowReq{}, err
-	}
 
 	// Ejecutamos el pipeline de agregación para obtener los datos
 	pipeline := []bson.D{
@@ -1108,17 +1150,6 @@ func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGet
 func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primitive.ObjectID) (tweetdomain.TweetGetFollowReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
-	// Actualizamos el campo Views incrementándolo en 1
-	updateFilter := bson.D{{Key: "_id", Value: id}}
-	update := bson.D{
-		{Key: "$inc", Value: bson.D{
-			{Key: "Views", Value: 1},
-		}},
-	}
-	_, err := GoMongoDBCollTweets.UpdateOne(context.Background(), updateFilter, update)
-	if err != nil {
-		return tweetdomain.TweetGetFollowReq{}, err
-	}
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{{Key: "_id", Value: id}}}},
 		{{Key: "$lookup", Value: bson.D{
@@ -1250,6 +1281,12 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 			tweetWithUserInfo.OriginalPostData = &originalPost
 		}
 	}
+	var posts []tweetdomain.TweetGetFollowReq
+	posts = append(posts, tweetWithUserInfo)
+
+	if err := t.updateTweetViews(context.TODO(), GoMongoDBCollTweets, posts, id); err != nil {
+		return tweetdomain.TweetGetFollowReq{}, err
+	}
 
 	return tweetWithUserInfo, nil
 }
@@ -1330,19 +1367,6 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 		}
 
 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
-	}
-
-	// Incrementar Views en 1 solo para los documentos obtenidos
-	var idsToUpdate []primitive.ObjectID
-	for _, tweet := range tweetsWithUserInfo {
-		idsToUpdate = append(idsToUpdate, tweet.ID)
-	}
-
-	_, err = GoMongoDBCollTweets.UpdateMany(context.Background(), bson.M{"_id": bson.M{"$in": idsToUpdate}}, bson.D{
-		{Key: "$inc", Value: bson.D{{Key: "Views", Value: 1}}},
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	// Obtener los datos del OriginalPost si existen
@@ -1652,16 +1676,8 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 	}
 
 	// Incrementar Views en 1 solo para los documentos obtenidos
-	var idsToUpdate []primitive.ObjectID
-	for _, tweet := range tweetsWithUserInfo {
-		idsToUpdate = append(idsToUpdate, tweet.ID)
-	}
-
-	_, err = GoMongoDBCollTweets.UpdateMany(context.Background(), bson.M{"_id": bson.M{"$in": idsToUpdate}}, bson.D{
-		{Key: "$inc", Value: bson.D{{Key: "Views", Value: 1}}},
-	})
-	if err != nil {
-		return nil, err
+	if err := t.updateTweetViews(context.TODO(), GoMongoDBCollTweets, tweetsWithUserInfo, idt); err != nil {
+		return tweetsWithUserInfo, err
 	}
 
 	// Obtener los datos del OriginalPost si existen
@@ -1872,7 +1888,7 @@ func (t *TweetRepository) GetTweetsLast24HoursFollow(userIDs []primitive.ObjectI
 	return tweetsWithUserInfo, nil
 }
 
-func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int) ([]tweetdomain.TweetCommentsGetReq, error) {
+func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int, idt primitive.ObjectID) ([]tweetdomain.TweetCommentsGetReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
 	var tweet tweetdomain.Post
@@ -1925,31 +1941,16 @@ func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int) 
 	}
 	defer cursor.Close(context.Background())
 
-	var commentIDsToUpdate []primitive.ObjectID
 	for cursor.Next(context.Background()) {
 		var comment tweetdomain.TweetCommentsGetReq
 		if err := cursor.Decode(&comment); err != nil {
 			return nil, err
 		}
-		commentIDsToUpdate = append(commentIDsToUpdate, comment.ID)
 		comments = append(comments, comment)
 	}
 
-	// Actualizar el campo Views de los comentarios obtenidos
-	if len(commentIDsToUpdate) > 0 {
-		_, err := GoMongoDBCollTweets.UpdateMany(
-			context.Background(),
-			bson.M{"_id": bson.M{"$in": commentIDsToUpdate}},
-			bson.M{"$inc": bson.M{"Views": 1}},
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		// Incrementar la propiedad Views en el resultado
-		for i := range comments {
-			comments[i].Views++
-		}
+	if err := t.updatePostCommentViews(context.TODO(), GoMongoDBCollTweets, comments, idt); err != nil {
+		return comments, err
 	}
 
 	return comments, nil

@@ -571,9 +571,10 @@ func (r *AdvertisementsRepository) RemovePendingAds(NameUser string) error {
 	var totalPixeles float64
 	for _, ad := range ads {
 		var pixelesUserNeed float64
-		if ad.Destination == "Muro" || ad.Destination == "ClipAds" {
+		if ad.Destination == "Muro" {
 			pixelesUserNeed = float64(ad.ClicksMax) * float64(floatValuePayClicks)
-		} else if ad.Destination == "Streams" {
+
+		} else if ad.Destination == "Streams" || ad.Destination == "ClipAds" {
 			pixelesUserNeed = float64(ad.ImpressionsMax) * float64(floatValuePayPerPrint)
 		} else {
 			return errors.New("destination undefined")
@@ -581,7 +582,8 @@ func (r *AdvertisementsRepository) RemovePendingAds(NameUser string) error {
 
 		totalPixeles += pixelesUserNeed
 	}
-
+	fmt.Println("!3")
+	fmt.Println(totalPixeles)
 	// Eliminar los anuncios pendientes
 	_, err = Advertisements.DeleteMany(ctx, filter)
 	if err != nil {

@@ -15,55 +15,59 @@ type Trend struct {
 	LastSeen time.Time `json:"last_seen" bson:"last_seen"`
 }
 type Post struct {
-	ID          primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	Type        string               `json:"Type" default:"Post" bson:"Type"`
-	Status      string               `json:"Status" bson:"Status"`
-	PostImage   string               `json:"PostImage" bson:"PostImage"`
-	TimeStamp   time.Time            `json:"TimeStamp" bson:"TimeStamp"`
-	UserID      primitive.ObjectID   `json:"UserID" bson:"UserID"`
-	Likes       []primitive.ObjectID `json:"Likes" bson:"Likes"`
-	Comments    []primitive.ObjectID `json:"Comments" bson:"Comments"`
-	RePosts     []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
-	Hashtags    []string             `json:"hashtags" bson:"Hashtags"`
-	Views       int                  `json:"Views" bson:"Views"`
-	CommunityID primitive.ObjectID   `json:"communityID" bson:"communityID,omitempty"`
-	IsPrivate   bool                 `json:"isPrivate" bson:"IsPrivate"`
+	ID                    primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Type                  string               `json:"Type" default:"Post" bson:"Type"`
+	Status                string               `json:"Status" bson:"Status"`
+	PostImage             string               `json:"PostImage" bson:"PostImage"`
+	TimeStamp             time.Time            `json:"TimeStamp" bson:"TimeStamp"`
+	UserID                primitive.ObjectID   `json:"UserID" bson:"UserID"`
+	Likes                 []primitive.ObjectID `json:"Likes" bson:"Likes"`
+	Comments              []primitive.ObjectID `json:"Comments" bson:"Comments"`
+	RePosts               []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
+	Hashtags              []string             `json:"hashtags" bson:"Hashtags"`
+	Views                 int                  `json:"Views" bson:"Views"`
+	CommunityID           primitive.ObjectID   `json:"communityID" bson:"communityID,omitempty"`
+	IsPrivate             bool                 `json:"isPrivate" bson:"IsPrivate"`
+	IdOfTheUsersWhoViewed []primitive.ObjectID `json:"IdOfTheUsersWhoViewed" bson:"IdOfTheUsersWhoViewed"`
 }
 type PostComment struct {
-	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	Type         string               `json:"Type" default:"PostComment" bson:"Type"`
-	OriginalPost primitive.ObjectID   `json:"OriginalPost" bson:"OriginalPost"`
-	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
-	Status       string               `json:"Status" bson:"Status"`
-	PostImage    string               `json:"PostImage" bson:"PostImage,omitempty"`
-	TimeStamp    time.Time            `json:"TimeStamp" bson:"TimeStamp"`
-	UserID       primitive.ObjectID   `json:"UserID" bson:"UserID"`
-	Likes        []primitive.ObjectID `json:"Likes" bson:"Likes"`
-	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
-	Hashtags     []string             `json:"hashtags" bson:"Hashtags"`
-	Views        int                  `json:"Views" bson:"Views"`
-	IsPrivate    bool                 `json:"isPrivate" bson:"IsPrivate"`
+	ID                    primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Type                  string               `json:"Type" default:"PostComment" bson:"Type"`
+	OriginalPost          primitive.ObjectID   `json:"OriginalPost" bson:"OriginalPost"`
+	Comments              []primitive.ObjectID `json:"Comments" bson:"Comments"`
+	Status                string               `json:"Status" bson:"Status"`
+	PostImage             string               `json:"PostImage" bson:"PostImage,omitempty"`
+	TimeStamp             time.Time            `json:"TimeStamp" bson:"TimeStamp"`
+	UserID                primitive.ObjectID   `json:"UserID" bson:"UserID"`
+	Likes                 []primitive.ObjectID `json:"Likes" bson:"Likes"`
+	RePosts               []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
+	Hashtags              []string             `json:"hashtags" bson:"Hashtags"`
+	Views                 int                  `json:"Views" bson:"Views"`
+	IsPrivate             bool                 `json:"isPrivate" bson:"IsPrivate"`
+	IdOfTheUsersWhoViewed []primitive.ObjectID `json:"IdOfTheUsersWhoViewed" bson:"IdOfTheUsersWhoViewed"`
 }
 type RePost struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Type         string             `json:"Type" default:"RePost" bson:"Type"`
-	UserID       primitive.ObjectID `json:"UserID" bson:"UserID"`
-	OriginalPost primitive.ObjectID `json:"OriginalPost" bson:"OriginalPost"`
-	TimeStamp    time.Time          `json:"TimeStamp" bson:"TimeStamp"`
+	ID                    primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Type                  string               `json:"Type" default:"RePost" bson:"Type"`
+	UserID                primitive.ObjectID   `json:"UserID" bson:"UserID"`
+	OriginalPost          primitive.ObjectID   `json:"OriginalPost" bson:"OriginalPost"`
+	TimeStamp             time.Time            `json:"TimeStamp" bson:"TimeStamp"`
+	IdOfTheUsersWhoViewed []primitive.ObjectID `json:"IdOfTheUsersWhoViewed" bson:"IdOfTheUsersWhoViewed"`
 }
 type CitaPost struct {
-	ID           primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	Type         string               `json:"Type" default:"CitaPost" bson:"Type"`
-	UserID       primitive.ObjectID   `json:"UserID" bson:"UserID"`
-	OriginalPost primitive.ObjectID   `json:"OriginalPost" bson:"OriginalPost"`
-	TimeStamp    time.Time            `json:"TimeStamp" bson:"TimeStamp"`
-	Status       string               `json:"Status" bson:"Status"`
-	Likes        []primitive.ObjectID `json:"Likes" bson:"Likes"`
-	RePosts      []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
-	Comments     []primitive.ObjectID `json:"Comments" bson:"Comments"`
-	PostImage    string               `json:"PostImage" bson:"PostImage"`
-	Hashtags     []string             `json:"hashtags" bson:"Hashtags"`
-	Views        int                  `json:"Views" bson:"Views"`
+	ID                    primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Type                  string               `json:"Type" default:"CitaPost" bson:"Type"`
+	UserID                primitive.ObjectID   `json:"UserID" bson:"UserID"`
+	OriginalPost          primitive.ObjectID   `json:"OriginalPost" bson:"OriginalPost"`
+	TimeStamp             time.Time            `json:"TimeStamp" bson:"TimeStamp"`
+	Status                string               `json:"Status" bson:"Status"`
+	Likes                 []primitive.ObjectID `json:"Likes" bson:"Likes"`
+	RePosts               []primitive.ObjectID `json:"RePosts" bson:"RePosts"`
+	Comments              []primitive.ObjectID `json:"Comments" bson:"Comments"`
+	PostImage             string               `json:"PostImage" bson:"PostImage"`
+	Hashtags              []string             `json:"hashtags" bson:"Hashtags"`
+	Views                 int                  `json:"Views" bson:"Views"`
+	IdOfTheUsersWhoViewed []primitive.ObjectID `json:"IdOfTheUsersWhoViewed" bson:"IdOfTheUsersWhoViewed"`
 }
 type TweetModelValidator struct {
 	Status      string             `json:"status" validate:"required,min=3,max=100"`
@@ -171,8 +175,9 @@ type PostAds struct {
 	RePostsCount     int                `json:"RePostsCount" bson:"RePostsCount"`
 	CommentsCount    int                `json:"CommentsCount" bson:"CommentsCount"`
 	//ads
-	AdvertisementsId primitive.ObjectID `json:"AdvertisementsId" bson:"AdvertisementsId"`
-	ReferenceLink    string             `json:"ReferenceLink" bson:"ReferenceLink"`
+	AdvertisementsId      primitive.ObjectID   `json:"AdvertisementsId" bson:"AdvertisementsId"`
+	ReferenceLink         string               `json:"ReferenceLink" bson:"ReferenceLink"`
+	IdOfTheUsersWhoViewed []primitive.ObjectID `json:"IdOfTheUsersWhoViewed" bson:"IdOfTheUsersWhoViewed"`
 }
 type GetRecommended struct {
 	ExcludeIDs []primitive.ObjectID `json:"ExcludeIDs" validate:"required"`

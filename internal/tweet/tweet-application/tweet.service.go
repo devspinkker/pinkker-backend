@@ -154,9 +154,9 @@ func (ts *TweetService) GetPostuserLogueado(page int, id, idValueObj primitive.O
 	return Tweets, errGetFollowedUsers
 }
 
-func (ts *TweetService) GetCommentPost(IdPost primitive.ObjectID, page int) ([]tweetdomain.TweetCommentsGetReq, error) {
+func (ts *TweetService) GetCommentPost(IdPost primitive.ObjectID, page int, idt primitive.ObjectID) ([]tweetdomain.TweetCommentsGetReq, error) {
 
-	comments, err := ts.TweetRepository.GetCommentPosts(IdPost, page)
+	comments, err := ts.TweetRepository.GetCommentPosts(IdPost, page, idt)
 	if err != nil {
 		return nil, err
 	}
