@@ -1102,34 +1102,21 @@ func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID, idt primit
 
 	// Crear filtro para encontrar el clip y verificar que el usuario no lo haya visto antes
 	filter := bson.M{
-		"_id": ClipId, // Filtro por ID del clip
-		"$or": []bson.M{
-			{"IdOfTheUsersWhoViewed": bson.M{"$ne": idt}},       // Si el usuario no está en el array
-			{"IdOfTheUsersWhoViewed": bson.M{"$exists": false}}, // Si el campo no existe
-			{"IdOfTheUsersWhoViewed": bson.M{"$eq": nil}},       // Si el campo es null
-		},
+		"_id":                   bson.M{"$in": ClipId}, // Filtro para los tweets seleccionados
+		"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},    // Solo actualizamos si el usuario no ha visto ya el tweet
 	}
 
-	// Actualización para inicializar el campo IdOfTheUsersWhoViewed si es null o no existe, luego incrementar las vistas
+	// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
 	update := bson.M{
-		"$set": bson.M{
-			"IdOfTheUsersWhoViewed": bson.M{
-				"$cond": bson.M{
-					"if":   bson.M{"$or": bson.A{bson.M{"$eq": bson.A{"$IdOfTheUsersWhoViewed", nil}}, bson.M{"$not": bson.M{"$exists": "$IdOfTheUsersWhoViewed"}}}},
-					"then": bson.A{}, // Si es null o no existe, lo inicializamos como un array vacío
-					"else": "$IdOfTheUsersWhoViewed",
-				},
-			},
-		},
 		"$push": bson.M{
 			"IdOfTheUsersWhoViewed": bson.M{
-				"$each":     []primitive.ObjectID{idt}, // Agregar el ID del usuario actual
-				"$position": -1,                        // Añadir al final del array
-				"$slice":    -20,                       // Mantener solo los últimos 20 IDs
+				"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
+				"$position": -1,                        // Agregar al final del array
+				"$slice":    -50,                       // Mantener solo los últimos 50 usuarios
 			},
 		},
 		"$inc": bson.M{
-			"views": 1, // Incrementar el contador de vistas
+			"views": 1, // Incrementar las vistas
 		},
 	}
 

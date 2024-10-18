@@ -429,17 +429,8 @@ func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mong
 			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
 		}
 
-		// Actualización que inicializa el array si es necesario y agrega el ID del usuario
+		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
 		update := bson.M{
-			"$set": bson.M{
-				"IdOfTheUsersWhoViewed": bson.M{
-					"$cond": bson.M{
-						"if":   bson.M{"$or": bson.A{bson.M{"$eq": bson.A{"$IdOfTheUsersWhoViewed", nil}}, bson.M{"$not": bson.M{"$exists": "$IdOfTheUsersWhoViewed"}}}},
-						"then": bson.A{}, // Inicializar como un array vacío si es null o no existe
-						"else": "$IdOfTheUsersWhoViewed",
-					},
-				},
-			},
 			"$push": bson.M{
 				"IdOfTheUsersWhoViewed": bson.M{
 					"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
@@ -461,7 +452,6 @@ func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mong
 
 	return nil
 }
-
 func (t *TweetRepository) updatePostCommentViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetCommentsGetReq, idt primitive.ObjectID) error {
 	// Obtener los IDs de los tweets
 	var tweetIDs []primitive.ObjectID
@@ -477,17 +467,8 @@ func (t *TweetRepository) updatePostCommentViews(ctx context.Context, collTweets
 			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
 		}
 
-		// Actualización que inicializa el array si es necesario y agrega el ID del usuario
+		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
 		update := bson.M{
-			"$set": bson.M{
-				"IdOfTheUsersWhoViewed": bson.M{
-					"$cond": bson.M{
-						"if":   bson.M{"$or": bson.A{bson.M{"$eq": bson.A{"$IdOfTheUsersWhoViewed", nil}}, bson.M{"$not": bson.M{"$exists": "$IdOfTheUsersWhoViewed"}}}},
-						"then": bson.A{}, // Inicializar como un array vacío si es null o no existe
-						"else": "$IdOfTheUsersWhoViewed",
-					},
-				},
-			},
 			"$push": bson.M{
 				"IdOfTheUsersWhoViewed": bson.M{
 					"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
