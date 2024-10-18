@@ -1110,8 +1110,17 @@ func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID, idt primit
 		},
 	}
 
-	// Actualización para incrementar las vistas y agregar el ID del usuario al array
+	// Actualización para inicializar el campo IdOfTheUsersWhoViewed si es null o no existe, luego incrementar las vistas
 	update := bson.M{
+		"$set": bson.M{
+			"IdOfTheUsersWhoViewed": bson.M{
+				"$cond": bson.M{
+					"if":   bson.M{"$or": bson.A{bson.M{"$eq": bson.A{"$IdOfTheUsersWhoViewed", nil}}, bson.M{"$not": bson.M{"$exists": "$IdOfTheUsersWhoViewed"}}}},
+					"then": bson.A{}, // Si es null o no existe, lo inicializamos como un array vacío
+					"else": "$IdOfTheUsersWhoViewed",
+				},
+			},
+		},
 		"$push": bson.M{
 			"IdOfTheUsersWhoViewed": bson.M{
 				"$each":     []primitive.ObjectID{idt}, // Agregar el ID del usuario actual

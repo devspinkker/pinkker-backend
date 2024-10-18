@@ -423,18 +423,23 @@ func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mong
 
 	// Asegurarse de que haya tweets para actualizar
 	if len(tweetIDs) > 0 {
-		// Crear un único filtro para todos los tweets, manejando el caso de null o campo vacío
+		// Crear un único filtro para todos los tweets
 		filter := bson.M{
-			"_id": bson.M{"$in": tweetIDs},
-			"$or": []bson.M{
-				{"IdOfTheUsersWhoViewed": bson.M{"$ne": idt}},       // Si el usuario no está en el array
-				{"IdOfTheUsersWhoViewed": bson.M{"$exists": false}}, // Si el campo no existe
-				{"IdOfTheUsersWhoViewed": bson.M{"$eq": nil}},       // Si el campo es null
-			},
+			"_id":                   bson.M{"$in": tweetIDs}, // Filtro para los tweets seleccionados
+			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
 		}
 
-		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
+		// Actualización que inicializa el array si es necesario y agrega el ID del usuario
 		update := bson.M{
+			"$set": bson.M{
+				"IdOfTheUsersWhoViewed": bson.M{
+					"$cond": bson.M{
+						"if":   bson.M{"$or": bson.A{bson.M{"$eq": bson.A{"$IdOfTheUsersWhoViewed", nil}}, bson.M{"$not": bson.M{"$exists": "$IdOfTheUsersWhoViewed"}}}},
+						"then": bson.A{}, // Inicializar como un array vacío si es null o no existe
+						"else": "$IdOfTheUsersWhoViewed",
+					},
+				},
+			},
 			"$push": bson.M{
 				"IdOfTheUsersWhoViewed": bson.M{
 					"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
@@ -466,18 +471,23 @@ func (t *TweetRepository) updatePostCommentViews(ctx context.Context, collTweets
 
 	// Asegurarse de que haya tweets para actualizar
 	if len(tweetIDs) > 0 {
-		// Crear un único filtro para todos los tweets, manejando el caso de null o campo vacío
+		// Crear un único filtro para todos los tweets
 		filter := bson.M{
-			"_id": bson.M{"$in": tweetIDs},
-			"$or": []bson.M{
-				{"IdOfTheUsersWhoViewed": bson.M{"$ne": idt}},       // Si el usuario no está en el array
-				{"IdOfTheUsersWhoViewed": bson.M{"$exists": false}}, // Si el campo no existe
-				{"IdOfTheUsersWhoViewed": bson.M{"$eq": nil}},       // Si el campo es null
-			},
+			"_id":                   bson.M{"$in": tweetIDs}, // Filtro para los tweets seleccionados
+			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
 		}
 
-		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
+		// Actualización que inicializa el array si es necesario y agrega el ID del usuario
 		update := bson.M{
+			"$set": bson.M{
+				"IdOfTheUsersWhoViewed": bson.M{
+					"$cond": bson.M{
+						"if":   bson.M{"$or": bson.A{bson.M{"$eq": bson.A{"$IdOfTheUsersWhoViewed", nil}}, bson.M{"$not": bson.M{"$exists": "$IdOfTheUsersWhoViewed"}}}},
+						"then": bson.A{}, // Inicializar como un array vacío si es null o no existe
+						"else": "$IdOfTheUsersWhoViewed",
+					},
+				},
+			},
 			"$push": bson.M{
 				"IdOfTheUsersWhoViewed": bson.M{
 					"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
