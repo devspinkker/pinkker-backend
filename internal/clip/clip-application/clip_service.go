@@ -116,8 +116,8 @@ func (u *ClipService) ClipDislike(idClip primitive.ObjectID, idValueToken primit
 	err := u.ClipRepository.ClipDislike(idClip, idValueToken)
 	return err
 }
-func (u *ClipService) MoreViewOfTheClip(idClip primitive.ObjectID) error {
-	err := u.ClipRepository.MoreViewOfTheClip(idClip)
+func (u *ClipService) MoreViewOfTheClip(idClip primitive.ObjectID, idt primitive.ObjectID) error {
+	err := u.ClipRepository.MoreViewOfTheClip(idClip, idt)
 	return err
 }
 func (u *ClipService) ClipsRecommended(idT primitive.ObjectID, excludeIDs []primitive.ObjectID) ([]clipdomain.GetClip, error) {

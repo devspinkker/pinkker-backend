@@ -631,7 +631,14 @@ func (clip *ClipHandler) MoreViewOfTheClip(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
-
+	idValue := c.Context().UserValue("_id").(string)
+	idTPrimitive, err := primitive.ObjectIDFromHex(idValue)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
 	IDClip, err := primitive.ObjectIDFromHex(IDClipReq.IDClip)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -639,7 +646,7 @@ func (clip *ClipHandler) MoreViewOfTheClip(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
-	errLike := clip.ClipService.MoreViewOfTheClip(IDClip)
+	errLike := clip.ClipService.MoreViewOfTheClip(IDClip, idTPrimitive)
 	if errLike != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",

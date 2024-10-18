@@ -1096,17 +1096,39 @@ func (c *ClipRepository) ClipDislike(ClipId, idValueToken primitive.ObjectID) er
 	return nil
 
 }
-func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID) error {
-
+func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID, idt primitive.ObjectID) error {
 	GoMongoDB := c.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBColl := GoMongoDB.Collection("Clips")
 
-	filter := bson.D{{Key: "_id", Value: ClipId}}
-	update := bson.D{{Key: "$inc", Value: bson.D{{Key: "views", Value: 1}}}}
+	// Crear filtro para encontrar el clip y verificar que el usuario no lo haya visto antes
+	filter := bson.M{
+		"_id":                   ClipId,             // Filtro por ID del clip
+		"IdOfTheUsersWhoViewed": bson.M{"$ne": idt}, // Solo actualizamos si el usuario no ha visto ya el clip
+	}
 
+	// Actualización para incrementar las vistas y agregar el ID del usuario al array
+	update := bson.M{
+		"$push": bson.M{
+			"IdOfTheUsersWhoViewed": bson.M{
+				"$each":     []primitive.ObjectID{idt}, // Agregar el ID del usuario actual
+				"$position": -1,                        // Añadir al final del array
+				"$slice":    -20,                       // Mantener solo los últimos 20 IDs
+			},
+		},
+		"$inc": bson.M{
+			"views": 1, // Incrementar el contador de vistas
+		},
+	}
+
+	// Actualizar el documento del clip en la colección
 	_, err := GoMongoDBColl.UpdateOne(context.Background(), filter, update)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
+
 func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username, comment string) (clipdomain.ClipCommentGet, error) {
 	ctx := context.Background()
 	db := c.mongoClient.Database("PINKKER-BACKEND")
