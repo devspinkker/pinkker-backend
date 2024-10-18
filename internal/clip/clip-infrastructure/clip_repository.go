@@ -1073,7 +1073,7 @@ func (c *ClipRepository) ClipDislike(ClipId, idValueToken primitive.ObjectID) er
 		if err == mongo.ErrNoDocuments {
 			return fmt.Errorf("clip with ID  does not exist")
 		}
-		return fmt.Errorf("error fetching clip", err)
+		return fmt.Errorf("error fetching clip")
 	}
 
 	filter := bson.D{{Key: "_id", Value: ClipId}}
@@ -1102,8 +1102,12 @@ func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID, idt primit
 
 	// Crear filtro para encontrar el clip y verificar que el usuario no lo haya visto antes
 	filter := bson.M{
-		"_id":                   ClipId,             // Filtro por ID del clip
-		"IdOfTheUsersWhoViewed": bson.M{"$ne": idt}, // Solo actualizamos si el usuario no ha visto ya el clip
+		"_id": ClipId, // Filtro por ID del clip
+		"$or": []bson.M{
+			{"IdOfTheUsersWhoViewed": bson.M{"$ne": idt}},       // Si el usuario no está en el array
+			{"IdOfTheUsersWhoViewed": bson.M{"$exists": false}}, // Si el campo no existe
+			{"IdOfTheUsersWhoViewed": bson.M{"$eq": nil}},       // Si el campo es null
+		},
 	}
 
 	// Actualización para incrementar las vistas y agregar el ID del usuario al array

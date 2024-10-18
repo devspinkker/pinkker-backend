@@ -423,10 +423,14 @@ func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mong
 
 	// Asegurarse de que haya tweets para actualizar
 	if len(tweetIDs) > 0 {
-		// Crear un único filtro para todos los tweets
+		// Crear un único filtro para todos los tweets, manejando el caso de null o campo vacío
 		filter := bson.M{
-			"_id":                   bson.M{"$in": tweetIDs}, // Filtro para los tweets seleccionados
-			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
+			"_id": bson.M{"$in": tweetIDs},
+			"$or": []bson.M{
+				{"IdOfTheUsersWhoViewed": bson.M{"$ne": idt}},       // Si el usuario no está en el array
+				{"IdOfTheUsersWhoViewed": bson.M{"$exists": false}}, // Si el campo no existe
+				{"IdOfTheUsersWhoViewed": bson.M{"$eq": nil}},       // Si el campo es null
+			},
 		}
 
 		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
@@ -452,6 +456,7 @@ func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mong
 
 	return nil
 }
+
 func (t *TweetRepository) updatePostCommentViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetCommentsGetReq, idt primitive.ObjectID) error {
 	// Obtener los IDs de los tweets
 	var tweetIDs []primitive.ObjectID
@@ -461,10 +466,14 @@ func (t *TweetRepository) updatePostCommentViews(ctx context.Context, collTweets
 
 	// Asegurarse de que haya tweets para actualizar
 	if len(tweetIDs) > 0 {
-		// Crear un único filtro para todos los tweets
+		// Crear un único filtro para todos los tweets, manejando el caso de null o campo vacío
 		filter := bson.M{
-			"_id":                   bson.M{"$in": tweetIDs}, // Filtro para los tweets seleccionados
-			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
+			"_id": bson.M{"$in": tweetIDs},
+			"$or": []bson.M{
+				{"IdOfTheUsersWhoViewed": bson.M{"$ne": idt}},       // Si el usuario no está en el array
+				{"IdOfTheUsersWhoViewed": bson.M{"$exists": false}}, // Si el campo no existe
+				{"IdOfTheUsersWhoViewed": bson.M{"$eq": nil}},       // Si el campo es null
+			},
 		}
 
 		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
@@ -490,6 +499,7 @@ func (t *TweetRepository) updatePostCommentViews(ctx context.Context, collTweets
 
 	return nil
 }
+
 func (t *TweetRepository) addOriginalPostData(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetGetFollowReq) error {
 	var originalPostIDs []primitive.ObjectID
 	for _, tweet := range tweets {
