@@ -124,6 +124,7 @@ func (repo *CommunitiesRepository) AddModerator(ctx context.Context, communityID
 	}
 
 	if !isCreator && !isModerator {
+
 		return fiber.NewError(fiber.StatusForbidden, "You are not authorized to add moderators")
 	}
 
