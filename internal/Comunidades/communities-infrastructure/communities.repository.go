@@ -47,6 +47,18 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communit
 		return nil, fiber.NewError(fiber.StatusForbidden, "The user does not have an active PinkkerPrime subscription")
 	}
 
+	communitiesCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+	var existingCommunity struct {
+		CommunityName string `bson:"CommunityName"`
+	}
+
+	err = communitiesCollection.FindOne(ctx, primitive.M{"CommunityName": communityName}).Decode(&existingCommunity)
+	if err == nil {
+		return nil, fiber.NewError(fiber.StatusConflict, "A community with this name already exists")
+	} else if err != mongo.ErrNoDocuments {
+		return nil, err
+	}
+
 	community := &communitiesdomain.Community{
 		CommunityName: communityName,
 		Description:   description,
@@ -61,8 +73,6 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communit
 		UpdatedAt:     time.Now(),
 	}
 
-	communitiesCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
-
 	result, err := communitiesCollection.InsertOne(ctx, community)
 	if err != nil {
 		return nil, err
@@ -73,8 +83,14 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communit
 	_, err = usersCollection.UpdateOne(
 		ctx,
 		primitive.M{"_id": creatorID},
-		primitive.M{"$addToSet": primitive.M{"InCommunities": communityID}},
+		primitive.M{
+			"$addToSet": primitive.M{
+				"InCommunities":    communityID,
+				"OwnerCommunities": communityID,
+			},
+		},
 	)
+
 	if err != nil {
 		return nil, err
 	}

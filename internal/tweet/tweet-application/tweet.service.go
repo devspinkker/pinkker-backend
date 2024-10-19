@@ -45,8 +45,9 @@ func (ts *TweetService) SaveTweet(status string, idCommunity primitive.ObjectID,
 	modelNewTweet.Views = 0
 	modelNewTweet.CommunityID = idCommunity
 	modelNewTweet.IsPrivate = IsPrivate
-	idTweet, err := ts.TweetRepository.TweetSave(modelNewTweet)
 	modelNewTweet.IdOfTheUsersWhoViewed = []primitive.ObjectID{}
+
+	idTweet, err := ts.TweetRepository.TweetSave(modelNewTweet)
 	if err != nil {
 		return idTweet, err
 

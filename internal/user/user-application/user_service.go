@@ -91,6 +91,8 @@ func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avat
 	fifteenDaysAgo := time.Now().AddDate(0, 0, -15)
 	modelNewUser.EditProfiile.Biography = fifteenDaysAgo
 	modelNewUser.EditProfiile.NameUser = time.Now()
+	modelNewUser.InCommunities = []primitive.ObjectID{}
+	modelNewUser.OwnerCommunities = []primitive.ObjectID{}
 
 	return &modelNewUser
 }
