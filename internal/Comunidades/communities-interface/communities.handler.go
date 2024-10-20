@@ -1,6 +1,7 @@
 package communitiestinterfaces
 
 import (
+	communitiesdomain "PINKKER-BACKEND/internal/Comunidades/communities"
 	communitiesapplication "PINKKER-BACKEND/internal/Comunidades/communities-application"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,12 +19,7 @@ func NewCommunitiesHandler(service *communitiesapplication.CommunitiesService) *
 }
 
 func (h *CommunitiesHandler) CreateCommunity(c *fiber.Ctx) error {
-	var req struct {
-		CommunityName string   `json:"community_name"`
-		Description   string   `json:"description"`
-		IsPrivate     bool     `json:"is_private"`
-		Categories    []string `json:"categories"`
-	}
+
 	idValue := c.Context().UserValue("_id").(string)
 	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
 	if errorID != nil {
@@ -31,14 +27,14 @@ func (h *CommunitiesHandler) CreateCommunity(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
-
+	req := communitiesdomain.CreateCommunity{}
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Error parsing request",
 		})
 	}
 
-	community, err := h.Service.CreateCommunity(c.Context(), req.CommunityName, idValueToken, req.Description, req.IsPrivate, req.Categories)
+	community, err := h.Service.CreateCommunity(c.Context(), req, idValueToken)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Error creating community",
@@ -49,6 +45,28 @@ func (h *CommunitiesHandler) CreateCommunity(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message":   "Community created successfully",
 		"community": community,
+	})
+}
+func (h *CommunitiesHandler) FindUserCommunities(c *fiber.Ctx) error {
+	var req struct {
+		UserId primitive.ObjectID `json:"UserId"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Error parsing request",
+		})
+	}
+	Communities, err := h.Service.FindUserCommunities(c.Context(), req.UserId)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error adding member",
+			"error":   err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOKy",
+		"data":    Communities,
 	})
 }
 func (h *CommunitiesHandler) AddMember(c *fiber.Ctx) error {
@@ -81,6 +99,7 @@ func (h *CommunitiesHandler) AddMember(c *fiber.Ctx) error {
 		"message": "Member added successfully",
 	})
 }
+
 func (h *CommunitiesHandler) RemoveMember(c *fiber.Ctx) error {
 	var req struct {
 		CommunityID primitive.ObjectID `json:"community_id"`

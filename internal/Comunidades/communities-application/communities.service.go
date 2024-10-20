@@ -19,20 +19,20 @@ func NewCommunitiesService(communitiesRepository *communitiestinfrastructure.Com
 }
 
 // Crear una nueva comunidad
-func (s *CommunitiesService) CreateCommunity(ctx context.Context, name string, creatorID primitive.ObjectID, description string, isPrivate bool, categories []string) (interface{}, error) {
-	return s.communitiesRepository.CreateCommunity(ctx, name, creatorID, description, isPrivate, categories)
+func (s *CommunitiesService) CreateCommunity(ctx context.Context, req communitiesdomain.CreateCommunity, creatorID primitive.ObjectID) (interface{}, error) {
+	return s.communitiesRepository.CreateCommunity(ctx, req, creatorID)
 }
 
 // Agregar un miembro a la comunidad
 func (s *CommunitiesService) AddMember(ctx context.Context, communityID, userID primitive.ObjectID) error {
-	_, err := s.communitiesRepository.GetSubscriptionByUserIDs(userID, communityID)
-	if err != nil {
-		return err
-	}
+
 	return s.communitiesRepository.AddMember(ctx, communityID, userID)
 }
 func (s *CommunitiesService) RemoveMember(ctx context.Context, communityID, userID primitive.ObjectID) error {
 	return s.communitiesRepository.RemoveMember(ctx, communityID, userID)
+}
+func (s *CommunitiesService) FindUserCommunities(ctx context.Context, userID primitive.ObjectID) ([]communitiesdomain.CommunityDetails, error) {
+	return s.communitiesRepository.FindUserCommunities(ctx, userID)
 }
 
 // Expulsar un miembro de la comunidad

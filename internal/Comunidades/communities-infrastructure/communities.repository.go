@@ -31,9 +31,10 @@ func NewcommunitiesRepository(redisClient *redis.Client, mongoClient *mongo.Clie
 }
 
 // CreateCommunity crea una nueva comunidad y la guarda en MongoDB
-func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communityName string, creatorID primitive.ObjectID, description string, isPrivate bool, categories []string) (*communitiesdomain.Community, error) {
+func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req communitiesdomain.CreateCommunity, creatorID primitive.ObjectID) (*communitiesdomain.Community, error) {
 	var user struct {
 		PinkkerPrime *userdomain.PinkkerPrime `bson:"PinkkerPrime"`
+		Pixeles      int                      `bson:"Pixeles"`
 	}
 
 	usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
@@ -43,34 +44,44 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communit
 		return nil, err
 	}
 
+	// Verificar si el usuario tiene una suscripción activa de PinkkerPrime
 	if user.PinkkerPrime == nil || user.PinkkerPrime.SubscriptionEnd.Before(time.Now()) {
-		return nil, fiber.NewError(fiber.StatusForbidden, "The user does not have an active PinkkerPrime subscription")
+		return nil, fiber.NewError(fiber.StatusForbidden, "El usuario no tiene una suscripción activa de PinkkerPrime")
 	}
 
+	// Verificar si el usuario tiene al menos 5000 pixeles
+	if user.Pixeles < 5000 {
+		return nil, fiber.NewError(fiber.StatusForbidden, "El usuario no tiene suficientes pixeles")
+	}
+
+	// Verificar si ya existe una comunidad con el mismo nombre
 	communitiesCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 	var existingCommunity struct {
 		CommunityName string `bson:"CommunityName"`
 	}
 
-	err = communitiesCollection.FindOne(ctx, primitive.M{"CommunityName": communityName}).Decode(&existingCommunity)
+	err = communitiesCollection.FindOne(ctx, primitive.M{"CommunityName": req.CommunityName}).Decode(&existingCommunity)
 	if err == nil {
-		return nil, fiber.NewError(fiber.StatusConflict, "A community with this name already exists")
+		return nil, fiber.NewError(fiber.StatusConflict, "Una comunidad con este nombre ya existe")
 	} else if err != mongo.ErrNoDocuments {
 		return nil, err
 	}
 
+	// Crear la nueva comunidad
 	community := &communitiesdomain.Community{
-		CommunityName: communityName,
-		Description:   description,
-		CreatorID:     creatorID,
-		Members:       []primitive.ObjectID{creatorID},
-		Mods:          []primitive.ObjectID{},
-		BannedUsers:   []primitive.ObjectID{},
-		Rules:         "Por defecto",
-		IsPrivate:     isPrivate,
-		Categories:    categories,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		CommunityName:      req.CommunityName,
+		Description:        req.Description,
+		CreatorID:          creatorID,
+		Members:            []primitive.ObjectID{creatorID},
+		Mods:               []primitive.ObjectID{},
+		BannedUsers:        []primitive.ObjectID{},
+		Rules:              "Por defecto",
+		IsPrivate:          req.IsPrivate,
+		Categories:         req.Categories,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
+		IsPaid:             req.IsPaid,
+		SubscriptionAmount: req.SubscriptionAmount,
 	}
 
 	result, err := communitiesCollection.InsertOne(ctx, community)
@@ -84,6 +95,7 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communit
 		ctx,
 		primitive.M{"_id": creatorID},
 		primitive.M{
+			"$inc": primitive.M{"Pixeles": -5000},
 			"$addToSet": primitive.M{
 				"InCommunities":    communityID,
 				"OwnerCommunities": communityID,
@@ -96,6 +108,68 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, communit
 	}
 
 	return community, nil
+}
+func (repo *CommunitiesRepository) FindUserCommunities(ctx context.Context, userID primitive.ObjectID) ([]communitiesdomain.CommunityDetails, error) {
+	usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	var user struct {
+		InCommunities []primitive.ObjectID `bson:"InCommunities"`
+	}
+
+	err := usersCollection.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(user.InCommunities) == 0 {
+		return []communitiesdomain.CommunityDetails{}, nil
+	}
+
+	communitiesCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.M{"_id": bson.M{"$in": user.InCommunities}}}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "CreatorID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "creatorDetails"},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "CommunityName", Value: 1},
+			{Key: "Description", Value: 1},
+			{Key: "IsPrivate", Value: 1},
+			{Key: "CreatedAt", Value: 1},
+			{Key: "UpdatedAt", Value: 1},
+			{Key: "Categories", Value: 1},
+			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
+			{Key: "creator", Value: bson.D{
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+			}},
+		}}},
+	}
+
+	// Ejecutar el pipeline
+	cursor, err := communitiesCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Almacenar los resultados
+	var communities []communitiesdomain.CommunityDetails
+	for cursor.Next(ctx) {
+		var community communitiesdomain.CommunityDetails
+		if err := cursor.Decode(&community); err != nil {
+			return nil, err
+		}
+		communities = append(communities, community)
+	}
+
+	return communities, nil
 }
 
 func (repo *CommunitiesRepository) AddModerator(ctx context.Context, communityID, newModID, modID primitive.ObjectID) error {
@@ -152,6 +226,50 @@ func (repo *CommunitiesRepository) AddModerator(ctx context.Context, communityID
 	return nil
 }
 
+// handleCommunityPayment gestiona el pago para las comunidades pagas, descontando el monto del usuario y
+// transfiriendo el saldo restante al creador de la comunidad, menos una comisión del 5%.
+func (repo *CommunitiesRepository) handleCommunityPayment(sc mongo.SessionContext, community communitiesdomain.Community, userID primitive.ObjectID) error {
+	usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	// Obtener el saldo actual del usuario
+	var user struct {
+		Pixeles float64 `json:"Pixeles" bson:"Pixeles"`
+	} // Asumiendo que tienes una estructura User para representar al usuario
+	err := usersCollection.FindOne(sc, primitive.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		return err
+	}
+	if int(user.Pixeles) < community.SubscriptionAmount {
+		return fiber.NewError(fiber.StatusPaymentRequired, "Insufficient Pixeles")
+	}
+
+	// Calcular el monto a pagar al creador de la comunidad (95% del valor de la suscripción)
+	paymentToCreator := float64(community.SubscriptionAmount) * 0.95
+
+	// Descontar el valor de la suscripción de los Pixeles del usuario
+	_, err = usersCollection.UpdateOne(
+		sc,
+		primitive.M{"_id": userID},
+		primitive.M{"$inc": primitive.M{"Pixeles": -community.SubscriptionAmount}},
+	)
+	if err != nil {
+		return err
+	}
+
+	// Añadir el monto correspondiente en Pixeles al saldo del creador de la comunidad
+	_, err = usersCollection.UpdateOne(
+		sc,
+		primitive.M{"_id": community.CreatorID},
+		primitive.M{"$inc": primitive.M{"Pixeles": paymentToCreator}},
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AddMember añade un miembro a la comunidad y gestiona el pago si la comunidad es paga.
 func (repo *CommunitiesRepository) AddMember(ctx context.Context, communityID primitive.ObjectID, userID primitive.ObjectID) error {
 	session, err := repo.mongoClient.StartSession()
 	if err != nil {
@@ -178,7 +296,29 @@ func (repo *CommunitiesRepository) AddMember(ctx context.Context, communityID pr
 			return fiber.NewError(fiber.StatusForbidden, "This user is banned from the community")
 		}
 
-		// Si el usuario no está baneado, añadirlo a la comunidad
+		// Obtener los detalles de la comunidad
+		var community communitiesdomain.Community
+		err = communitiesCollection.FindOne(sc, primitive.M{"_id": communityID}).Decode(&community)
+		if err != nil {
+			session.AbortTransaction(sc)
+			return err
+		}
+
+		// Si la comunidad es paga, gestionar el pago
+		if community.IsPaid {
+			err = repo.handleCommunityPayment(sc, community, userID)
+			if err != nil {
+				session.AbortTransaction(sc)
+				return err
+			}
+		} else {
+			_, err = repo.GetSubscriptionByUserIDs(userID, community)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Añadir el usuario a la comunidad
 		_, err = communitiesCollection.UpdateOne(
 			sc,
 			primitive.M{"_id": communityID},
@@ -637,7 +777,7 @@ func (r *CommunitiesRepository) GetTOTPSecret(ctx context.Context, userID primit
 func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, communityID primitive.ObjectID, ExcludeFilterlID []primitive.ObjectID, idT primitive.ObjectID, limit int) ([]communitiesdomain.PostGetCommunityReq, error) {
 	db := repo.mongoClient.Database("PINKKER-BACKEND")
 	collPosts := db.Collection("Post")
-	_, err := repo.GetSubscriptionByUserIDs(idT, communityID)
+	_, err := repo.GetSubscriptionByUserIDsAndcommunityID(idT, communityID)
 	if err != nil {
 		return nil, err
 	}
@@ -758,7 +898,40 @@ func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID
 
 	return nil, mongo.ErrNoDocuments
 }
-func (r *CommunitiesRepository) GetSubscriptionByUserIDs(sourceUserID, communityID primitive.ObjectID) (*subscriptiondomain.Subscription, error) {
+
+func (r *CommunitiesRepository) GetSubscriptionByUserIDs(sourceUserID primitive.ObjectID, community communitiesdomain.Community) (*subscriptiondomain.Subscription, error) {
+
+	if community.CreatorID == sourceUserID {
+		return nil, nil
+	}
+
+	if !community.IsPrivate {
+		return nil, nil
+	}
+
+	subscriptionsCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscriptions")
+
+	filter := bson.M{
+		"sourceUserID":      sourceUserID,
+		"destinationUserID": community.CreatorID,
+	}
+
+	var subscription subscriptiondomain.Subscription
+	err := subscriptionsCollection.FindOne(context.Background(), filter).Decode(&subscription)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, fmt.Errorf("no se encontró ninguna suscripción entre el usuario y el creador")
+		}
+		return nil, fmt.Errorf("error al buscar la suscripción: %v", err)
+	}
+
+	if subscription.SubscriptionEnd.Before(time.Now()) {
+		return nil, fmt.Errorf("la suscripción ha expirado")
+	}
+
+	return &subscription, nil
+}
+func (r *CommunitiesRepository) GetSubscriptionByUserIDsAndcommunityID(sourceUserID, communityID primitive.ObjectID) (*subscriptiondomain.Subscription, error) {
 	communitiesCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 
 	redisKey := fmt.Sprintf("community:%s", communityID.Hex())

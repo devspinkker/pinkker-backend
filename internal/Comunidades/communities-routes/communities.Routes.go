@@ -21,6 +21,7 @@ func CommunitiesRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mo
 	App.Post("/communities/AddMember", middleware.UseExtractor(), Handler.AddMember)
 
 	App.Post("/communities/RemoveMember", middleware.UseExtractor(), Handler.RemoveMember)
+	App.Post("/communities/FindUserCommunities", Handler.FindUserCommunities)
 
 	App.Post("/communities/BanMember", middleware.UseExtractor(), Handler.BanMember)
 	App.Post("/communities/GetCommunityPosts", middleware.UseExtractor(), Handler.GetCommunityPosts)

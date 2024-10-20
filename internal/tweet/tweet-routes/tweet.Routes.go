@@ -38,6 +38,7 @@ func TweetdRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.C
 
 	App.Post("/post/GetTweetsRecommended", middleware.UseExtractor(), tweetHandler.GetTweetsRecommended)
 	App.Post("/post/GetRandomPostcommunities", middleware.UseExtractor(), tweetHandler.GetRandomPostcommunities)
+	App.Post("/post/GetPostCommunitiesFromUser", middleware.UseExtractor(), tweetHandler.GetPostCommunitiesFromUser)
 
 	App.Get("/post/GetTrends", tweetHandler.GetTrends)
 	App.Get("/post/GetTweetsByHashtag", tweetHandler.GetTweetsByHashtag)

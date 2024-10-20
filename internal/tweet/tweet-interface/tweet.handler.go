@@ -353,7 +353,53 @@ func (th *TweetHandler) GetRandomPostcommunities(c *fiber.Ctx) error {
 		"data":    Tweets,
 	})
 }
+func (th *TweetHandler) GetPostCommunitiesFromUser(c *fiber.Ctx) error {
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
 
+	var req tweetdomain.GetRecommended
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+	Tweets, errTweetGetFollow := th.TweetServise.GetPostCommunitiesFromUser(idValueObj, req.ExcludeIDs)
+	if errTweetGetFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errTweetGetFollow.Error(),
+		})
+	}
+
+	PostAds, err := th.TweetServise.GetAdsMuroAndPost()
+	if err != nil {
+		fmt.Println(err)
+	}
+	if PostAds.ReferenceLink != "" {
+		var combinedData []interface{}
+
+		for _, tweet := range Tweets {
+			combinedData = append(combinedData, tweet)
+		}
+
+		combinedData = append(combinedData, PostAds)
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "ok",
+			"data":    combinedData,
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Tweets,
+	})
+}
 func (th *TweetHandler) GetPostuser(c *fiber.Ctx) error {
 
 	page, errpage := strconv.Atoi(c.Query("page", "1"))

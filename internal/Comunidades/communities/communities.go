@@ -8,18 +8,28 @@ import (
 )
 
 type Community struct {
-	ID            primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	CommunityName string               `json:"communityName" bson:"CommunityName" validate:"required"`
-	Description   string               `json:"description" bson:"Description"`
-	CreatorID     primitive.ObjectID   `json:"creatorID" bson:"CreatorID"`
-	Members       []primitive.ObjectID `json:"members" bson:"Members"`
-	Mods          []primitive.ObjectID `json:"mods" bson:"Mods"`
-	BannedUsers   []primitive.ObjectID `json:"bannedUsers" bson:"BannedUsers"`
-	Rules         string               `json:"rules" bson:"Rules"`
-	IsPrivate     bool                 `json:"isPrivate" bson:"IsPrivate"`
-	Categories    []string             `json:"categories" bson:"Categories"`
-	CreatedAt     time.Time            `json:"createdAt" bson:"CreatedAt"`
-	UpdatedAt     time.Time            `json:"updatedAt" bson:"UpdatedAt"`
+	ID                 primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	CommunityName      string               `json:"communityName" bson:"CommunityName" validate:"required"`
+	Description        string               `json:"description" bson:"Description"`
+	CreatorID          primitive.ObjectID   `json:"creatorID" bson:"CreatorID"`
+	Members            []primitive.ObjectID `json:"members" bson:"Members"`
+	Mods               []primitive.ObjectID `json:"mods" bson:"Mods"`
+	BannedUsers        []primitive.ObjectID `json:"bannedUsers" bson:"BannedUsers"`
+	Rules              string               `json:"rules" bson:"Rules"`
+	IsPrivate          bool                 `json:"isPrivate" bson:"IsPrivate"`
+	Categories         []string             `json:"categories" bson:"Categories"`
+	CreatedAt          time.Time            `json:"createdAt" bson:"CreatedAt"`
+	UpdatedAt          time.Time            `json:"updatedAt" bson:"UpdatedAt"`
+	IsPaid             bool                 `json:"IsPaid" bson:"IsPaid"`
+	SubscriptionAmount int                  `json:"SubscriptionAmount" bson:"SubscriptionAmount"`
+}
+type CreateCommunity struct {
+	CommunityName      string   `json:"community_name"`
+	Description        string   `json:"description"`
+	IsPrivate          bool     `json:"is_private"`
+	Categories         []string `json:"categories"`
+	IsPaid             bool     `json:"is_paid"`
+	SubscriptionAmount int      `json:"subscription_amount"`
 }
 
 func (u *Community) ValidateReqCreateCommunities() error {
