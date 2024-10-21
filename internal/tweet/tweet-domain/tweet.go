@@ -53,6 +53,8 @@ type RePost struct {
 	OriginalPost          primitive.ObjectID   `json:"OriginalPost" bson:"OriginalPost"`
 	TimeStamp             time.Time            `json:"TimeStamp" bson:"TimeStamp"`
 	IdOfTheUsersWhoViewed []primitive.ObjectID `json:"IdOfTheUsersWhoViewed" bson:"IdOfTheUsersWhoViewed"`
+	CommunityID           primitive.ObjectID   `json:"communityID" bson:"communityID,omitempty"`
+	IsPrivate             bool                 `json:"isPrivate" bson:"IsPrivate"`
 }
 type CitaPost struct {
 	ID                    primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
@@ -68,10 +70,19 @@ type CitaPost struct {
 	Hashtags              []string             `json:"hashtags" bson:"Hashtags"`
 	Views                 int                  `json:"Views" bson:"Views"`
 	IdOfTheUsersWhoViewed []primitive.ObjectID `json:"IdOfTheUsersWhoViewed" bson:"IdOfTheUsersWhoViewed"`
+	CommunityID           primitive.ObjectID   `json:"communityID" bson:"communityID,omitempty"`
+	IsPrivate             bool                 `json:"isPrivate" bson:"IsPrivate"`
 }
+
+type PostDataOp struct {
+	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	CommunityID primitive.ObjectID `json:"communityID" bson:"communityID,omitempty"`
+	IsPrivate   bool               `json:"isPrivate" bson:"IsPrivate"`
+}
+
 type TweetModelValidator struct {
 	Status      string             `json:"status" validate:"required,min=3,max=100"`
-	CommunityID primitive.ObjectID `json:"communityID" bson:"communityID,omitempty"`
+	CommunityID primitive.ObjectID `json:"communityID" bson:"communityID,omitempty" `
 }
 type TweetCommentModelValidator struct {
 	Status       string             `json:"status" validate:"required,min=3,max=100"`

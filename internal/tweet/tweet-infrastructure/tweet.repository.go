@@ -411,7 +411,9 @@ func (t *TweetRepository) GetRandomPostcommunities(idT primitive.ObjectID, exclu
 		}
 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
 	}
-
+	if err := t.addOriginalPostDataCommunity(ctx, collTweets, tweetsWithUserInfo); err != nil {
+		return nil, err
+	}
 	return tweetsWithUserInfo, nil
 }
 func (t *TweetRepository) GetPostsFromUserCommunities(idT primitive.ObjectID, excludeIDs []primitive.ObjectID, limit int) ([]tweetdomain.GetPostcommunitiesRandom, error) {
@@ -429,7 +431,7 @@ func (t *TweetRepository) GetPostsFromUserCommunities(idT primitive.ObjectID, ex
 		return nil, err
 	}
 
-	if len(user.InCommunities) == 0 {
+	if user.InCommunities == nil || len(user.InCommunities) == 0 {
 		return nil, fiber.NewError(fiber.StatusNotFound, "The user is not part of any communities")
 	}
 
@@ -475,7 +477,7 @@ func (t *TweetRepository) GetPostsFromUserCommunities(idT primitive.ObjectID, ex
 			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
 			{Key: "RePostsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$RePosts", bson.A{}}}}}}},
 			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, "$Likes"}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
 		}}},
 
 		// Ordenamos por relevancia (basado en el conteo de likes y la antigüedad del tweet)
@@ -530,9 +532,73 @@ func (t *TweetRepository) GetPostsFromUserCommunities(idT primitive.ObjectID, ex
 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
 	}
 
+	if err := t.addOriginalPostDataCommunity(ctx, collTweets, tweetsWithUserInfo); err != nil {
+		return nil, err
+	}
+
 	return tweetsWithUserInfo, nil
 }
+func (t *TweetRepository) addOriginalPostDataCommunity(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.GetPostcommunitiesRandom) error {
+	var originalPostIDs []primitive.ObjectID
+	for _, tweet := range tweets {
+		if tweet.OriginalPost != primitive.NilObjectID {
+			originalPostIDs = append(originalPostIDs, tweet.OriginalPost)
+		}
+	}
+	if len(originalPostIDs) > 0 {
+		originalPostPipeline := bson.A{
+			bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: originalPostIDs}}}}}},
+			bson.D{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "Users"},
+				{Key: "localField", Value: "UserID"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "UserInfo"},
+			}}},
+			bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+			bson.D{{Key: "$project", Value: bson.D{
+				{Key: "id", Value: "$_id"},
+				{Key: "Type", Value: "$Type"},
+				{Key: "Status", Value: "$Status"},
+				{Key: "PostImage", Value: "$PostImage"},
+				{Key: "TimeStamp", Value: "$TimeStamp"},
+				{Key: "UserID", Value: "$UserID"},
+				{Key: "Likes", Value: "$Likes"},
+				{Key: "Comments", Value: "$Comments"},
+				{Key: "RePosts", Value: "$RePosts"},
+				{Key: "Views", Value: "$Views"},
+				{Key: "OriginalPost", Value: "$OriginalPost"},
+				{Key: "UserInfo.FullName", Value: 1},
+				{Key: "UserInfo.Avatar", Value: 1},
+				{Key: "UserInfo.NameUser", Value: 1},
+			}}},
+		}
 
+		cursorOriginalPosts, err := collTweets.Aggregate(ctx, originalPostPipeline)
+		if err != nil {
+			return err
+		}
+		defer cursorOriginalPosts.Close(ctx)
+
+		var originalPostMap = make(map[primitive.ObjectID]tweetdomain.TweetGetFollowReq)
+		for cursorOriginalPosts.Next(ctx) {
+			var originalPost tweetdomain.TweetGetFollowReq
+			if err := cursorOriginalPosts.Decode(&originalPost); err != nil {
+				return err
+			}
+			originalPostMap[originalPost.ID] = originalPost
+		}
+
+		for i, tweet := range tweets {
+			if tweet.OriginalPost != primitive.NilObjectID {
+				originalPost, found := originalPostMap[tweet.OriginalPost]
+				if found {
+					tweets[i].OriginalPostData = &originalPost
+				}
+			}
+		}
+	}
+	return nil
+}
 func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetGetFollowReq, idt primitive.ObjectID) error {
 	// Obtener los IDs de los tweets
 	var tweetIDs []primitive.ObjectID
@@ -2075,39 +2141,40 @@ func (t *TweetRepository) GetCommentPosts(tweetID primitive.ObjectID, page int, 
 
 	return comments, nil
 }
-func (t *TweetRepository) isOriginalPostPrivate(originalPostID primitive.ObjectID) (bool, error) {
+func (t *TweetRepository) isOriginalPostPrivate(originalPostID primitive.ObjectID) (tweetdomain.PostDataOp, error) {
 	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+	dataPost := tweetdomain.PostDataOp{}
+	err := GoMongoDBColl.FindOne(context.Background(), bson.D{{Key: "_id", Value: originalPostID}}).Decode(&dataPost)
 
-	originalPost := GoMongoDBColl.FindOne(context.Background(), bson.D{{Key: "_id", Value: originalPostID}})
-
-	if err := originalPost.Err(); err != nil {
+	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return false, errors.New("el post original no existe")
+			return dataPost, errors.New("el post original no existe")
 		}
-		return false, err
+		return dataPost, err
 	}
 
-	var postData struct {
-		IsPrivate bool `bson:"IsPrivate"`
-	}
-
-	if err := originalPost.Decode(&postData); err != nil {
-		return false, err
-	}
-
-	return postData.IsPrivate, nil
+	return dataPost, nil
 }
 
 func (t *TweetRepository) RePost(rePost *tweetdomain.RePost) error {
 	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
-	isPrivate, err := t.isOriginalPostPrivate(rePost.OriginalPost)
+	Post, err := t.isOriginalPostPrivate(rePost.OriginalPost)
 	if err != nil {
 		return err
 	}
+	rePost.IsPrivate = false
 
-	if isPrivate {
-		return errors.New("no se puede repostear un post privado")
+	if Post.IsPrivate {
+		rePost.IsPrivate = true
+		member, _, err := t.IsUserMemberOfCommunity(Post.CommunityID, rePost.UserID)
+		if err != nil {
+			return errors.New("error buscando al member")
+		}
+		if !member {
+			return errors.New("no se puede repostear un post privado")
+		}
 	}
+	rePost.CommunityID = Post.CommunityID
 
 	filterRePost := bson.D{{Key: "UserID", Value: rePost.UserID}, {Key: "OriginalPost", Value: rePost.OriginalPost}}
 	existingRePost := GoMongoDBColl.FindOne(context.Background(), filterRePost)
@@ -2146,14 +2213,24 @@ func (t *TweetRepository) RePost(rePost *tweetdomain.RePost) error {
 }
 func (t *TweetRepository) CitaPost(rePost *tweetdomain.CitaPost) error {
 	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
-	isPrivate, err := t.isOriginalPostPrivate(rePost.OriginalPost)
+	Post, err := t.isOriginalPostPrivate(rePost.OriginalPost)
 	if err != nil {
 		return err
 	}
+	rePost.IsPrivate = false
 
-	if isPrivate {
-		return errors.New("no se puede repostear un post privado")
+	if Post.IsPrivate {
+		rePost.IsPrivate = true
+		member, _, err := t.IsUserMemberOfCommunity(Post.CommunityID, rePost.UserID)
+		if err != nil {
+			return errors.New("error buscando al member")
+		}
+		if !member {
+			return errors.New("no se puede repostear un post privado")
+		}
 	}
+	rePost.CommunityID = Post.CommunityID
+
 	_, err = GoMongoDBColl.InsertOne(context.Background(), rePost)
 	return err
 }
@@ -2267,7 +2344,6 @@ func (t *TweetRepository) IsUserMemberOfCommunity(communityID, userID primitive.
 		{Key: "Members", Value: bson.D{{Key: "$in", Value: bson.A{userID}}}},
 	}
 
-	// Realiza la búsqueda en la base de datos
 	var community struct {
 		ID        primitive.ObjectID `bson:"_id"`
 		IsPrivate bool               `bson:"IsPrivate"`

@@ -3,6 +3,7 @@ package communitiestinterfaces
 import (
 	communitiesdomain "PINKKER-BACKEND/internal/Comunidades/communities"
 	communitiesapplication "PINKKER-BACKEND/internal/Comunidades/communities-application"
+	"PINKKER-BACKEND/pkg/helpers"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,7 +20,12 @@ func NewCommunitiesHandler(service *communitiesapplication.CommunitiesService) *
 }
 
 func (h *CommunitiesHandler) CreateCommunity(c *fiber.Ctx) error {
+	fileHeader, _ := c.FormFile("Banner")
+	PostImageChanel := make(chan string)
+	errChanel := make(chan error)
 
+	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+	Banner := <-PostImageChanel
 	idValue := c.Context().UserValue("_id").(string)
 	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
 	if errorID != nil {
@@ -29,12 +35,12 @@ func (h *CommunitiesHandler) CreateCommunity(c *fiber.Ctx) error {
 	}
 	req := communitiesdomain.CreateCommunity{}
 	if err := c.BodyParser(&req); err != nil {
+
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Error parsing request",
 		})
 	}
-
-	community, err := h.Service.CreateCommunity(c.Context(), req, idValueToken)
+	community, err := h.Service.CreateCommunity(c.Context(), req, Banner, idValueToken)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Error creating community",

@@ -19,8 +19,8 @@ func NewCommunitiesService(communitiesRepository *communitiestinfrastructure.Com
 }
 
 // Crear una nueva comunidad
-func (s *CommunitiesService) CreateCommunity(ctx context.Context, req communitiesdomain.CreateCommunity, creatorID primitive.ObjectID) (interface{}, error) {
-	return s.communitiesRepository.CreateCommunity(ctx, req, creatorID)
+func (s *CommunitiesService) CreateCommunity(ctx context.Context, req communitiesdomain.CreateCommunity, Banner string, creatorID primitive.ObjectID) (interface{}, error) {
+	return s.communitiesRepository.CreateCommunity(ctx, req, Banner, creatorID)
 }
 
 // Agregar un miembro a la comunidad

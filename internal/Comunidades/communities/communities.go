@@ -22,14 +22,15 @@ type Community struct {
 	UpdatedAt          time.Time            `json:"updatedAt" bson:"UpdatedAt"`
 	IsPaid             bool                 `json:"IsPaid" bson:"IsPaid"`
 	SubscriptionAmount int                  `json:"SubscriptionAmount" bson:"SubscriptionAmount"`
+	Banner             string               `json:"Banner" bson:"Banner"`
 }
 type CreateCommunity struct {
-	CommunityName      string   `json:"community_name"`
-	Description        string   `json:"description"`
-	IsPrivate          bool     `json:"is_private"`
-	Categories         []string `json:"categories"`
-	IsPaid             bool     `json:"is_paid"`
-	SubscriptionAmount int      `json:"subscription_amount"`
+	CommunityName      string   `json:"community_name" form:"community_name"`
+	Description        string   `json:"description" form:"description"`
+	IsPrivate          bool     `json:"is_private" form:"is_private"`
+	Categories         []string `json:"categories" form:"categories"`
+	IsPaid             bool     `json:"is_paid" form:"is_paid"`
+	SubscriptionAmount int      `json:"subscription_amount" form:"subscription_amount"`
 }
 
 func (u *Community) ValidateReqCreateCommunities() error {

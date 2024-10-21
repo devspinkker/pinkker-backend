@@ -31,7 +31,7 @@ func NewcommunitiesRepository(redisClient *redis.Client, mongoClient *mongo.Clie
 }
 
 // CreateCommunity crea una nueva comunidad y la guarda en MongoDB
-func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req communitiesdomain.CreateCommunity, creatorID primitive.ObjectID) (*communitiesdomain.Community, error) {
+func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req communitiesdomain.CreateCommunity, Banner string, creatorID primitive.ObjectID) (*communitiesdomain.Community, error) {
 	var user struct {
 		PinkkerPrime *userdomain.PinkkerPrime `bson:"PinkkerPrime"`
 		Pixeles      int                      `bson:"Pixeles"`
@@ -59,14 +59,16 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 	var existingCommunity struct {
 		CommunityName string `bson:"CommunityName"`
 	}
-
 	err = communitiesCollection.FindOne(ctx, primitive.M{"CommunityName": req.CommunityName}).Decode(&existingCommunity)
+
 	if err == nil {
 		return nil, fiber.NewError(fiber.StatusConflict, "Una comunidad con este nombre ya existe")
 	} else if err != mongo.ErrNoDocuments {
 		return nil, err
 	}
-
+	if req.IsPaid {
+		req.IsPrivate = true
+	}
 	// Crear la nueva comunidad
 	community := &communitiesdomain.Community{
 		CommunityName:      req.CommunityName,
@@ -82,6 +84,7 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 		UpdatedAt:          time.Now(),
 		IsPaid:             req.IsPaid,
 		SubscriptionAmount: req.SubscriptionAmount,
+		Banner:             Banner,
 	}
 
 	result, err := communitiesCollection.InsertOne(ctx, community)
@@ -109,6 +112,7 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 
 	return community, nil
 }
+
 func (repo *CommunitiesRepository) FindUserCommunities(ctx context.Context, userID primitive.ObjectID) ([]communitiesdomain.CommunityDetails, error) {
 	usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
@@ -829,6 +833,7 @@ func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, commun
 			{Key: "likeCount", Value: 1},
 			{Key: "CommentsCount", Value: 1},
 			{Key: "isLikedByID", Value: 1},
+			{Key: "OriginalPost", Value: 1},
 		}}},
 	}
 
@@ -846,8 +851,71 @@ func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, commun
 		}
 		postsWithUserInfo = append(postsWithUserInfo, postWithUserInfo)
 	}
-
+	if err := repo.addOriginalPostDataCommunity(ctx, collPosts, postsWithUserInfo); err != nil {
+		return nil, err
+	}
 	return postsWithUserInfo, nil
+}
+func (t *CommunitiesRepository) addOriginalPostDataCommunity(ctx context.Context, collTweets *mongo.Collection, Posts []communitiesdomain.PostGetCommunityReq) error {
+	var originalPostIDs []primitive.ObjectID
+	for _, tweet := range Posts {
+		if tweet.OriginalPost != primitive.NilObjectID {
+			originalPostIDs = append(originalPostIDs, tweet.OriginalPost)
+		}
+	}
+	if len(originalPostIDs) > 0 {
+		originalPostPipeline := bson.A{
+			bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: originalPostIDs}}}}}},
+			bson.D{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "Users"},
+				{Key: "localField", Value: "UserID"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "UserInfo"},
+			}}},
+			bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+			bson.D{{Key: "$project", Value: bson.D{
+				{Key: "id", Value: "$_id"},
+				{Key: "Type", Value: "$Type"},
+				{Key: "Status", Value: "$Status"},
+				{Key: "PostImage", Value: "$PostImage"},
+				{Key: "TimeStamp", Value: "$TimeStamp"},
+				{Key: "UserID", Value: "$UserID"},
+				{Key: "Likes", Value: "$Likes"},
+				{Key: "Comments", Value: "$Comments"},
+				{Key: "RePosts", Value: "$RePosts"},
+				{Key: "Views", Value: "$Views"},
+				{Key: "OriginalPost", Value: "$OriginalPost"},
+				{Key: "UserInfo.FullName", Value: 1},
+				{Key: "UserInfo.Avatar", Value: 1},
+				{Key: "UserInfo.NameUser", Value: 1},
+			}}},
+		}
+
+		cursorOriginalPosts, err := collTweets.Aggregate(ctx, originalPostPipeline)
+		if err != nil {
+			return err
+		}
+		defer cursorOriginalPosts.Close(ctx)
+
+		var originalPostMap = make(map[primitive.ObjectID]communitiesdomain.PostGetCommunityReq)
+		for cursorOriginalPosts.Next(ctx) {
+			var originalPost communitiesdomain.PostGetCommunityReq
+			if err := cursorOriginalPosts.Decode(&originalPost); err != nil {
+				return err
+			}
+			originalPostMap[originalPost.ID] = originalPost
+		}
+
+		for i, tweet := range Posts {
+			if tweet.OriginalPost != primitive.NilObjectID {
+				originalPost, found := originalPostMap[tweet.OriginalPost]
+				if found {
+					Posts[i].OriginalPostData = &originalPost
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // solo lo pase abajo
