@@ -2,6 +2,7 @@ package userinfrastructure
 
 import (
 	"PINKKER-BACKEND/config"
+	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
@@ -2076,4 +2077,363 @@ func (r *UserRepository) GetInfoUserInRoom(nameUser string, getInfoUserInRoom pr
 	}
 
 	return room, nil
+}
+
+func (r *UserRepository) GetAllPendingNameUserAds(page int, userId primitive.ObjectID) ([]advertisements.Advertisements, error) {
+	// Base de datos y colecciones
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	Users := db.Collection("Users")
+	Advertisements := db.Collection("Advertisements")
+
+	ctx := context.TODO()
+
+	// Buscar el usuario por userId
+	var user struct {
+		OwnerCommunities []primitive.ObjectID `bson:"OwnerCommunities"`
+	}
+
+	err := Users.FindOne(ctx, bson.M{"_id": userId}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validar que el usuario tenga comunidades
+	if len(user.OwnerCommunities) == 0 {
+		return nil, errors.New("el usuario no tiene comunidades")
+	}
+
+	// Paginación
+	limit := int64(10)
+	skip := int64((page - 1) * 10)
+
+	// Filtro para anuncios pendientes con CommunityId en OwnerCommunities
+	filter := bson.M{
+		"State": "pending",
+		"CommunityId": bson.M{
+			"$in": user.OwnerCommunities,
+		},
+	}
+
+	// Opciones de consulta: paginación
+	options := options.Find()
+	options.SetLimit(limit)
+	options.SetSkip(skip)
+
+	// Ejecutar la consulta en Advertisements
+	cursor, err := Advertisements.Find(ctx, filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Decodificar los resultados
+	var pendingAds []advertisements.Advertisements
+	for cursor.Next(ctx) {
+		var ad advertisements.Advertisements
+		if err := cursor.Decode(&ad); err != nil {
+			return nil, err
+		}
+		pendingAds = append(pendingAds, ad)
+	}
+
+	// Verificar errores del cursor
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return pendingAds, nil
+}
+func (r *UserRepository) AcceptOrDeleteAdvertisement(userId primitive.ObjectID, advertisementID primitive.ObjectID, action bool) error {
+	// Base de datos y colecciones
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	Users := db.Collection("Users")
+	Advertisements := db.Collection("Advertisements")
+
+	ctx := context.TODO()
+
+	// Paso 1: Buscar al usuario por UserId para obtener OwnerCommunities
+	var user struct {
+		OwnerCommunities []primitive.ObjectID `bson:"OwnerCommunities"`
+	}
+
+	err := Users.FindOne(ctx, bson.M{"_id": userId}).Decode(&user)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	// Paso 2: Buscar el anuncio por su ID
+	var advertisement struct {
+		CommunityId          primitive.ObjectID `bson:"CommunityId"`
+		PricePTotalCommunity float64            `bson:"PricePTotalCommunity"` // Asegúrate que este campo es float64
+		IdUser               primitive.ObjectID `bson:"IdUser"`
+		State                string             `bson:"State"` // Agregamos el campo State para verificar su estado
+
+	}
+
+	err = Advertisements.FindOne(ctx, bson.M{"_id": advertisementID}).Decode(&advertisement)
+	if err != nil {
+		return errors.New("advertisement not found")
+	}
+
+	// Si el anuncio ya está aceptado, no hacer nada
+	if advertisement.State == "accepted" {
+		return nil // Anuncio ya aceptado, no se hace nada
+	}
+
+	// Paso 3: Verificar si el anuncio pertenece a una de las comunidades del usuario
+	hasPermission := false
+	for _, communityID := range user.OwnerCommunities {
+		if communityID == advertisement.CommunityId {
+			hasPermission = true
+			break
+		}
+	}
+
+	if !hasPermission {
+		return errors.New("user does not have permission to modify this advertisement")
+	}
+
+	// Acción cuando el anuncio es aceptado
+	if action {
+		// Aceptar el anuncio
+		_, err := Advertisements.UpdateOne(ctx, bson.M{"_id": advertisementID}, bson.M{
+			"$set": bson.M{
+				"State": "accepted",
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		// Calcular el monto que se le suma al usuario (90% del total)
+		amountToAdd := advertisement.PricePTotalCommunity * 0.90
+		fmt.Println(amountToAdd)
+		// Actualizar el saldo del usuario con el nuevo valor
+		_, err = Users.UpdateOne(ctx, bson.M{"_id": userId}, bson.M{
+			"$inc": bson.M{
+				"Pixeles": amountToAdd, // Aumenta el saldo del usuario
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+	} else {
+		// Acción cuando el anuncio es rechazado
+		// Eliminar el anuncio
+		_, err := Advertisements.DeleteOne(ctx, bson.M{"_id": advertisementID})
+		if err != nil {
+			return err
+		}
+
+		// Devolver el dinero al creador del anuncio
+		_, err = Users.UpdateOne(ctx, bson.M{"_id": advertisement.IdUser}, bson.M{
+			"$inc": bson.M{
+				"Pixeles": advertisement.PricePTotalCommunity, // Devolver el total al creador
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func (r *UserRepository) GetAllAcceptedNameUserAds(page int, userId primitive.ObjectID) ([]advertisements.Advertisements, error) {
+	// Base de datos y colecciones
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	Users := db.Collection("Users")
+	Advertisements := db.Collection("Advertisements")
+
+	ctx := context.TODO()
+
+	// Buscar el usuario por userId
+	var user struct {
+		OwnerCommunities []primitive.ObjectID `bson:"OwnerCommunities"`
+	}
+
+	err := Users.FindOne(ctx, bson.M{"_id": userId}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validar que el usuario tenga comunidades
+	if len(user.OwnerCommunities) == 0 {
+		return nil, errors.New("el usuario no tiene comunidades")
+	}
+
+	// Paginación
+	limit := int64(10)
+	skip := int64((page - 1) * 10)
+
+	// Filtro para anuncios aceptados
+	filter := bson.M{
+		"State": "accepted",
+		"CommunityId": bson.M{
+			"$in": user.OwnerCommunities,
+		},
+	}
+
+	// Opciones de consulta: paginación
+	options := options.Find()
+	options.SetLimit(limit)
+	options.SetSkip(skip)
+
+	// Ejecutar la consulta en Advertisements
+	cursor, err := Advertisements.Find(ctx, filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Decodificar los resultados
+	var acceptedAds []advertisements.Advertisements
+	for cursor.Next(ctx) {
+		var ad advertisements.Advertisements
+		if err := cursor.Decode(&ad); err != nil {
+			return nil, err
+		}
+		acceptedAds = append(acceptedAds, ad)
+	}
+
+	// Verificar errores del cursor
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return acceptedAds, nil
+}
+func (r *UserRepository) GetActiveAdsByEndAdCommunity(page int, userId primitive.ObjectID) ([]advertisements.Advertisements, error) {
+	// Base de datos y colecciones
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	Users := db.Collection("Users")
+	Advertisements := db.Collection("Advertisements")
+
+	ctx := context.TODO()
+
+	// Buscar el usuario por userId
+	var user struct {
+		OwnerCommunities []primitive.ObjectID `bson:"OwnerCommunities"`
+	}
+
+	err := Users.FindOne(ctx, bson.M{"_id": userId}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validar que el usuario tenga comunidades
+	if len(user.OwnerCommunities) == 0 {
+		return nil, errors.New("el usuario no tiene comunidades")
+	}
+
+	// Paginación
+	limit := int64(10)
+	skip := int64((page - 1) * 10)
+
+	// Filtro para anuncios con EndAdCommunity superior a la fecha actual
+	currentTime := time.Now()
+	filter := bson.M{
+		"State": "accepted",
+		"CommunityId": bson.M{
+			"$in": user.OwnerCommunities,
+		},
+		"EndAdCommunity": bson.M{
+			"$gt": currentTime, // Activos si la fecha es mayor a la actual
+		},
+	}
+
+	// Opciones de consulta: paginación
+	options := options.Find()
+	options.SetLimit(limit)
+	options.SetSkip(skip)
+
+	// Ejecutar la consulta en Advertisements
+	cursor, err := Advertisements.Find(ctx, filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Decodificar los resultados
+	var activeAds []advertisements.Advertisements
+	for cursor.Next(ctx) {
+		var ad advertisements.Advertisements
+		if err := cursor.Decode(&ad); err != nil {
+			return nil, err
+		}
+		activeAds = append(activeAds, ad)
+	}
+
+	// Verificar errores del cursor
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return activeAds, nil
+}
+func (r *UserRepository) GetAdsByNameUser(page int, userId primitive.ObjectID, nameUser string) ([]advertisements.Advertisements, error) {
+	// Base de datos y colecciones
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	Users := db.Collection("Users")
+	Advertisements := db.Collection("Advertisements")
+
+	ctx := context.TODO()
+
+	// Buscar el usuario por userId
+	var user struct {
+		OwnerCommunities []primitive.ObjectID `bson:"OwnerCommunities"`
+	}
+
+	err := Users.FindOne(ctx, bson.M{"_id": userId}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validar que el usuario tenga comunidades
+	if len(user.OwnerCommunities) == 0 {
+		return nil, errors.New("el usuario no tiene comunidades")
+	}
+
+	// Paginación
+	limit := int64(10)
+	skip := int64((page - 1) * 10)
+
+	// Filtro para anuncios por NameUser
+	filter := bson.M{
+		"NameUser": nameUser,
+		"CommunityId": bson.M{
+			"$in": user.OwnerCommunities,
+		},
+	}
+
+	// Opciones de consulta: paginación
+	options := options.Find()
+	options.SetLimit(limit)
+	options.SetSkip(skip)
+
+	// Ejecutar la consulta en Advertisements
+	cursor, err := Advertisements.Find(ctx, filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Decodificar los resultados
+	var adsByName []advertisements.Advertisements
+	for cursor.Next(ctx) {
+		var ad advertisements.Advertisements
+		if err := cursor.Decode(&ad); err != nil {
+			return nil, err
+		}
+		adsByName = append(adsByName, ad)
+	}
+
+	// Verificar errores del cursor
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return adsByName, nil
 }

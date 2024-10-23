@@ -446,7 +446,7 @@ func (r *StreamRepository) CommercialInStreamSelectAdvertisements(StreamCategory
 	// Pipeline para buscar coincidencias específicas
 	pipelineMatch := bson.A{
 		bson.M{"$match": bson.M{
-			"Categorie":   StreamCategory,
+			"Category":    StreamCategory,
 			"Destination": "Streams",
 			"State":       "accepted",
 			"$expr":       bson.M{"$lte": bson.A{bson.M{"$add": bson.A{"$Impressions", ViewerCount}}, "$ImpressionsMax"}},
@@ -694,7 +694,7 @@ func (r *StreamRepository) GetStreamByNameUser(nameUser string) (*streamdomain.S
 }
 
 // get streams by Categorie
-func (r *StreamRepository) GetStreamsByCategorie(Categorie string, page int) ([]streamdomain.Stream, error) {
+func (r *StreamRepository) GetStreamsByCategory(Categorie string, page int) ([]streamdomain.Stream, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 	skip := (page - 1) * 15
 

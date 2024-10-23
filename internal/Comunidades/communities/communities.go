@@ -23,6 +23,7 @@ type Community struct {
 	IsPaid             bool                 `json:"IsPaid" bson:"IsPaid"`
 	SubscriptionAmount int                  `json:"SubscriptionAmount" bson:"SubscriptionAmount"`
 	Banner             string               `json:"Banner" bson:"Banner"`
+	AdPricePerDay      int                  `json:"AdPricePerDay" bson:"AdPricePerDay"`
 }
 type CreateCommunity struct {
 	CommunityName      string   `json:"community_name" form:"community_name"`
@@ -31,6 +32,7 @@ type CreateCommunity struct {
 	Categories         []string `json:"categories" form:"categories"`
 	IsPaid             bool     `json:"is_paid" form:"is_paid"`
 	SubscriptionAmount int      `json:"subscription_amount" form:"subscription_amount"`
+	AdPricePerDay      int      `json:"AdPricePerDay" form:"AdPricePerDay"`
 }
 
 func (u *Community) ValidateReqCreateCommunities() error {
@@ -64,17 +66,20 @@ type PostGetCommunityReq struct {
 }
 
 type CommunityDetails struct {
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CommunityName   string             `json:"communityName" bson:"CommunityName"`
-	Description     string             `json:"description" bson:"Description"`
-	Creator         CreatorInfo        `json:"creator" bson:"creator"`
-	IsPrivate       bool               `json:"isPrivate" bson:"IsPrivate"`
-	MembersCount    int                `json:"membersCount" bson:"membersCount"`
-	CreatedAt       time.Time          `json:"createdAt" bson:"CreatedAt"`
-	UpdatedAt       time.Time          `json:"updatedAt" bson:"UpdatedAt"`
-	Categories      []string           `json:"categories" bson:"Categories"`
-	IsUserMember    bool               `json:"isUserMember" bson:"isUserMember"`
-	IsUserModerator bool               `json:"isUserModerator" bson:"isUserModerator"`
+	ID                 primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	CommunityName      string             `json:"communityName" bson:"CommunityName"`
+	Description        string             `json:"description" bson:"Description"`
+	Creator            CreatorInfo        `json:"creator" bson:"creator"`
+	IsPrivate          bool               `json:"isPrivate" bson:"IsPrivate"`
+	MembersCount       int                `json:"membersCount" bson:"membersCount"`
+	CreatedAt          time.Time          `json:"createdAt" bson:"CreatedAt"`
+	UpdatedAt          time.Time          `json:"updatedAt" bson:"UpdatedAt"`
+	Categories         []string           `json:"categories" bson:"Categories"`
+	IsUserMember       bool               `json:"isUserMember" bson:"isUserMember"`
+	IsUserModerator    bool               `json:"isUserModerator" bson:"isUserModerator"`
+	Banner             string             `json:"Banner" bson:"Banner"`
+	SubscriptionAmount int                `json:"SubscriptionAmount" bson:"SubscriptionAmount"`
+	AdPricePerDay      int                `json:"AdPricePerDay" bson:"AdPricePerDay"`
 }
 
 type CreatorInfo struct {

@@ -1,6 +1,7 @@
 package userapplication
 
 import (
+	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
@@ -312,4 +313,33 @@ func (u *UserService) GetRecommendedUsers(idT primitive.ObjectID, excludeIDs []p
 	limit := 5
 	Users, err := u.roomRepository.GetRecommendedUsers(idT, excludeIDs, limit)
 	return Users, err
+}
+
+func (u *UserService) GetAllPendingNameUserAds(page int, IdUser primitive.ObjectID) ([]advertisements.Advertisements, error) {
+	ads, err := u.roomRepository.GetAllPendingNameUserAds(page, IdUser)
+	if err != nil {
+		return ads, err
+	}
+	return ads, err
+}
+func (u *UserService) AcceptOrDeleteAdvertisement(IdUserTokenP primitive.ObjectID, ad primitive.ObjectID, action bool) error {
+	err := u.roomRepository.AcceptOrDeleteAdvertisement(IdUserTokenP, ad, action)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+// aa
+func (u *UserService) GetAllAcceptedNameUserAds(page int, IdUser primitive.ObjectID) ([]advertisements.Advertisements, error) {
+	return u.roomRepository.GetAllAcceptedNameUserAds(page, IdUser)
+
+}
+func (u *UserService) GetActiveAdsByEndAdCommunity(page int, IdUser primitive.ObjectID) ([]advertisements.Advertisements, error) {
+	return u.roomRepository.GetActiveAdsByEndAdCommunity(page, IdUser)
+
+}
+func (u *UserService) GetAdsByNameUser(page int, IdUser primitive.ObjectID, nameUser string) ([]advertisements.Advertisements, error) {
+	return u.roomRepository.GetAdsByNameUser(page, IdUser, nameUser)
+
 }

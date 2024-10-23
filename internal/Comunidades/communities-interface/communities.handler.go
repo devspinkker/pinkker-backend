@@ -169,40 +169,7 @@ func (h *CommunitiesHandler) BanMember(c *fiber.Ctx) error {
 		"message": "Member banned successfully",
 	})
 }
-func (h *CommunitiesHandler) GetCommunityPosts(c *fiber.Ctx) error {
-	var req struct {
-		CommunityIDs     primitive.ObjectID   `json:"community_ids"`
-		ExcludeFilterIDs []primitive.ObjectID `json:"ExcludeFilterIDs"`
-	}
 
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Error parsing request",
-		})
-	}
-	idValue := c.Context().UserValue("_id").(string)
-	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
-	if errorID != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "StatusBadRequest",
-		})
-	}
-
-	// Llamar al servicio para obtener los posts de las comunidades
-	posts, err := h.Service.GetCommunityPosts(c.Context(), req.CommunityIDs, req.ExcludeFilterIDs, idValueToken)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Error fetching community posts",
-			"error":   err.Error(),
-		})
-	}
-
-	// Devolver los posts como respuesta JSON
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Posts fetched successfully",
-		"posts":   posts,
-	})
-}
 func (h *CommunitiesHandler) AddModerator(c *fiber.Ctx) error {
 	var req struct {
 		CommunityID string `json:"community_id"`
@@ -337,6 +304,28 @@ func (h *CommunitiesHandler) FindCommunityByName(c *fiber.Ctx) error {
 
 func (h *CommunitiesHandler) GetTop10CommunitiesByMembers(c *fiber.Ctx) error {
 	community, err := h.Service.GetTop10CommunitiesByMembers(c.Context())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"error":   err,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "successfully",
+		"data":    community,
+	})
+}
+func (h *CommunitiesHandler) GetTop10CommunitiesByMembersNoMember(c *fiber.Ctx) error {
+	IdToken := c.Context().UserValue("_id").(string)
+	IdTokenObjectID, err := primitive.ObjectIDFromHex(IdToken)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid user ID",
+		})
+	}
+
+	community, err := h.Service.GetTop10CommunitiesByMembersNoMember(c.Context(), IdTokenObjectID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",

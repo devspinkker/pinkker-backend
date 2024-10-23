@@ -1,10 +1,13 @@
 package tweetinfrastructure
 
 import (
+	communitiesdomain "PINKKER-BACKEND/internal/Comunidades/communities"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
+	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -535,7 +538,9 @@ func (t *TweetRepository) GetPostsFromUserCommunities(idT primitive.ObjectID, ex
 	if err := t.addOriginalPostDataCommunity(ctx, collTweets, tweetsWithUserInfo); err != nil {
 		return nil, err
 	}
-
+	if err := t.PostcommunitiesRandomAddView(context.TODO(), collTweets, tweetsWithUserInfo, idT); err != nil {
+		return nil, err
+	}
 	return tweetsWithUserInfo, nil
 }
 func (t *TweetRepository) addOriginalPostDataCommunity(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.GetPostcommunitiesRandom) error {
@@ -597,82 +602,6 @@ func (t *TweetRepository) addOriginalPostDataCommunity(ctx context.Context, coll
 			}
 		}
 	}
-	return nil
-}
-func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetGetFollowReq, idt primitive.ObjectID) error {
-	// Obtener los IDs de los tweets
-	var tweetIDs []primitive.ObjectID
-	for _, tweet := range tweets {
-		tweetIDs = append(tweetIDs, tweet.ID)
-	}
-
-	// Asegurarse de que haya tweets para actualizar
-	if len(tweetIDs) > 0 {
-		// Crear un único filtro para todos los tweets
-		filter := bson.M{
-			"_id":                   bson.M{"$in": tweetIDs}, // Filtro para los tweets seleccionados
-			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
-		}
-
-		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
-		update := bson.M{
-			"$push": bson.M{
-				"IdOfTheUsersWhoViewed": bson.M{
-					"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
-					"$position": -1,                        // Agregar al final del array
-					"$slice":    -50,                       // Mantener solo los últimos 50 usuarios
-				},
-			},
-			"$inc": bson.M{
-				"Views": 1, // Incrementar las vistas
-			},
-		}
-
-		// Usamos UpdateMany para actualizar todos los tweets de una sola vez
-		_, err := collTweets.UpdateMany(ctx, filter, update)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-func (t *TweetRepository) updatePostCommentViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetCommentsGetReq, idt primitive.ObjectID) error {
-	// Obtener los IDs de los tweets
-	var tweetIDs []primitive.ObjectID
-	for _, tweet := range tweets {
-		tweetIDs = append(tweetIDs, tweet.ID)
-	}
-
-	// Asegurarse de que haya tweets para actualizar
-	if len(tweetIDs) > 0 {
-		// Crear un único filtro para todos los tweets
-		filter := bson.M{
-			"_id":                   bson.M{"$in": tweetIDs}, // Filtro para los tweets seleccionados
-			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
-		}
-
-		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
-		update := bson.M{
-			"$push": bson.M{
-				"IdOfTheUsersWhoViewed": bson.M{
-					"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
-					"$position": -1,                        // Agregar al final del array
-					"$slice":    -50,                       // Mantener solo los últimos 50 usuarios
-				},
-			},
-			"$inc": bson.M{
-				"Views": 1, // Incrementar las vistas
-			},
-		}
-
-		// Usamos UpdateMany para actualizar todos los tweets de una sola vez
-		_, err := collTweets.UpdateMany(ctx, filter, update)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -737,7 +666,67 @@ func (t *TweetRepository) addOriginalPostData(ctx context.Context, collTweets *m
 	}
 	return nil
 }
+func (t *TweetRepository) addOriginalPostDataGetCommunityPosts(ctx context.Context, collTweets *mongo.Collection, tweets []communitiesdomain.PostGetCommunityReq) error {
+	var originalPostIDs []primitive.ObjectID
+	for _, tweet := range tweets {
+		if tweet.OriginalPost != primitive.NilObjectID {
+			originalPostIDs = append(originalPostIDs, tweet.OriginalPost)
+		}
+	}
+	if len(originalPostIDs) > 0 {
+		originalPostPipeline := bson.A{
+			bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: originalPostIDs}}}}}},
+			bson.D{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "Users"},
+				{Key: "localField", Value: "UserID"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "UserInfo"},
+			}}},
+			bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+			bson.D{{Key: "$project", Value: bson.D{
+				{Key: "id", Value: "$_id"},
+				{Key: "Type", Value: "$Type"},
+				{Key: "Status", Value: "$Status"},
+				{Key: "PostImage", Value: "$PostImage"},
+				{Key: "TimeStamp", Value: "$TimeStamp"},
+				{Key: "UserID", Value: "$UserID"},
+				{Key: "Likes", Value: "$Likes"},
+				{Key: "Comments", Value: "$Comments"},
+				{Key: "RePosts", Value: "$RePosts"},
+				{Key: "Views", Value: "$Views"},
+				{Key: "OriginalPost", Value: "$OriginalPost"},
+				{Key: "UserInfo.FullName", Value: 1},
+				{Key: "UserInfo.Avatar", Value: 1},
+				{Key: "UserInfo.NameUser", Value: 1},
+			}}},
+		}
 
+		cursorOriginalPosts, err := collTweets.Aggregate(ctx, originalPostPipeline)
+		if err != nil {
+			return err
+		}
+		defer cursorOriginalPosts.Close(ctx)
+
+		var originalPostMap = make(map[primitive.ObjectID]communitiesdomain.PostGetCommunityReq)
+		for cursorOriginalPosts.Next(ctx) {
+			var originalPost communitiesdomain.PostGetCommunityReq
+			if err := cursorOriginalPosts.Decode(&originalPost); err != nil {
+				return err
+			}
+			originalPostMap[originalPost.ID] = originalPost
+		}
+
+		for i, tweet := range tweets {
+			if tweet.OriginalPost != primitive.NilObjectID {
+				originalPost, found := originalPostMap[tweet.OriginalPost]
+				if found {
+					tweets[i].OriginalPostData = &originalPost
+				}
+			}
+		}
+	}
+	return nil
+}
 func (t *TweetRepository) GetAdsMuroAndPost() (tweetdomain.PostAds, error) {
 	Advertisements, err := t.GetAdsMuro()
 	if err != nil {
@@ -807,6 +796,81 @@ func (t *TweetRepository) GetAdsMuro() (advertisements.Advertisements, error) {
 
 	return advertisements.Advertisements{}, errors.New("no advertisements found")
 }
+
+func (t *TweetRepository) GetAdsMuroByCommunityId(communityId primitive.ObjectID) (tweetdomain.PostAds, error) {
+	Advertisements, err := t.GetAdsByCommunityId(communityId)
+	if err != nil {
+		fmt.Println(err)
+		return tweetdomain.PostAds{}, err
+	}
+	post, err := t.GetPostForAd(Advertisements.DocumentToBeAnnounced)
+	if err != nil {
+		return tweetdomain.PostAds{}, err
+	}
+	var PostAds tweetdomain.PostAds
+	PostAds.AdvertisementsId = Advertisements.ID
+	PostAds.ReferenceLink = Advertisements.ReferenceLink
+
+	PostAds.ID = post.ID
+	PostAds.Status = post.Status
+	PostAds.TimeStamp = post.TimeStamp
+	PostAds.Type = post.Type
+	PostAds.Hashtags = post.Hashtags
+	PostAds.UserInfo = post.UserInfo
+	PostAds.OriginalPostData = post.OriginalPostData
+	PostAds.Views = post.Views
+	PostAds.IsLikedByID = post.IsLikedByID
+	PostAds.LikeCount = post.LikeCount
+	PostAds.RePostsCount = post.RePostsCount
+	PostAds.CommentsCount = post.CommentsCount
+	PostAds.PostImage = post.PostImage
+
+	return PostAds, err
+
+}
+func (t *TweetRepository) GetAdsByCommunityId(communityId primitive.ObjectID) (advertisements.Advertisements, error) {
+	db := t.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollAdvertisements := db.Collection("Advertisements")
+	ctx := context.TODO()
+
+	// Obtiene la fecha actual en formato UTC
+	currentTime := time.Now().UTC()
+
+	pipeline := bson.A{
+		bson.M{"$match": bson.M{
+			"CommunityId": communityId,
+			"Destination": "Comunidades",
+			"State":       "accepted",
+			"$expr": bson.M{
+				"$gt": bson.A{"$EndAdCommunity", currentTime},
+			},
+		}},
+		bson.M{"$sample": bson.M{"size": 1}}, // Para tomar un anuncio aleatorio
+		bson.M{"$project": bson.M{
+			"IdOfTheUsersWhoClicked": 0,
+			"ClicksPerDay":           0,
+		}},
+	}
+
+	var advertisement advertisements.Advertisements
+
+	cursor, err := GoMongoDBCollAdvertisements.Aggregate(ctx, pipeline)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+	defer cursor.Close(ctx)
+
+	// Decodificar el resultado si se encuentra
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&advertisement); err != nil {
+			return advertisements.Advertisements{}, err
+		}
+		return advertisement, nil
+	}
+
+	return advertisements.Advertisements{}, errors.New("no advertisements found")
+}
+
 func (t *TweetRepository) IsUserBanned(userId primitive.ObjectID) (bool, error) {
 	// Conexión a la colección de Usuarios
 	GoMongoDBCollUsers := t.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
@@ -1228,6 +1292,118 @@ func (t *TweetRepository) GetPostId(id primitive.ObjectID) (tweetdomain.TweetGet
 				bson.D{{Key: "IsPrivate", Value: false}},
 				bson.D{{Key: "IsPrivate", Value: bson.D{{Key: "$exists", Value: false}}}},
 			}},
+		}}},
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		{{Key: "$unwind", Value: "$UserInfo"}},
+		{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "RePostsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$RePosts", bson.A{}}}}}}},
+		}}},
+		{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: "$Status"},
+			{Key: "PostImage", Value: "$PostImage"},
+			{Key: "Type", Value: "$Type"},
+			{Key: "TimeStamp", Value: "$TimeStamp"},
+			{Key: "UserID", Value: "$UserID"},
+			{Key: "likeCount", Value: 1},
+			{Key: "RePostsCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+
+			{Key: "isLikedByUser", Value: 1},
+			{Key: "Comments", Value: "$Comments"},
+			{Key: "RePosts", Value: "$RePosts"},
+			{Key: "Views", Value: "$Views"},
+			{Key: "OriginalPost", Value: "$OriginalPost"},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
+		}}},
+	}
+
+	cursor, err := GoMongoDBCollTweets.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return tweetdomain.TweetGetFollowReq{}, err
+	}
+	defer cursor.Close(context.Background())
+
+	var tweetWithUserInfo tweetdomain.TweetGetFollowReq
+	if cursor.Next(context.Background()) {
+		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
+			return tweetdomain.TweetGetFollowReq{}, err
+		}
+	}
+
+	// Obtener los datos del OriginalPost si existe
+	if tweetWithUserInfo.OriginalPost != primitive.NilObjectID {
+		originalPostPipeline := bson.A{
+			bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: tweetWithUserInfo.OriginalPost}}}},
+			bson.D{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "Users"},
+				{Key: "localField", Value: "UserID"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "UserInfo"},
+			}}},
+			bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+			bson.D{{Key: "$addFields", Value: bson.D{
+				{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+				{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+				{Key: "RePostsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$RePosts", bson.A{}}}}}}},
+			}}},
+			bson.D{{Key: "$project", Value: bson.D{
+				{Key: "id", Value: "$_id"},
+				{Key: "Type", Value: "$Type"},
+				{Key: "Status", Value: "$Status"},
+				{Key: "PostImage", Value: "$PostImage"},
+				{Key: "TimeStamp", Value: "$TimeStamp"},
+				{Key: "UserID", Value: "$UserID"},
+				{Key: "likeCount", Value: 1},
+				{Key: "RePostsCount", Value: 1},
+				{Key: "CommentsCount", Value: 1},
+
+				{Key: "isLikedByUser", Value: 1},
+				{Key: "Comments", Value: "$Comments"},
+				{Key: "RePosts", Value: "$RePosts"},
+				{Key: "Views", Value: "$Views"},
+				{Key: "OriginalPost", Value: "$OriginalPost"},
+				{Key: "UserInfo.FullName", Value: 1},
+				{Key: "UserInfo.Avatar", Value: 1},
+				{Key: "UserInfo.Online", Value: 1},
+				{Key: "UserInfo.NameUser", Value: 1},
+			}}},
+		}
+
+		cursorOriginalPosts, err := GoMongoDBCollTweets.Aggregate(context.Background(), originalPostPipeline)
+		if err != nil {
+			return tweetdomain.TweetGetFollowReq{}, err
+		}
+		defer cursorOriginalPosts.Close(context.Background())
+
+		var originalPost tweetdomain.TweetGetFollowReq
+		if cursorOriginalPosts.Next(context.Background()) {
+			if err := cursorOriginalPosts.Decode(&originalPost); err != nil {
+				return tweetdomain.TweetGetFollowReq{}, err
+			}
+			tweetWithUserInfo.OriginalPostData = &originalPost
+		}
+	}
+
+	return tweetWithUserInfo, nil
+}
+func (t *TweetRepository) GetPostForAd(id primitive.ObjectID) (tweetdomain.TweetGetFollowReq, error) {
+	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+
+	// Ejecutamos el pipeline de agregación para obtener los datos
+	pipeline := []bson.D{
+		{{Key: "$match", Value: bson.D{
+			{Key: "_id", Value: id},
 		}}},
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
@@ -2358,4 +2534,263 @@ func (t *TweetRepository) IsUserMemberOfCommunity(communityID, userID primitive.
 	}
 
 	return true, community.IsPrivate, nil
+}
+
+func (repo *TweetRepository) GetCommunityPosts(ctx context.Context, communityID primitive.ObjectID, ExcludeFilterlID []primitive.ObjectID, idT primitive.ObjectID, limit int) ([]tweetdomain.GetPostcommunitiesRandom, error) {
+	db := repo.mongoClient.Database("PINKKER-BACKEND")
+	collPosts := db.Collection("Post")
+	_, err := repo.GetSubscriptionByUserIDsAndcommunityID(idT, communityID)
+	if err != nil {
+		return nil, err
+	}
+	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: ExcludeFilterlID}}}}
+
+	includeFilter := bson.D{
+		{Key: "communityID", Value: communityID},
+		{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
+	}
+
+	matchFilter := bson.D{
+		{Key: "$and", Value: bson.A{
+			excludeFilter,
+			includeFilter,
+		}},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: matchFilter}},
+
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "TimeStamp", Value: -1}, // Ordenar por fecha de creación
+		}}},
+		bson.D{{Key: "$limit", Value: limit}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: 1},
+			{Key: "PostImage", Value: 1},
+			{Key: "Type", Value: 1},
+			{Key: "TimeStamp", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
+			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
+			{Key: "OriginalPost", Value: 1},
+		}}},
+	}
+
+	cursor, err := collPosts.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var postsWithUserInfo []tweetdomain.GetPostcommunitiesRandom
+	for cursor.Next(ctx) {
+		var postWithUserInfo tweetdomain.GetPostcommunitiesRandom
+		if err := cursor.Decode(&postWithUserInfo); err != nil {
+			return nil, err
+		}
+		postsWithUserInfo = append(postsWithUserInfo, postWithUserInfo)
+	}
+	if err := repo.addOriginalPostDataCommunity(ctx, collPosts, postsWithUserInfo); err != nil {
+		return nil, err
+	}
+	if err := repo.PostcommunitiesRandomAddView(context.TODO(), collPosts, postsWithUserInfo, idT); err != nil {
+		return nil, err
+	}
+	return postsWithUserInfo, nil
+}
+func (r *TweetRepository) GetSubscriptionByUserIDsAndcommunityID(sourceUserID, communityID primitive.ObjectID) (*subscriptiondomain.Subscription, error) {
+	communitiesCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+
+	redisKey := fmt.Sprintf("community:%s", communityID.Hex())
+	redisData, err := r.redisClient.Get(context.Background(), redisKey).Result()
+
+	var community struct {
+		CreatorID primitive.ObjectID `bson:"CreatorID"`
+		IsPrivate bool               `bson:"IsPrivate"`
+	}
+
+	if err == redis.Nil {
+		err := communitiesCollection.FindOne(context.Background(), bson.M{"_id": communityID}).Decode(&community)
+		if err != nil {
+			return nil, fmt.Errorf("error al obtener el creador de la comunidad: %v", err)
+		}
+
+		communityJSON, err := json.Marshal(community)
+		if err == nil {
+			r.redisClient.Set(context.Background(), redisKey, communityJSON, time.Minute*1)
+		}
+	} else if err != nil {
+		return nil, fmt.Errorf("error al obtener datos de Redis: %v", err)
+	} else {
+		// fmt.Println("Encontrado en Redis")
+		err = json.Unmarshal([]byte(redisData), &community)
+		if err != nil {
+			return nil, fmt.Errorf("error al deserializar datos de Redis: %v", err)
+		}
+	}
+
+	if community.CreatorID == sourceUserID {
+		return nil, nil
+	}
+
+	if !community.IsPrivate {
+		return nil, nil
+	}
+
+	subscriptionsCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscriptions")
+
+	filter := bson.M{
+		"sourceUserID":      sourceUserID,
+		"destinationUserID": community.CreatorID,
+	}
+
+	var subscription subscriptiondomain.Subscription
+	err = subscriptionsCollection.FindOne(context.Background(), filter).Decode(&subscription)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, fmt.Errorf("no se encontró ninguna suscripción entre el usuario y el creador")
+		}
+		return nil, fmt.Errorf("error al buscar la suscripción: %v", err)
+	}
+
+	if subscription.SubscriptionEnd.Before(time.Now()) {
+		return nil, fmt.Errorf("la suscripción ha expirado")
+	}
+
+	return &subscription, nil
+}
+
+// views
+func (t *TweetRepository) PostcommunitiesRandomAddView(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.GetPostcommunitiesRandom, idt primitive.ObjectID) error {
+	// Obtener los IDs de los tweets
+	var tweetIDs []primitive.ObjectID
+	for _, tweet := range tweets {
+		tweetIDs = append(tweetIDs, tweet.ID)
+	}
+
+	// Asegurarse de que haya tweets para actualizar
+	if len(tweetIDs) > 0 {
+		// Crear un único filtro para todos los tweets
+		filter := bson.M{
+			"_id":                   bson.M{"$in": tweetIDs}, // Filtro para los tweets seleccionados
+			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
+		}
+
+		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
+		update := bson.M{
+			"$push": bson.M{
+				"IdOfTheUsersWhoViewed": bson.M{
+					"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
+					"$position": -1,                        // Agregar al final del array
+					"$slice":    -50,                       // Mantener solo los últimos 50 usuarios
+				},
+			},
+			"$inc": bson.M{
+				"Views": 1, // Incrementar las vistas
+			},
+		}
+
+		// Usamos UpdateMany para actualizar todos los tweets de una sola vez
+		_, err := collTweets.UpdateMany(ctx, filter, update)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+func (t *TweetRepository) updateTweetViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetGetFollowReq, idt primitive.ObjectID) error {
+	// Obtener los IDs de los tweets
+	var tweetIDs []primitive.ObjectID
+	for _, tweet := range tweets {
+		tweetIDs = append(tweetIDs, tweet.ID)
+	}
+
+	// Asegurarse de que haya tweets para actualizar
+	if len(tweetIDs) > 0 {
+		// Crear un único filtro para todos los tweets
+		filter := bson.M{
+			"_id":                   bson.M{"$in": tweetIDs}, // Filtro para los tweets seleccionados
+			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
+		}
+
+		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
+		update := bson.M{
+			"$push": bson.M{
+				"IdOfTheUsersWhoViewed": bson.M{
+					"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
+					"$position": -1,                        // Agregar al final del array
+					"$slice":    -50,                       // Mantener solo los últimos 50 usuarios
+				},
+			},
+			"$inc": bson.M{
+				"Views": 1, // Incrementar las vistas
+			},
+		}
+
+		// Usamos UpdateMany para actualizar todos los tweets de una sola vez
+		_, err := collTweets.UpdateMany(ctx, filter, update)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+func (t *TweetRepository) updatePostCommentViews(ctx context.Context, collTweets *mongo.Collection, tweets []tweetdomain.TweetCommentsGetReq, idt primitive.ObjectID) error {
+	// Obtener los IDs de los tweets
+	var tweetIDs []primitive.ObjectID
+	for _, tweet := range tweets {
+		tweetIDs = append(tweetIDs, tweet.ID)
+	}
+
+	// Asegurarse de que haya tweets para actualizar
+	if len(tweetIDs) > 0 {
+		// Crear un único filtro para todos los tweets
+		filter := bson.M{
+			"_id":                   bson.M{"$in": tweetIDs}, // Filtro para los tweets seleccionados
+			"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},      // Solo actualizamos si el usuario no ha visto ya el tweet
+		}
+
+		// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
+		update := bson.M{
+			"$push": bson.M{
+				"IdOfTheUsersWhoViewed": bson.M{
+					"$each":     []primitive.ObjectID{idt}, // Agregar ID del usuario actual
+					"$position": -1,                        // Agregar al final del array
+					"$slice":    -50,                       // Mantener solo los últimos 50 usuarios
+				},
+			},
+			"$inc": bson.M{
+				"Views": 1, // Incrementar las vistas
+			},
+		}
+
+		// Usamos UpdateMany para actualizar todos los tweets de una sola vez
+		_, err := collTweets.UpdateMany(ctx, filter, update)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

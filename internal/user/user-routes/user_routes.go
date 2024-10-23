@@ -74,6 +74,13 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Post("/user/PanelAdminPinkker/RemoveBanStreamer", middleware.UseExtractor(), UserHandler.PanelAdminRemoveBanStreamer)
 	App.Post("/user/PanelAdminPinkker/PanelAdminPinkkerPartnerUser", middleware.UseExtractor(), UserHandler.PanelAdminPinkkerPartnerUser)
 
+	App.Post("/user/GetAllPendingNameUserAds", middleware.UseExtractor(), UserHandler.GetAllPendingNameUserAds)
+	App.Post("/user/AcceptOrDeleteAdvertisement", middleware.UseExtractor(), UserHandler.AcceptOrDeleteAdvertisement)
+
+	App.Post("/user/GetAllAcceptedNameUserAds", middleware.UseExtractor(), UserHandler.GetAllAcceptedNameUserAds)
+	App.Post("/user/GetActiveAdsByEndAdCommunity", middleware.UseExtractor(), UserHandler.GetActiveAdsByEndAdCommunity)
+	App.Post("/user/GetAdsByNameUser", middleware.UseExtractor(), UserHandler.GetAdsByNameUser)
+
 	App.Get("/ws/notification/ActivityFeed/:user", websocket.New(func(c *websocket.Conn) {
 		user := c.Params("user") + "ActivityFeed"
 		chatService := utils.NewChatService()

@@ -39,9 +39,7 @@ func (s *CommunitiesService) FindUserCommunities(ctx context.Context, userID pri
 func (s *CommunitiesService) BanMember(ctx context.Context, communityID, userID, mod primitive.ObjectID) error {
 	return s.communitiesRepository.BanMember(ctx, communityID, userID, mod)
 }
-func (s *CommunitiesService) GetCommunityPosts(ctx context.Context, CommunityID primitive.ObjectID, ExcludeFilterIDs []primitive.ObjectID, idT primitive.ObjectID) ([]communitiesdomain.PostGetCommunityReq, error) {
-	return s.communitiesRepository.GetCommunityPosts(ctx, CommunityID, ExcludeFilterIDs, idT, 10)
-}
+
 func (s *CommunitiesService) AddModerator(ctx context.Context, communityID, newModID, modID primitive.ObjectID) error {
 	return s.communitiesRepository.AddModerator(ctx, communityID, newModID, modID)
 }
@@ -57,6 +55,11 @@ func (s *CommunitiesService) FindCommunityByName(ctx context.Context, community 
 func (s *CommunitiesService) GetTop10CommunitiesByMembers(ctx context.Context) ([]communitiesdomain.CommunityDetails, error) {
 	return s.communitiesRepository.GetTop10CommunitiesByMembers(ctx)
 }
+
+func (s *CommunitiesService) GetTop10CommunitiesByMembersNoMember(ctx context.Context, id primitive.ObjectID) ([]communitiesdomain.CommunityDetails, error) {
+	return s.communitiesRepository.GetTop10CommunitiesByMembersNoMember(ctx, id)
+}
+
 func (s *CommunitiesService) GetCommunity(ctx context.Context, community primitive.ObjectID) (*communitiesdomain.CommunityDetails, error) {
 	return s.communitiesRepository.GetCommunity(ctx, community)
 }

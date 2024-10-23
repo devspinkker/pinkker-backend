@@ -15,22 +15,28 @@ type Advertisements struct {
 	ID                     primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
 	Name                   string               `json:"Name" bson:"Name"`
 	NameUser               string               `json:"NameUser" bson:"NameUser"`
+	IdUser                 primitive.ObjectID   `json:"IdUser" bson:"IdUser"`
 	Destination            string               `json:"Destination" bson:"Destination"` // para Streams o para Muro o que ClipAds
-	Categorie              string               `json:"Categorie" bson:"Categorie"`
+	Category               string               `json:"Category" bson:"Category"`       // preferencia del creador en hacia donde se dirija el ad de stream
 	Impressions            int                  `json:"Impressions" bson:"Impressions"`
 	ImpressionsMax         int                  `json:"ImpressionsMax" bson:"ImpressionsMax"`
-	UrlVideo               string               `json:"UrlVideo" bson:"UrlVideo"`
+	UrlVideo               string               `json:"UrlVideo" bson:"UrlVideo"` // para stream
 	ReferenceLink          string               `json:"ReferenceLink" bson:"ReferenceLink"`
 	PayPerPrint            float64              `json:"PayPerPrint" bson:"PayPerPrint"`
 	Clicks                 int                  `json:"Clicks" bson:"Clicks"`
 	ClicksMax              int                  `json:"ClicksMax" bson:"ClicksMax"`
-	DocumentToBeAnnounced  primitive.ObjectID   `json:"DocumentToBeAnnounced" bson:"DocumentToBeAnnounced"`
-	IdOfTheUsersWhoClicked []primitive.ObjectID `json:"IdOfTheUsersWhoClicked" bson:"IdOfTheUsersWhoClicked"`
+	DocumentToBeAnnounced  primitive.ObjectID   `json:"DocumentToBeAnnounced" bson:"DocumentToBeAnnounced"`   // documento de muro al que quiere promocionar
+	IdOfTheUsersWhoClicked []primitive.ObjectID `json:"IdOfTheUsersWhoClicked" bson:"IdOfTheUsersWhoClicked"` // en caso de ser clicks para mantener un conteo de que usuario dio like
 	ClicksPerDay           []ClicksPerDay       `json:"ClicksPerDay" bson:"ClicksPerDay"`
 	ImpressionsPerDay      []ImpressionsPerDay  `json:"ImpressionsPerDay" bson:"ImpressionsPerDay"`
 	Timestamp              time.Time            `json:"Timestamp" bson:"Timestamp"`
-	State                  string               `json:"State"  bson:"State"`
+	State                  string               `json:"State"  bson:"State"` // aceptado es que esta siendo funcional
 	ClipId                 primitive.ObjectID   `json:"ClipId"  bson:"ClipId"`
+	// el anuncio puede ser de tipo muro y ser mostrado solo en comunidades, las comunides a la que se muestra
+	// tendra un tiempo en que expira el ad
+	CommunityId          primitive.ObjectID `json:"CommunityId"  bson:"CommunityId"`
+	EndAdCommunity       time.Time          `json:"EndAdCommunity"  bson:"EndAdCommunity"`
+	PricePTotalCommunity float64            `json:"PricePTotalCommunity"  bson:"PricePTotalCommunity"`
 }
 
 type ClicksPerDay struct {
@@ -61,7 +67,7 @@ type UpdateAdvertisement struct {
 	Name                  string             `json:"Name" bson:"Name"`
 	NameUser              string             `json:"NameUser" bson:"NameUser"`
 	Destination           string             `json:"Destination" bson:"Destination"`
-	Categorie             string             `json:"Categorie" bson:"Categorie"`
+	Category              string             `json:"Category" bson:"Category"`
 	ImpressionsMax        int                `json:"ImpressionsMax" bson:"ImpressionsMax"`
 	UrlVideo              string             `json:"UrlVideo" bson:"UrlVideo"`
 	ReferenceLink         string             `json:"ReferenceLink" bson:"ReferenceLink"`
@@ -69,12 +75,26 @@ type UpdateAdvertisement struct {
 	ClicksMax             int                `json:"ClicksMax"`
 	DocumentToBeAnnounced primitive.ObjectID `json:"DocumentToBeAnnounced"`
 }
-
+type UpdateAdvertisementCommunityId struct {
+	ID                    primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Name                  string             `json:"Name" bson:"Name"`
+	NameUser              string             `json:"NameUser" bson:"NameUser"`
+	Destination           string             `json:"Destination" bson:"Destination"`
+	Category              string             `json:"Category" bson:"Category"`
+	ImpressionsMax        int                `json:"ImpressionsMax" bson:"ImpressionsMax"`
+	UrlVideo              string             `json:"UrlVideo" bson:"UrlVideo"`
+	ReferenceLink         string             `json:"ReferenceLink" bson:"ReferenceLink"`
+	Code                  string             `json:"Code"`
+	ClicksMax             int                `json:"ClicksMax"`
+	DocumentToBeAnnounced primitive.ObjectID `json:"DocumentToBeAnnounced"`
+	CommunityId           primitive.ObjectID `json:"CommunityId"`
+	DaysTheAd             time.Time          `json:"Days"`
+}
 type ClipAdsCreate struct {
 	Name                  string             `json:"Name" bson:"Name"`
 	NameUser              string             `json:"NameUser" bson:"NameUser"`
 	Destination           string             `json:"Destination" bson:"Destination"` // ClipAds
-	Categorie             string             `json:"Categorie" bson:"Categorie"`
+	Category              string             `json:"Category" bson:"Category"`
 	ImpressionsMax        int                `json:"ImpressionsMax" bson:"ImpressionsMax"`
 	UrlVideo              string             `json:"UrlVideo" bson:"UrlVideo"`
 	ReferenceLink         string             `json:"ReferenceLink" bson:"ReferenceLink"`
@@ -86,6 +106,29 @@ type ClipAdsCreate struct {
 }
 
 func (u *UpdateAdvertisement) Validate() error {
+	validate := validator.New()
+
+	validate.RegisterValidation("nonnegative", func(fl validator.FieldLevel) bool {
+		value := fl.Field().Int()
+		return value >= 0
+	})
+
+	// Validate struct
+	err := validate.Struct(u)
+	if err != nil {
+		return err
+	}
+
+	if u.ImpressionsMax < 0 {
+		return fmt.Errorf("ImpressionsMax must be non-negative")
+	}
+	if u.ClicksMax < 0 {
+		return fmt.Errorf("ClicksMax must be non-negative")
+	}
+
+	return nil
+}
+func (u *UpdateAdvertisementCommunityId) Validate() error {
 	validate := validator.New()
 
 	validate.RegisterValidation("nonnegative", func(fl validator.FieldLevel) bool {

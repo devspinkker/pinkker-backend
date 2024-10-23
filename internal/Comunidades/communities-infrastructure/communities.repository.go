@@ -85,6 +85,7 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 		IsPaid:             req.IsPaid,
 		SubscriptionAmount: req.SubscriptionAmount,
 		Banner:             Banner,
+		AdPricePerDay:      req.AdPricePerDay,
 	}
 
 	result, err := communitiesCollection.InsertOne(ctx, community)
@@ -147,6 +148,7 @@ func (repo *CommunitiesRepository) FindUserCommunities(ctx context.Context, user
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
 			{Key: "Categories", Value: 1},
+			{Key: "AdPricePerDay", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
 				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
@@ -616,6 +618,7 @@ func (repo *CommunitiesRepository) FindCommunityByName(ctx context.Context, comm
 			{Key: "IsPrivate", Value: 1},
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
+			{Key: "AdPricePerDay", Value: 1},
 			{Key: "Categories", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
@@ -653,6 +656,7 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 	pipeline := bson.A{
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
+
 			{Key: "localField", Value: "CreatorID"},
 			{Key: "foreignField", Value: "_id"},
 			{Key: "as", Value: "creatorDetails"},
@@ -665,6 +669,7 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
 			{Key: "Categories", Value: 1},
+			{Key: "AdPricePerDay", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
 				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
@@ -683,6 +688,61 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembers(ctx context.Cont
 	}
 	defer cursor.Close(ctx)
 
+	var topCommunities []communitiesdomain.CommunityDetails
+	for cursor.Next(ctx) {
+		var community communitiesdomain.CommunityDetails
+		if err := cursor.Decode(&community); err != nil {
+			return nil, err
+		}
+		topCommunities = append(topCommunities, community)
+	}
+
+	return topCommunities, nil
+}
+func (repo *CommunitiesRepository) GetTop10CommunitiesByMembersNoMember(ctx context.Context, userID primitive.ObjectID) ([]communitiesdomain.CommunityDetails, error) {
+	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+
+	pipeline := bson.A{
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "CreatorID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "creatorDetails"},
+		}}},
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "Members", Value: bson.D{{Key: "$ne", Value: userID}}},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "CommunityName", Value: 1},
+			{Key: "Description", Value: 1},
+			{Key: "IsPrivate", Value: 1},
+			{Key: "CreatedAt", Value: 1},
+			{Key: "UpdatedAt", Value: 1},
+			{Key: "Categories", Value: 1},
+			{Key: "AdPricePerDay", Value: 1},
+			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
+			{Key: "creator", Value: bson.D{
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+			}},
+		}}},
+		// Ordenamos por el tamaño de los miembros en orden descendente
+		bson.D{{Key: "$sort", Value: bson.M{"membersCount": -1}}},
+		// Limitamos a las 10 comunidades más grandes
+		bson.D{{Key: "$limit", Value: 10}},
+	}
+
+	// Ejecutamos el pipeline
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Decodificamos los resultados
 	var topCommunities []communitiesdomain.CommunityDetails
 	for cursor.Next(ctx) {
 		var community communitiesdomain.CommunityDetails
@@ -716,8 +776,10 @@ func (repo *CommunitiesRepository) GetCommunityWithUserMembership(ctx context.Co
 			{Key: "CommunityName", Value: 1},
 			{Key: "Description", Value: 1},
 			{Key: "IsPrivate", Value: 1},
+			{Key: "Banner", Value: 1},
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
+			{Key: "SubscriptionAmount", Value: 1},
 			{Key: "Categories", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
@@ -778,84 +840,6 @@ func (r *CommunitiesRepository) GetTOTPSecret(ctx context.Context, userID primit
 
 }
 
-func (repo *CommunitiesRepository) GetCommunityPosts(ctx context.Context, communityID primitive.ObjectID, ExcludeFilterlID []primitive.ObjectID, idT primitive.ObjectID, limit int) ([]communitiesdomain.PostGetCommunityReq, error) {
-	db := repo.mongoClient.Database("PINKKER-BACKEND")
-	collPosts := db.Collection("Post")
-	_, err := repo.GetSubscriptionByUserIDsAndcommunityID(idT, communityID)
-	if err != nil {
-		return nil, err
-	}
-	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: ExcludeFilterlID}}}}
-
-	includeFilter := bson.D{
-		{Key: "communityID", Value: communityID},
-		{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
-	}
-
-	matchFilter := bson.D{
-		{Key: "$and", Value: bson.A{
-			excludeFilter,
-			includeFilter,
-		}},
-	}
-
-	pipeline := bson.A{
-		bson.D{{Key: "$match", Value: matchFilter}},
-
-		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "UserID"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "UserInfo"},
-		}}},
-		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
-		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
-			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
-		}}},
-		bson.D{{Key: "$sort", Value: bson.D{
-			{Key: "TimeStamp", Value: -1}, // Ordenar por fecha de creación
-		}}},
-		bson.D{{Key: "$limit", Value: limit}},
-		bson.D{{Key: "$project", Value: bson.D{
-			{Key: "id", Value: "$_id"},
-			{Key: "Status", Value: 1},
-			{Key: "PostImage", Value: 1},
-			{Key: "Type", Value: 1},
-			{Key: "TimeStamp", Value: 1},
-			{Key: "UserID", Value: 1},
-			{Key: "Comments", Value: 1},
-			{Key: "UserInfo.FullName", Value: 1},
-			{Key: "UserInfo.Avatar", Value: 1},
-			{Key: "UserInfo.NameUser", Value: 1},
-			{Key: "UserInfo.Online", Value: 1},
-			{Key: "likeCount", Value: 1},
-			{Key: "CommentsCount", Value: 1},
-			{Key: "isLikedByID", Value: 1},
-			{Key: "OriginalPost", Value: 1},
-		}}},
-	}
-
-	cursor, err := collPosts.Aggregate(ctx, pipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var postsWithUserInfo []communitiesdomain.PostGetCommunityReq
-	for cursor.Next(ctx) {
-		var postWithUserInfo communitiesdomain.PostGetCommunityReq
-		if err := cursor.Decode(&postWithUserInfo); err != nil {
-			return nil, err
-		}
-		postsWithUserInfo = append(postsWithUserInfo, postWithUserInfo)
-	}
-	if err := repo.addOriginalPostDataCommunity(ctx, collPosts, postsWithUserInfo); err != nil {
-		return nil, err
-	}
-	return postsWithUserInfo, nil
-}
 func (t *CommunitiesRepository) addOriginalPostDataCommunity(ctx context.Context, collTweets *mongo.Collection, Posts []communitiesdomain.PostGetCommunityReq) error {
 	var originalPostIDs []primitive.ObjectID
 	for _, tweet := range Posts {
@@ -938,6 +922,7 @@ func (repo *CommunitiesRepository) GetCommunity(ctx context.Context, communityID
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
 			{Key: "Categories", Value: 1},
+			{Key: "AdPricePerDay", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
 				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},

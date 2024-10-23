@@ -3,6 +3,7 @@ package tweetapplication
 import (
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	tweetinfrastructure "PINKKER-BACKEND/internal/tweet/tweet-infrastructure"
+	"context"
 	"strings"
 	"time"
 
@@ -23,6 +24,12 @@ func (ts *TweetService) GetAdsMuroAndPost() (tweetdomain.PostAds, error) {
 	Tweet, errGetFollowedUsers := ts.TweetRepository.GetAdsMuroAndPost()
 	return Tweet, errGetFollowedUsers
 }
+func (ts *TweetService) GetAdsMuroByCommunityId(communityId primitive.ObjectID) (tweetdomain.PostAds, error) {
+
+	Tweet, errGetFollowedUsers := ts.TweetRepository.GetAdsMuroByCommunityId(communityId)
+	return Tweet, errGetFollowedUsers
+}
+
 func (ts *TweetService) IsUserMemberOfCommunity(communityID primitive.ObjectID, userID primitive.ObjectID) (bool, bool, error) {
 
 	return ts.TweetRepository.IsUserMemberOfCommunity(communityID, userID)
@@ -213,4 +220,8 @@ func (t *TweetService) GetTrendsByPrefix(prefix string) ([]tweetdomain.Trend, er
 	post, err := t.TweetRepository.GetTrendsByPrefix(prefix, 10)
 	return post, err
 
+}
+
+func (s *TweetService) GetCommunityPosts(ctx context.Context, CommunityID primitive.ObjectID, ExcludeFilterIDs []primitive.ObjectID, idT primitive.ObjectID) ([]tweetdomain.GetPostcommunitiesRandom, error) {
+	return s.TweetRepository.GetCommunityPosts(ctx, CommunityID, ExcludeFilterIDs, idT, 10)
 }

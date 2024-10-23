@@ -739,3 +739,54 @@ func (th *TweetHandler) GetTrendsByPrefix(c *fiber.Ctx) error {
 		"data":    Trend,
 	})
 }
+
+func (h *TweetHandler) GetCommunityPosts(c *fiber.Ctx) error {
+	var req struct {
+		CommunityIDs     primitive.ObjectID   `json:"community_ids"`
+		ExcludeFilterIDs []primitive.ObjectID `json:"ExcludeFilterIDs"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Error parsing request",
+		})
+	}
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+
+	// Llamar al servicio para obtener los posts de las comunidades
+	posts, err := h.TweetServise.GetCommunityPosts(c.Context(), req.CommunityIDs, req.ExcludeFilterIDs, idValueToken)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error fetching community posts",
+			"error":   err.Error(),
+		})
+	}
+	PostAds, err := h.TweetServise.GetAdsMuroByCommunityId(req.CommunityIDs)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if PostAds.ReferenceLink != "" {
+		var combinedData []interface{}
+
+		for _, tweet := range posts {
+			combinedData = append(combinedData, tweet)
+		}
+
+		combinedData = append(combinedData, PostAds)
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "ok",
+			"posts":   combinedData,
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Posts fetched successfully",
+		"posts":   posts,
+	})
+}

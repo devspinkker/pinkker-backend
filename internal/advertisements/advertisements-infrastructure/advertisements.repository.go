@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"time"
 
@@ -283,7 +284,7 @@ func (r *AdvertisementsRepository) CreateAdvertisement(ad advertisements.UpdateA
 	documento.Name = ad.Name
 	documento.NameUser = ad.NameUser
 	documento.Destination = ad.Destination
-	documento.Categorie = ad.Categorie
+	documento.Category = ad.Category
 	documento.UrlVideo = ad.UrlVideo
 	documento.ReferenceLink = ad.ReferenceLink
 	documento.ImpressionsMax = ad.ImpressionsMax
@@ -312,7 +313,7 @@ func (r *AdvertisementsRepository) UpdateAdvertisement(ad advertisements.UpdateA
 		"$set": bson.M{
 			"Name":                  ad.Name,
 			"Destination":           ad.Destination,
-			"Categorie":             ad.Categorie,
+			"Category":              ad.Category,
 			"Impressions":           0,
 			"UrlVideo":              ad.UrlVideo,
 			"ReferenceLink":         ad.ReferenceLink,
@@ -400,7 +401,7 @@ func (r *AdvertisementsRepository) BuyadCreate(ad advertisements.UpdateAdvertise
 	documento.Name = ad.Name
 	documento.NameUser = ad.NameUser
 	documento.Destination = ad.Destination
-	documento.Categorie = ad.Categorie
+	documento.Category = ad.Category
 	documento.UrlVideo = ad.UrlVideo
 	documento.ReferenceLink = ad.ReferenceLink
 	documento.ImpressionsMax = ad.ImpressionsMax
@@ -692,7 +693,7 @@ func (r *AdvertisementsRepository) CreateAdsAdvertisement(data advertisements.Cl
 	documento.Name = data.Name
 	documento.NameUser = data.NameUser
 	documento.Destination = data.Destination
-	documento.Categorie = data.Categorie
+	documento.Category = data.Category
 	documento.UrlVideo = data.UrlVideo
 	documento.ReferenceLink = data.ReferenceLink
 	documento.ImpressionsMax = data.ImpressionsMax
@@ -778,7 +779,6 @@ func (r *AdvertisementsRepository) BuyadClipCreate(ad advertisements.ClipAdsCrea
 		log.Fatalf("error al convertir el valor")
 	}
 
-	// Buscar solo los Pixeles del usuario
 	userPixeles, err := r.findPixelesByUserId(ctx, idUser, collectionUsers)
 	if err != nil {
 		log.Fatalf("error al encontrar los pixeles del usuario")
@@ -793,15 +793,12 @@ func (r *AdvertisementsRepository) BuyadClipCreate(ad advertisements.ClipAdsCrea
 		return advertisements.Advertisements{}, errors.New("destination undefined")
 	}
 
-	// Verificar si el usuario tiene suficientes pixeles
 	if PixelesUserNeed > userPixeles || PixelesUserNeed <= 50000 {
 		return advertisements.Advertisements{}, errors.New("insufficient Pixeles")
 	}
 
-	// Restar los pixeles del usuario
 	userPixeles -= PixelesUserNeed
 
-	// Actualizar la cantidad de pixeles del usuario en la base de datos
 	update := bson.M{
 		"$inc": bson.M{
 			"Pixeles": -PixelesUserNeed,
@@ -817,7 +814,7 @@ func (r *AdvertisementsRepository) BuyadClipCreate(ad advertisements.ClipAdsCrea
 	documento.Name = ad.Name
 	documento.NameUser = ad.NameUser
 	documento.Destination = ad.Destination
-	documento.Categorie = ad.Categorie
+	documento.Category = ad.Category
 	documento.UrlVideo = ad.UrlVideo
 	documento.ReferenceLink = ad.ReferenceLink
 	documento.ImpressionsMax = ad.ImpressionsMax
@@ -832,7 +829,6 @@ func (r *AdvertisementsRepository) BuyadClipCreate(ad advertisements.ClipAdsCrea
 	documento.State = "pending"
 	documento.ClipId = clipid
 
-	// Insertar el anuncio en la base de datos
 	result, err := collection.InsertOne(ctx, documento)
 	if err != nil {
 		return advertisements.Advertisements{}, err
@@ -840,6 +836,78 @@ func (r *AdvertisementsRepository) BuyadClipCreate(ad advertisements.ClipAdsCrea
 	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
 		documento.ID = oid
 	}
-	// Devolver el anuncio creado
+	return documento, nil
+}
+func (r *AdvertisementsRepository) BuyadMuroCommunity(ad advertisements.UpdateAdvertisementCommunityId, idUser primitive.ObjectID) (advertisements.Advertisements, error) {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	collection := db.Collection("Advertisements")
+	collectionUsers := db.Collection("Users")
+	collectionCommunities := db.Collection("communities")
+
+	ctx := context.Background()
+
+	userPixeles, err := r.findPixelesByUserId(ctx, idUser, collectionUsers)
+	if err != nil {
+		log.Fatalf("error al encontrar los pixeles del usuario")
+		return advertisements.Advertisements{}, err
+	}
+	var community struct {
+		AdPricePerDay float64 `bson:"AdPricePerDay"`
+	}
+
+	err = collectionCommunities.FindOne(ctx, bson.M{"_id": ad.CommunityId}).Decode(&community)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+
+	daysAd := math.Floor(time.Until(ad.DaysTheAd).Hours() / 24)
+
+	// Validar que el anuncio tenga un número de días válido
+	if daysAd <= 0 {
+		return advertisements.Advertisements{}, errors.New("invalid number of days for the ad")
+	}
+
+	// Cálculo de los píxeles necesarios basados en días redondeados
+	pixelsNeeded := community.AdPricePerDay * daysAd
+
+	if pixelsNeeded > userPixeles {
+		return advertisements.Advertisements{}, errors.New("insufficient Pixeles")
+	}
+
+	update := bson.M{
+		"$inc": bson.M{
+			"Pixeles": -pixelsNeeded,
+		},
+	}
+	_, err = collectionUsers.UpdateOne(ctx, bson.M{"_id": idUser}, update)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
+	var documento advertisements.Advertisements
+	documento.Name = ad.Name
+	documento.NameUser = ad.NameUser
+	documento.IdUser = idUser
+	documento.Destination = ad.Destination
+	documento.Category = ad.Category
+	documento.UrlVideo = ad.UrlVideo
+	documento.ReferenceLink = ad.ReferenceLink
+	documento.ImpressionsMax = ad.ImpressionsMax
+	documento.PayPerPrint = 0
+	documento.Impressions = 0
+	documento.ClicksMax = ad.ClicksMax
+	documento.DocumentToBeAnnounced = ad.DocumentToBeAnnounced
+	documento.IdOfTheUsersWhoClicked = []primitive.ObjectID{}
+	documento.ClicksPerDay = []advertisements.ClicksPerDay{}
+	documento.ImpressionsPerDay = []advertisements.ImpressionsPerDay{}
+	documento.Timestamp = time.Now()
+	documento.State = "pending"
+	documento.CommunityId = ad.CommunityId
+	documento.EndAdCommunity = ad.DaysTheAd
+	documento.PricePTotalCommunity = pixelsNeeded
+
+	_, err = collection.InsertOne(ctx, documento)
+	if err != nil {
+		return advertisements.Advertisements{}, err
+	}
 	return documento, nil
 }

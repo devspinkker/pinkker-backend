@@ -84,7 +84,10 @@ func (s *AdvertisementsService) BuyadCreate(StreamerID primitive.ObjectID, data 
 	advertisementsGet, err := s.AdvertisementsRepository.BuyadCreate(data, StreamerID)
 	return advertisementsGet, err
 }
-
+func (s *AdvertisementsService) BuyadMuroCommunity(idtoken primitive.ObjectID, data advertisements.UpdateAdvertisementCommunityId) (advertisements.Advertisements, error) {
+	advertisementsGet, err := s.AdvertisementsRepository.BuyadMuroCommunity(data, idtoken)
+	return advertisementsGet, err
+}
 func (s *AdvertisementsService) ClipAdsCreate(data advertisements.ClipAdsCreate) (advertisements.Advertisements, error) {
 	advertisementsGet, err := s.AdvertisementsRepository.CreateAdsAdvertisement(data)
 	return advertisementsGet, err
