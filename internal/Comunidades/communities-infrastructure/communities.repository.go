@@ -149,9 +149,11 @@ func (repo *CommunitiesRepository) FindUserCommunities(ctx context.Context, user
 			{Key: "UpdatedAt", Value: 1},
 			{Key: "Categories", Value: 1},
 			{Key: "AdPricePerDay", Value: 1},
+			{Key: "Banner", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
 			{Key: "creator", Value: bson.D{
 				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.banner", 0}}}},
 				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
 				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
 			}},

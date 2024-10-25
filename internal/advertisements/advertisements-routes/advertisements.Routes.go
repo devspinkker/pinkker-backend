@@ -20,7 +20,7 @@ func AdvertisementsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB 
 	App.Post("/advertisements/GetAdvertisements", middleware.UseExtractor(), Handler.GetAdvertisements)
 
 	App.Post("/advertisements/BuyadCreate", middleware.UseExtractor(), middleware.TOTPAuthMiddleware(Repository), Handler.BuyadCreate)
-	App.Post("/advertisements/BuyadMuroCommunity", middleware.UseExtractor(), Handler.BuyadMuroCommunity)
+	App.Post("/advertisements/BuyadMuroCommunity", middleware.UseExtractor(), middleware.TOTPAuthMiddleware(Repository), Handler.BuyadMuroCommunity)
 
 	App.Post("/advertisements/CreateAdsClips", middleware.UseExtractor(), middleware.TOTPAuthMiddleware(Repository), Handler.CreateAdsClips)
 
