@@ -4,6 +4,7 @@ import (
 	communitiesdomain "PINKKER-BACKEND/internal/Comunidades/communities"
 	communitiesapplication "PINKKER-BACKEND/internal/Comunidades/communities-application"
 	"PINKKER-BACKEND/pkg/helpers"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -389,5 +390,30 @@ func (h *CommunitiesHandler) GetCommunityWithUserMembership(c *fiber.Ctx) error 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "successfully",
 		"data":    community,
+	})
+}
+func (h *CommunitiesHandler) GetCommunityRecommended(c *fiber.Ctx) error {
+
+	page, errpage := strconv.Atoi(c.Query("page", "1"))
+	if errpage != nil || page < 1 {
+		page = 1
+	}
+
+	idValue := c.Context().UserValue("_id").(string)
+	idValueObj, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	Comunidades, err := h.Service.GetCommunityRecommended(c.Context(), idValueObj, page)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    Comunidades,
 	})
 }

@@ -33,5 +33,6 @@ func CommunitiesRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mo
 	App.Get("/communities/GetCommunityWithUserMembership", middleware.UseExtractor(), Handler.GetCommunityWithUserMembership)
 	App.Get("/communities/GetTop10CommunitiesByMembers", middleware.UseExtractor(), Handler.GetTop10CommunitiesByMembers)
 	App.Get("/communities/GetTop10CommunitiesByMembersNoMember", middleware.UseExtractor(), Handler.GetTop10CommunitiesByMembersNoMember)
+	App.Get("/communities/GetCommunityRecommended", middleware.UseExtractor(), Handler.GetCommunityRecommended)
 
 }

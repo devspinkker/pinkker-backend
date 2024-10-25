@@ -66,3 +66,6 @@ func (s *CommunitiesService) GetCommunity(ctx context.Context, community primiti
 func (s *CommunitiesService) GetCommunityWithUserMembership(ctx context.Context, community, user primitive.ObjectID) (*communitiesdomain.CommunityDetails, error) {
 	return s.communitiesRepository.GetCommunityWithUserMembership(ctx, community, user)
 }
+func (s *CommunitiesService) GetCommunityRecommended(ctx context.Context, user primitive.ObjectID, page int) ([]communitiesdomain.CommunityDetails, error) {
+	return s.communitiesRepository.GetCommunityRecommended(ctx, user, page, 10)
+}

@@ -718,6 +718,7 @@ func (repo *CommunitiesRepository) GetTop10CommunitiesByMembersNoMember(ctx cont
 			{Key: "_id", Value: 1},
 			{Key: "CommunityName", Value: 1},
 			{Key: "Description", Value: 1},
+			{Key: "Banner", Value: 1},
 			{Key: "IsPrivate", Value: 1},
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
@@ -1046,4 +1047,110 @@ func (r *CommunitiesRepository) GetSubscriptionByUserIDsAndcommunityID(sourceUse
 	}
 
 	return &subscription, nil
+}
+func (repo *CommunitiesRepository) GetCommunityRecommended(ctx context.Context, userID primitive.ObjectID, page int, limit int) ([]communitiesdomain.CommunityDetails, error) {
+	Database := repo.mongoClient.Database("PINKKER-BACKEND")
+	collection := Database.Collection("communities")
+	userCollection := Database.Collection("Users")
+
+	// Obtener los IDs de los usuarios que sigue el usuario actual
+	userPipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.M{"_id": userID}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Following", Value: bson.D{{Key: "$objectToArray", Value: "$Following"}}},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$Following"}},
+		bson.D{{Key: "$limit", Value: 100}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "Following.k", Value: 1},
+		}}},
+		bson.D{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: bson.D{}},
+			{Key: "followingIDs", Value: bson.D{{Key: "$push", Value: "$Following.k"}}},
+		}}},
+	}
+
+	cursor, err := userCollection.Aggregate(ctx, userPipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var userResult struct {
+		FollowingIDs []primitive.ObjectID `bson:"followingIDs"`
+	}
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&userResult); err != nil {
+			return nil, err
+		}
+	}
+
+	followingIDs := userResult.FollowingIDs
+
+	// Calcular el valor de skip basado en page y limit
+	skip := (page - 1) * limit
+
+	// Pipeline para buscar comunidades relevantes con paginación
+	pipeline := bson.A{
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "CreatorID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "creatorDetails"},
+		}}},
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "Members", Value: bson.D{{Key: "$ne", Value: userID}}},
+			{Key: "BannedUsers", Value: bson.D{{Key: "$ne", Value: userID}}},
+		}}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "relevanceScore", Value: bson.D{
+				{Key: "$cond", Value: bson.D{
+					{Key: "if", Value: bson.D{{Key: "$in", Value: bson.A{"$CreatorID", followingIDs}}}},
+					{Key: "then", Value: 10},
+					{Key: "else", Value: 0},
+				}},
+			}},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "CommunityName", Value: 1},
+			{Key: "Description", Value: 1},
+			{Key: "Banner", Value: 1},
+			{Key: "IsPrivate", Value: 1},
+			{Key: "CreatedAt", Value: 1},
+			{Key: "UpdatedAt", Value: 1},
+			{Key: "Categories", Value: 1},
+			{Key: "AdPricePerDay", Value: 1},
+			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
+			{Key: "relevanceScore", Value: 1},
+			{Key: "creator", Value: bson.D{
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Banner", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+			}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.M{"relevanceScore": -1, "membersCount": -1}}},
+		bson.D{{Key: "$skip", Value: skip}},
+		bson.D{{Key: "$limit", Value: limit}},
+	}
+
+	// Ejecutamos el pipeline
+	cursor, err = collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Decodificamos los resultados
+	var topCommunities []communitiesdomain.CommunityDetails
+	for cursor.Next(ctx) {
+		var community communitiesdomain.CommunityDetails
+		if err := cursor.Decode(&community); err != nil {
+			return nil, err
+		}
+		topCommunities = append(topCommunities, community)
+	}
+
+	return topCommunities, nil
 }
