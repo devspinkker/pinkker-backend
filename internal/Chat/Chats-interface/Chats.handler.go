@@ -139,7 +139,7 @@ func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse request"})
 	}
 
-	message, Room, err := h.Service.SendMessage(objID, request.ReceiverID, request.Content)
+	message, stateUser, Room, err := h.Service.SendMessage(objID, request.ReceiverID, request.Content)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -169,6 +169,11 @@ func (h *ChatsHandler) SendMessage(c *fiber.Ctx) error {
 		if err != nil {
 			return err
 		}
+	}
+	// ccuando pedimos para ver si el uusario esta bloqueado aprovechamos para traer si el que recibe lo tiene en primario
+	// al que envia
+	if stateUser == "primary" {
+		h.NotifyActivityFeed(request.ReceiverID.Hex()+"ActivityFeed", objID)
 	}
 
 	return c.Status(fiber.StatusOK).JSON(message)
@@ -294,4 +299,23 @@ func (h *ChatsHandler) WebSocketHandler(c *websocket.Conn) {
 			}
 		}
 	}
+}
+
+func (h *ChatsHandler) NotifyActivityFeed(room string, id primitive.ObjectID) error {
+	clients, err := h.Service.GetWebSocketActivityFeed(room)
+	if err != nil {
+		return err
+	}
+	notification := map[string]interface{}{
+		"Type":   "message",
+		"UserId": id,
+	}
+	for _, client := range clients {
+		err = client.WriteJSON(notification)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

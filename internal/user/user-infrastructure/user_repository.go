@@ -1111,6 +1111,259 @@ func (u *UserRepository) UpdateLastConnection(userID primitive.ObjectID) error {
 	return nil
 }
 
+// last notificaciones
+func (u *UserRepository) GetRecentFollowsBeforeFirstConnection(IdUserTokenP primitive.ObjectID, page int) ([]domain.FollowInfoRes, error) {
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := db.Collection("Users")
+
+	limit := 10
+	skip := (page - 1) * limit
+
+	// Pipeline de agregación
+	pipeline := bson.A{
+		// 1. Filtramos por el usuario con el ID proporcionado
+		bson.M{"$match": bson.M{"_id": IdUserTokenP}},
+		// 2. Proyectamos los campos necesarios y convertimos el campo Followers a un arreglo
+		bson.M{"$project": bson.M{
+			"LastConnection": 1,
+			"Followers": bson.M{
+				"$objectToArray": "$Followers",
+			},
+		}},
+		// 3. "Unwind" para descomponer el arreglo de Followers en documentos individuales
+		bson.M{"$unwind": "$Followers"},
+		// 4. Filtramos los seguidores que tienen la fecha 'since' mayor a la fecha 'LastConnection'
+		bson.M{"$match": bson.M{
+			"$expr": bson.M{
+				"$lt": bson.A{"$Followers.v.since", "$LastConnection"},
+			},
+		}},
+		// 5. Convertimos Followers.k a ObjectId si no lo es ya
+		bson.M{"$addFields": bson.M{
+			"followerId": bson.M{
+				"$cond": bson.M{
+					"if":   bson.M{"$eq": bson.A{bson.M{"$type": "$Followers.k"}, "objectId"}},
+					"then": "$Followers.k",
+					"else": bson.M{"$toObjectId": "$Followers.k"},
+				},
+			},
+		}},
+		// 6. Lookup para obtener el NameUser de la colección Users basado en el ID del seguidor
+		bson.M{"$lookup": bson.M{
+			"from":         "Users",        // Colección Users
+			"localField":   "followerId",   // ID convertido del seguidor
+			"foreignField": "_id",          // Campo _id de la colección Users
+			"as":           "FollowerInfo", // Nombre del campo para la información del usuario
+		}},
+		// 7. Descomponemos el array FollowerInfo para obtener el primer documento
+		bson.M{"$unwind": bson.M{
+			"path":                       "$FollowerInfo",
+			"preserveNullAndEmptyArrays": true, // En caso de que no haya coincidencia
+		}},
+		// 8. Ordenamos los resultados por la fecha de 'since' en orden descendente
+		bson.M{"$sort": bson.M{"Followers.v.since": -1}},
+		// 9. Aplicamos el skip para la paginación
+		bson.M{"$skip": skip},
+		// 10. Aplicamos el limit para limitar la cantidad de resultados
+		bson.M{"$limit": limit},
+		// 11. Proyectamos los campos finales que queremos devolver
+		bson.M{"$project": bson.M{
+			"Email":         "$Followers.v.Email",
+			"since":         "$Followers.v.since",
+			"notifications": "$Followers.v.notifications",
+			"NameUser":      "$FollowerInfo.NameUser", // Nombre del seguidor
+			"Avatar":        "$FollowerInfo.Avatar",   // Nombre del seguidor
+
+		}},
+	}
+
+	cursor, err := GoMongoDBCollUsers.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var follows []domain.FollowInfoRes
+	for cursor.Next(context.Background()) {
+		var follow domain.FollowInfoRes
+		if err := cursor.Decode(&follow); err != nil {
+			return nil, err
+		}
+		follows = append(follows, follow)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(follows) == 0 {
+		return nil, errors.New("no documents found")
+	}
+
+	return follows, nil
+}
+
+func (d *UserRepository) AllMyPixelesDonorsBeforeFirstConnection(id primitive.ObjectID, page int) ([]donationdomain.ResDonation, error) {
+	GoMongoDBCollDonations := d.mongoClient.Database("PINKKER-BACKEND").Collection("Donations")
+
+	limit := 10
+	skip := (page - 1) * limit
+
+	// Pipeline de agregación
+	// Pipeline de agregación
+	pipeline := bson.A{
+		// 1. Filtrar donaciones hechas al usuario destino (ToUser)
+		bson.M{"$match": bson.M{"ToUser": id}},
+		// 2. Lookup para obtener información del usuario destino (ToUser) y su LastConnection
+		bson.M{"$lookup": bson.M{
+			"from":         "Users",
+			"localField":   "ToUser",
+			"foreignField": "_id",
+			"as":           "toUserInfo",
+		}},
+		// 3. Descomponer el array de usuarios destino (ToUser)
+		bson.M{"$unwind": "$toUserInfo"},
+		// 4. Filtrar donaciones hechas después de la última conexión del usuario destino usando $expr
+		// para comparar el campo TimeStamp con LastConnection
+		bson.M{"$match": bson.M{
+			"$expr": bson.M{
+				"$lt": bson.A{"$TimeStamp", "$toUserInfo.LastConnection"},
+			},
+		}},
+		// 5. Lookup para obtener información del usuario que hizo la donación (FromUser)
+		bson.M{"$lookup": bson.M{
+			"from":         "Users",
+			"localField":   "FromUser",
+			"foreignField": "_id",
+			"as":           "fromUserInfo",
+		}},
+		// 6. Descomponer el array de usuarios que hicieron la donación
+		bson.M{"$unwind": "$fromUserInfo"},
+		// 7. Proyectar los campos que queremos devolver, incluyendo los detalles de FromUser
+		bson.M{"$project": bson.M{
+			"FromUser":              "$FromUser",
+			"fromUserInfo.Avatar":   "$fromUserInfo.Avatar",
+			"fromUserInfo.NameUser": "$fromUserInfo.NameUser",
+			"Pixeles":               1,
+			"Text":                  1,
+			"TimeStamp":             1,
+			"Notified":              1,
+			"ToUser":                1,
+			"_id":                   1,
+		}},
+		// 8. Ordenar por la fecha de donación en orden descendente
+		bson.M{"$sort": bson.M{"TimeStamp": -1}},
+		// 9. Aplicar el skip para la paginación
+		bson.M{"$skip": skip},
+		// 10. Limitar la cantidad de resultados
+		bson.M{"$limit": limit},
+	}
+
+	cursor, err := GoMongoDBCollDonations.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var donations []donationdomain.ResDonation
+	for cursor.Next(context.Background()) {
+		var donation donationdomain.ResDonation
+		if err := cursor.Decode(&donation); err != nil {
+			return nil, err
+		}
+		donations = append(donations, donation)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(donations) == 0 {
+		return nil, errors.New("no documents found")
+	}
+
+	return donations, nil
+}
+
+func (r *UserRepository) GetSubsChatBeforeFirstConnection(id primitive.ObjectID, page int) ([]subscriptiondomain.ResSubscriber, error) {
+	GoMongoDBCollSubscribers := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscribers")
+
+	limit := 10
+	skip := (page - 1) * limit
+
+	// Definimos el pipeline para la consulta de agregación
+	// Definimos el pipeline para la consulta de agregación
+	pipeline := bson.A{
+		// 1. Lookup para obtener el usuario de destino (destinationUserID)
+		bson.M{"$lookup": bson.M{
+			"from":         "Users",
+			"localField":   "destinationUserID",
+			"foreignField": "_id",
+			"as":           "user",
+		}},
+		// 2. Unwind para descomponer el array de usuarios
+		bson.M{"$unwind": "$user"},
+		// 3. Match para comparar si el TimeStamp es mayor que LastConnection
+		bson.M{"$match": bson.M{
+			"destinationUserID": id,
+			"$expr": bson.M{
+				"$lt": bson.A{"$TimeStamp", "$user.LastConnection"},
+			},
+		}},
+		// 4. Ordenamos por la fecha de inicio de suscripción en orden descendente
+		bson.M{"$sort": bson.M{"TimeStamp": -1}},
+		// 5. Aplicamos el skip para la paginación
+		bson.M{"$skip": skip},
+		// 6. Limitamos la cantidad de resultados
+		bson.M{"$limit": limit},
+		// 7. Lookup para obtener información del usuario que inició la suscripción (sourceUserID)
+		bson.M{"$lookup": bson.M{
+			"from":         "Users",
+			"localField":   "sourceUserID",
+			"foreignField": "_id",
+			"as":           "FromUserInfo",
+		}},
+		// 8. Unwind para descomponer el array de usuarios
+		bson.M{"$unwind": "$FromUserInfo"},
+		// 9. Proyectamos los campos necesarios para la respuesta final
+		bson.M{"$project": bson.M{
+			"SubscriberNameUser":    "$SubscriberNameUser",
+			"FromUserInfo.Avatar":   "$FromUserInfo.Avatar",
+			"FromUserInfo.NameUser": "$FromUserInfo.NameUser",
+			"SubscriptionStart":     "$SubscriptionStart",
+			"SubscriptionEnd":       "$SubscriptionEnd",
+			"Notified":              "$Notified",
+			"Text":                  "$Text",
+			"id":                    "$_id",
+		}},
+	}
+
+	cursor, err := GoMongoDBCollSubscribers.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var subscribers []subscriptiondomain.ResSubscriber
+	for cursor.Next(context.Background()) {
+		var subscriber subscriptiondomain.ResSubscriber
+		if err := cursor.Decode(&subscriber); err != nil {
+			return nil, err
+		}
+		subscribers = append(subscribers, subscriber)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(subscribers) == 0 {
+		return nil, errors.New("no documents found")
+	}
+
+	return subscribers, nil
+}
+
 // follow
 func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.ObjectID) (string, error) {
 	db := u.mongoClient.Database("PINKKER-BACKEND")

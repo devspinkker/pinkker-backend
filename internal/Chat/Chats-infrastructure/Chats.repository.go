@@ -3,9 +3,12 @@ package Chatsinfrastructure
 import (
 	Chatsdomain "PINKKER-BACKEND/internal/Chat/Chats"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
+	"PINKKER-BACKEND/pkg/utils"
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/gofiber/websocket/v2"
 
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
@@ -322,10 +325,11 @@ func (r *ChatsRepository) getChatWithUsers(ctx context.Context, chatID primitive
 
 	return &chatWithUsers, nil
 }
-func (r *ChatsRepository) IsUserBlocked(user1ID, user2ID primitive.ObjectID) (primitive.ObjectID, bool, error) {
+func (r *ChatsRepository) IsUserBlocked(user1ID, user2ID primitive.ObjectID) (primitive.ObjectID, string, bool, error) {
 	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("chats")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+	var stateUser string
 
 	// Buscar el chat por user1ID y user2ID
 	filter := bson.M{
@@ -339,9 +343,9 @@ func (r *ChatsRepository) IsUserBlocked(user1ID, user2ID primitive.ObjectID) (pr
 	err := collection.FindOne(ctx, filter).Decode(&chat)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return primitive.NilObjectID, false, fmt.Errorf("chat not found between the users")
+			return primitive.NilObjectID, stateUser, false, fmt.Errorf("chat not found between the users")
 		}
-		return primitive.NilObjectID, false, fmt.Errorf("error finding chat: %v", err)
+		return primitive.NilObjectID, stateUser, false, fmt.Errorf("error finding chat: %v", err)
 	}
 
 	// Verificar si el usuario user1ID ha sido bloqueado por user2ID
@@ -349,8 +353,13 @@ func (r *ChatsRepository) IsUserBlocked(user1ID, user2ID primitive.ObjectID) (pr
 	if chat.Blocked.BlockedByUser2 || chat.Blocked.BlockedByUser1 {
 		isBlocked = true
 	}
+	if chat.User2ID == user2ID {
+		stateUser = chat.StatusUser2
+	} else {
+		stateUser = chat.StatusUser1
+	}
 
-	return chat.ID, isBlocked, nil
+	return chat.ID, stateUser, isBlocked, nil
 }
 
 func (r *ChatsRepository) SaveMessage(message *Chatsdomain.Message) (*Chatsdomain.Message, error) {
@@ -569,4 +578,9 @@ func (r *ChatsRepository) UpdateUserStatus(ctx context.Context, chatID, userID p
 	}
 
 	return nil
+}
+func (u *ChatsRepository) GetWebSocketClientsInRoom(roomID string) ([]*websocket.Conn, error) {
+	clients, err := utils.NewChatService().GetWebSocketClientsInRoom(roomID)
+
+	return clients, err
 }

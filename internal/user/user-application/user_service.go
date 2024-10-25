@@ -205,6 +205,20 @@ func (u *UserService) GetNotificacionesLastConnection(IdUserTokenP primitive.Obj
 	}
 	return GetRecentFollows, AllMyPixelesDonors, GetSubsChat, nil
 }
+
+func (u *UserService) GetRecentNotis(IdUserTokenP primitive.ObjectID, page int) ([]userdomain.FollowInfoRes, []donationdomain.ResDonation, []subscriptiondomain.ResSubscriber, error) {
+	var GetRecentFollows []userdomain.FollowInfoRes
+	var AllMyPixelesDonors []donationdomain.ResDonation
+	var GetSubsChat []subscriptiondomain.ResSubscriber
+	GetRecentFollows, _ = u.roomRepository.GetRecentFollowsBeforeFirstConnection(IdUserTokenP, page)
+	AllMyPixelesDonors, _ = u.roomRepository.AllMyPixelesDonorsBeforeFirstConnection(IdUserTokenP, page)
+	GetSubsChat, err := u.roomRepository.GetSubsChatBeforeFirstConnection(IdUserTokenP, page)
+
+	if err != nil && err.Error() != "no documents found" {
+		return nil, nil, nil, err
+	}
+	return GetRecentFollows, AllMyPixelesDonors, GetSubsChat, nil
+}
 func (u *UserService) PurchasePinkkerPrime(IdUser primitive.ObjectID) (bool, error) {
 	return u.roomRepository.PurchasePinkkerPrime(IdUser)
 }

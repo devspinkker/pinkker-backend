@@ -785,6 +785,47 @@ func (h *UserHandler) GetNotificacionesLastConnection(c *fiber.Ctx) error {
 		},
 	})
 }
+func (h *UserHandler) GetRecentNotis(c *fiber.Ctx) error {
+	// Obtener el ID del token del usuario desde el contexto
+	IdUserToken := c.Context().UserValue("_id").(string)
+	page, errpage := strconv.Atoi(c.Query("page", "1"))
+	if errpage != nil || page < 1 {
+		page = 1
+	}
+	// Convertir el ID del token del usuario a ObjectID
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+		})
+	}
+
+	// Obtener las notificaciones llamando al servicio de usuario
+	FollowInfo, ResDonation, Subscription, errUpdateUserFollow := h.userService.GetRecentNotis(IdUserTokenP, page)
+	if errUpdateUserFollow != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errUpdateUserFollow.Error(),
+		})
+	}
+
+	// Estructura de los datos a devolver
+	type dataStruct struct {
+		FollowInfo   []userdomain.FollowInfoRes         `json:"FollowInfo"`
+		ResDonation  []donationdomain.ResDonation       `json:"ResDonation"`
+		Subscription []subscriptiondomain.ResSubscriber `json:"Subscription"`
+	}
+
+	// Responder con los datos de notificaciones
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data": dataStruct{
+			FollowInfo:   FollowInfo,
+			ResDonation:  ResDonation,
+			Subscription: Subscription,
+		},
+	})
+}
 func (h *UserHandler) PurchasePinkkerPrime(c *fiber.Ctx) error {
 	IdUserToken := c.Context().UserValue("_id").(string)
 	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)

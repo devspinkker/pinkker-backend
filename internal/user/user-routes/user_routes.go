@@ -53,6 +53,8 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 
 	App.Get("/user/getUserById", middleware.UseExtractor(), UserHandler.GetUserByIdTheToken)
 	App.Get("/user/GetNotificacionesLastConnection", middleware.UseExtractor(), UserHandler.GetNotificacionesLastConnection)
+	App.Get("/user/GetRecentotificaciones", middleware.UseExtractor(), UserHandler.GetRecentNotis)
+
 	//Follow
 	App.Post("/user/follow", middleware.UseExtractor(), UserHandler.Follow)
 	App.Post("/user/Unfollow", middleware.UseExtractor(), UserHandler.Unfollow)

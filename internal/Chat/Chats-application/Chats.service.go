@@ -7,6 +7,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/gofiber/websocket/v2"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -42,11 +44,11 @@ func (s *ChatsService) UpdateChatBlockStatus(chatID primitive.ObjectID, userID p
 	return nil
 }
 
-func (s *ChatsService) SendMessage(senderID, receiverID primitive.ObjectID, content string) (*Chatsdomain.Message, primitive.ObjectID, error) {
+func (s *ChatsService) SendMessage(senderID, receiverID primitive.ObjectID, content string) (*Chatsdomain.Message, string, primitive.ObjectID, error) {
 
-	chatId, bloqued, err := s.ChatsRepository.IsUserBlocked(senderID, receiverID)
+	chatId, stateUser, bloqued, err := s.ChatsRepository.IsUserBlocked(senderID, receiverID)
 	if bloqued || err != nil {
-		return nil, primitive.ObjectID{}, errors.New("bloqued")
+		return nil, stateUser, primitive.ObjectID{}, errors.New("bloqued")
 	}
 
 	message := &Chatsdomain.Message{
@@ -60,14 +62,14 @@ func (s *ChatsService) SendMessage(senderID, receiverID primitive.ObjectID, cont
 
 	savedMessage, err := s.ChatsRepository.SaveMessage(message)
 	if err != nil {
-		return message, primitive.ObjectID{}, err
+		return message, stateUser, primitive.ObjectID{}, err
 	}
 	id, err := s.ChatsRepository.AddMessageToChat(savedMessage.ID, chatId)
 	if err != nil {
-		return message, id, err
+		return message, stateUser, id, err
 	}
 
-	return message, id, nil
+	return message, stateUser, id, nil
 }
 
 func (s *ChatsService) GetMessages(objID, receiverID primitive.ObjectID) ([]*Chatsdomain.Message, error) {
@@ -103,4 +105,9 @@ func (s *ChatsService) UpdateUserStatus(Idtoken, chatID primitive.ObjectID, newS
 		return errors.New("estado inválido")
 	}
 	return s.ChatsRepository.UpdateUserStatus(ctx, chatID, Idtoken, newStatus)
+}
+
+func (u *ChatsService) GetWebSocketActivityFeed(user string) ([]*websocket.Conn, error) {
+	client, err := u.ChatsRepository.GetWebSocketClientsInRoom(user)
+	return client, err
 }
