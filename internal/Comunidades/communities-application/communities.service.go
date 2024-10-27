@@ -34,6 +34,9 @@ func (s *CommunitiesService) RemoveMember(ctx context.Context, communityID, user
 func (s *CommunitiesService) FindUserCommunities(ctx context.Context, userID primitive.ObjectID) ([]communitiesdomain.CommunityDetails, error) {
 	return s.communitiesRepository.FindUserCommunities(ctx, userID)
 }
+func (s *CommunitiesService) CommunityOwnerUser(ctx context.Context, userID primitive.ObjectID) ([]communitiesdomain.CommunityDetails, error) {
+	return s.communitiesRepository.CommunityOwnerUser(ctx, userID)
+}
 
 // Expulsar un miembro de la comunidad
 func (s *CommunitiesService) BanMember(ctx context.Context, communityID, userID, mod primitive.ObjectID) error {

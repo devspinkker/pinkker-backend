@@ -76,6 +76,30 @@ func (h *CommunitiesHandler) FindUserCommunities(c *fiber.Ctx) error {
 		"data":    Communities,
 	})
 }
+
+func (h *CommunitiesHandler) CommunityOwnerUser(c *fiber.Ctx) error {
+	var req struct {
+		UserId primitive.ObjectID `json:"UserId"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Error parsing request",
+		})
+	}
+	Communities, err := h.Service.CommunityOwnerUser(c.Context(), req.UserId)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error adding member",
+			"error":   err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "StatusOK",
+		"data":    Communities,
+	})
+}
+
 func (h *CommunitiesHandler) AddMember(c *fiber.Ctx) error {
 	var req struct {
 		CommunityID primitive.ObjectID `json:"community_id"`

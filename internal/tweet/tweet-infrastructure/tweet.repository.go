@@ -319,12 +319,12 @@ func (t *TweetRepository) GetRandomPostcommunities(idT primitive.ObjectID, exclu
 	db := t.mongoClient.Database("PINKKER-BACKEND")
 	collTweets := db.Collection("Post")
 
-	last24Hours := time.Now().Add(-24 * time.Hour)
+	// last24Hours := time.Now().Add(-24 * time.Hour)
 
 	pipeline := bson.A{
 		bson.D{{Key: "$match", Value: bson.D{
 			{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludeIDs}}},
-			{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
+			// {Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
 			{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
 			{Key: "$or", Value: bson.A{
 				bson.D{{Key: "IsPrivate", Value: false}},
@@ -419,6 +419,7 @@ func (t *TweetRepository) GetRandomPostcommunities(idT primitive.ObjectID, exclu
 	}
 	return tweetsWithUserInfo, nil
 }
+
 func (t *TweetRepository) GetPostsFromUserCommunities(idT primitive.ObjectID, excludeIDs []primitive.ObjectID, limit int) ([]tweetdomain.GetPostcommunitiesRandom, error) {
 	ctx := context.Background()
 	db := t.mongoClient.Database("PINKKER-BACKEND")
@@ -1653,7 +1654,7 @@ func (t *TweetRepository) GetPostIdLogueado(id primitive.ObjectID, userID primit
 	return tweetWithUserInfo, nil
 }
 
-func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int) ([]tweetdomain.GetPostcommunitiesRandom, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
 	skip := (page - 1) * 10
@@ -1716,10 +1717,10 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 	}
 	defer cursor.Close(context.Background())
 
-	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
+	var tweetsWithUserInfo []tweetdomain.GetPostcommunitiesRandom
 	var originalPostIDs []primitive.ObjectID
 	for cursor.Next(context.Background()) {
-		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
+		var tweetWithUserInfo tweetdomain.GetPostcommunitiesRandom
 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
 			return nil, err
 		}
@@ -1766,6 +1767,161 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 				{Key: "UserInfo.Avatar", Value: 1},
 				{Key: "UserInfo.NameUser", Value: 1},
 				{Key: "UserInfo.Online", Value: 1},
+				{Key: "CommunityInfo.CommunityName", Value: 1},
+				{Key: "CommunityInfo._id", Value: 1},
+			}}},
+		}
+
+		cursorOriginalPosts, err := GoMongoDBCollTweets.Aggregate(context.Background(), originalPostPipeline)
+		if err != nil {
+			return nil, err
+		}
+		defer cursorOriginalPosts.Close(context.Background())
+
+		var originalPostMap = make(map[primitive.ObjectID]tweetdomain.TweetGetFollowReq)
+		for cursorOriginalPosts.Next(context.Background()) {
+			var originalPost tweetdomain.TweetGetFollowReq
+			if err := cursorOriginalPosts.Decode(&originalPost); err != nil {
+				return nil, err
+			}
+			originalPostMap[originalPost.ID] = originalPost
+		}
+		for i, tweet := range tweetsWithUserInfo {
+			if tweet.OriginalPost != primitive.NilObjectID {
+				originalPost, found := originalPostMap[tweet.OriginalPost]
+				if found {
+					tweetsWithUserInfo[i].OriginalPostData = &originalPost
+				}
+			}
+		}
+	}
+
+	return tweetsWithUserInfo, nil
+}
+
+func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.ObjectID, limit int) ([]tweetdomain.GetPostcommunitiesRandom, error) {
+	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
+
+	skip := (page - 1) * 10
+	pipeline := []bson.D{
+		{{Key: "$match", Value: bson.D{
+			{Key: "UserID", Value: id},
+
+			{Key: "$or", Value: bson.A{
+				bson.D{{Key: "communityID", Value: primitive.NilObjectID}},
+				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: false}}}},
+			}},
+			{Key: "$or", Value: bson.A{
+				bson.D{{Key: "IsPrivate", Value: false}},
+				bson.D{{Key: "IsPrivate", Value: bson.D{{Key: "$exists", Value: false}}}},
+			}},
+		}}},
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		{{Key: "$unwind", Value: "$UserInfo"}},
+		{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idt, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "RePostsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$RePosts", bson.A{}}}}}}},
+		}}},
+		{{Key: "$sort", Value: bson.D{
+			{Key: "TimeStamp", Value: -1},
+		}}},
+		{{Key: "$skip", Value: skip}},
+		{{Key: "$limit", Value: limit}},
+		{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: "$Status"},
+			{Key: "PostImage", Value: "$PostImage"},
+			{Key: "Type", Value: "$Type"},
+			{Key: "TimeStamp", Value: "$TimeStamp"},
+			{Key: "UserID", Value: "$UserID"},
+			{Key: "likeCount", Value: 1},
+			{Key: "RePostsCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "CommunityInfo.CommunityName", Value: 1},
+			{Key: "CommunityInfo._id", Value: 1},
+			{Key: "Comments", Value: "$Comments"},
+			{Key: "RePosts", Value: "$RePosts"},
+			{Key: "OriginalPost", Value: "$OriginalPost"},
+			{Key: "Views", Value: "$Views"},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
+		}}},
+	}
+
+	cursor, err := GoMongoDBCollTweets.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var tweetsWithUserInfo []tweetdomain.GetPostcommunitiesRandom
+	var originalPostIDs []primitive.ObjectID
+	for cursor.Next(context.Background()) {
+		var tweetWithUserInfo tweetdomain.GetPostcommunitiesRandom
+		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
+			return nil, err
+		}
+
+		if tweetWithUserInfo.OriginalPost != primitive.NilObjectID {
+			originalPostIDs = append(originalPostIDs, tweetWithUserInfo.OriginalPost)
+		}
+
+		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
+	}
+
+	// Incrementar Views en 1 solo para los documentos obtenidos
+	if err := t.PostcommunitiesRandomAddView(context.TODO(), GoMongoDBCollTweets, tweetsWithUserInfo, idt); err != nil {
+		return tweetsWithUserInfo, err
+	}
+
+	// Obtener los datos del OriginalPost si existen
+	if len(originalPostIDs) > 0 {
+		originalPostPipeline := bson.A{
+			bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: originalPostIDs}}}}}},
+			bson.D{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "Users"},
+				{Key: "localField", Value: "UserID"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "UserInfo"},
+			}}},
+			bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+			bson.D{{Key: "$addFields", Value: bson.D{
+				{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+				{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idt, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+				{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+				{Key: "RePostsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$RePosts", bson.A{}}}}}}},
+			}}},
+			bson.D{{Key: "$project", Value: bson.D{
+				{Key: "id", Value: "$_id"},
+				{Key: "Type", Value: "$Type"},
+				{Key: "Status", Value: "$Status"},
+				{Key: "PostImage", Value: "$PostImage"},
+				{Key: "TimeStamp", Value: "$TimeStamp"},
+				{Key: "UserID", Value: "$UserID"},
+				{Key: "Likes", Value: "$Likes"},
+				{Key: "CommentsCount", Value: 1},
+				{Key: "likeCount", Value: 1},
+				{Key: "RePostsCount", Value: 1},
+				{Key: "isLikedByID", Value: 1},
+				{Key: "Comments", Value: "$Comments"},
+				{Key: "CommunityInfo.CommunityName", Value: 1},
+				{Key: "CommunityInfo._id", Value: 1},
+				{Key: "Views", Value: "$Views"},
+				{Key: "OriginalPost", Value: "$OriginalPost"},
+				{Key: "UserInfo.FullName", Value: 1},
+				{Key: "UserInfo.Avatar", Value: 1},
+				{Key: "UserInfo.NameUser", Value: 1},
+				{Key: "UserInfo.Online", Value: 1},
 			}}},
 		}
 
@@ -1796,7 +1952,6 @@ func (t *TweetRepository) GetPostuser(page int, id primitive.ObjectID, limit int
 
 	return tweetsWithUserInfo, nil
 }
-
 func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
@@ -1921,157 +2076,6 @@ func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, li
 				{Key: "Likes", Value: "$Likes"},
 				{Key: "Comments", Value: "$Comments"},
 				{Key: "RePosts", Value: "$RePosts"},
-				{Key: "Views", Value: "$Views"},
-				{Key: "OriginalPost", Value: "$OriginalPost"},
-				{Key: "UserInfo.FullName", Value: 1},
-				{Key: "UserInfo.Avatar", Value: 1},
-				{Key: "UserInfo.NameUser", Value: 1},
-				{Key: "UserInfo.Online", Value: 1},
-			}}},
-		}
-
-		cursorOriginalPosts, err := GoMongoDBCollTweets.Aggregate(context.Background(), originalPostPipeline)
-		if err != nil {
-			return nil, err
-		}
-		defer cursorOriginalPosts.Close(context.Background())
-
-		var originalPostMap = make(map[primitive.ObjectID]tweetdomain.TweetGetFollowReq)
-		for cursorOriginalPosts.Next(context.Background()) {
-			var originalPost tweetdomain.TweetGetFollowReq
-			if err := cursorOriginalPosts.Decode(&originalPost); err != nil {
-				return nil, err
-			}
-			originalPostMap[originalPost.ID] = originalPost
-		}
-
-		for i, tweet := range tweetsWithUserInfo {
-			if tweet.OriginalPost != primitive.NilObjectID {
-				originalPost, found := originalPostMap[tweet.OriginalPost]
-				if found {
-					tweetsWithUserInfo[i].OriginalPostData = &originalPost
-				}
-			}
-		}
-	}
-
-	return tweetsWithUserInfo, nil
-}
-
-func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
-	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
-
-	skip := (page - 1) * 10
-	pipeline := []bson.D{
-		{{Key: "$match", Value: bson.D{
-			{Key: "UserID", Value: id},
-
-			{Key: "$or", Value: bson.A{
-				bson.D{{Key: "communityID", Value: primitive.NilObjectID}},
-				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: false}}}},
-			}},
-			{Key: "$or", Value: bson.A{
-				bson.D{{Key: "IsPrivate", Value: false}},
-				bson.D{{Key: "IsPrivate", Value: bson.D{{Key: "$exists", Value: false}}}},
-			}},
-		}}},
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "Users"},
-			{Key: "localField", Value: "UserID"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "UserInfo"},
-		}}},
-		{{Key: "$unwind", Value: "$UserInfo"}},
-		{{Key: "$addFields", Value: bson.D{
-			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
-			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idt, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
-			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
-			{Key: "RePostsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$RePosts", bson.A{}}}}}}},
-		}}},
-		{{Key: "$sort", Value: bson.D{
-			{Key: "TimeStamp", Value: -1},
-		}}},
-		{{Key: "$skip", Value: skip}},
-		{{Key: "$limit", Value: limit}},
-		{{Key: "$project", Value: bson.D{
-			{Key: "id", Value: "$_id"},
-			{Key: "Status", Value: "$Status"},
-			{Key: "PostImage", Value: "$PostImage"},
-			{Key: "Type", Value: "$Type"},
-			{Key: "TimeStamp", Value: "$TimeStamp"},
-			{Key: "UserID", Value: "$UserID"},
-			{Key: "likeCount", Value: 1},
-			{Key: "RePostsCount", Value: 1},
-			{Key: "isLikedByID", Value: 1},
-			{Key: "CommentsCount", Value: 1},
-
-			{Key: "Comments", Value: "$Comments"},
-			{Key: "RePosts", Value: "$RePosts"},
-			{Key: "OriginalPost", Value: "$OriginalPost"},
-			{Key: "Views", Value: "$Views"},
-			{Key: "UserInfo.FullName", Value: 1},
-			{Key: "UserInfo.Avatar", Value: 1},
-			{Key: "UserInfo.NameUser", Value: 1},
-			{Key: "UserInfo.Online", Value: 1},
-		}}},
-	}
-
-	cursor, err := GoMongoDBCollTweets.Aggregate(context.Background(), pipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(context.Background())
-
-	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
-	var originalPostIDs []primitive.ObjectID
-	for cursor.Next(context.Background()) {
-		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
-		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
-			return nil, err
-		}
-
-		if tweetWithUserInfo.OriginalPost != primitive.NilObjectID {
-			originalPostIDs = append(originalPostIDs, tweetWithUserInfo.OriginalPost)
-		}
-
-		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
-	}
-
-	// Incrementar Views en 1 solo para los documentos obtenidos
-	if err := t.updateTweetViews(context.TODO(), GoMongoDBCollTweets, tweetsWithUserInfo, idt); err != nil {
-		return tweetsWithUserInfo, err
-	}
-
-	// Obtener los datos del OriginalPost si existen
-	if len(originalPostIDs) > 0 {
-		originalPostPipeline := bson.A{
-			bson.D{{Key: "$match", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: originalPostIDs}}}}}},
-			bson.D{{Key: "$lookup", Value: bson.D{
-				{Key: "from", Value: "Users"},
-				{Key: "localField", Value: "UserID"},
-				{Key: "foreignField", Value: "_id"},
-				{Key: "as", Value: "UserInfo"},
-			}}},
-			bson.D{{Key: "$unwind", Value: "$UserInfo"}},
-			bson.D{{Key: "$addFields", Value: bson.D{
-				{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
-				{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idt, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
-				{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
-				{Key: "RePostsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$RePosts", bson.A{}}}}}}},
-			}}},
-			bson.D{{Key: "$project", Value: bson.D{
-				{Key: "id", Value: "$_id"},
-				{Key: "Type", Value: "$Type"},
-				{Key: "Status", Value: "$Status"},
-				{Key: "PostImage", Value: "$PostImage"},
-				{Key: "TimeStamp", Value: "$TimeStamp"},
-				{Key: "UserID", Value: "$UserID"},
-				{Key: "Likes", Value: "$Likes"},
-				{Key: "CommentsCount", Value: 1},
-				{Key: "likeCount", Value: 1},
-				{Key: "RePostsCount", Value: 1},
-				{Key: "isLikedByID", Value: 1},
-				{Key: "Comments", Value: "$Comments"},
 				{Key: "Views", Value: "$Views"},
 				{Key: "OriginalPost", Value: "$OriginalPost"},
 				{Key: "UserInfo.FullName", Value: 1},

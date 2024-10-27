@@ -179,7 +179,71 @@ func (repo *CommunitiesRepository) FindUserCommunities(ctx context.Context, user
 
 	return communities, nil
 }
+func (repo *CommunitiesRepository) CommunityOwnerUser(ctx context.Context, userID primitive.ObjectID) ([]communitiesdomain.CommunityDetails, error) {
+	usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
+	var user struct {
+		OwnerCommunities []primitive.ObjectID `bson:"OwnerCommunities"`
+	}
+
+	err := usersCollection.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(user.OwnerCommunities) == 0 {
+		return []communitiesdomain.CommunityDetails{}, nil
+	}
+
+	communitiesCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: bson.M{"_id": bson.M{"$in": user.OwnerCommunities}}}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "CreatorID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "creatorDetails"},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "CommunityName", Value: 1},
+			{Key: "Description", Value: 1},
+			{Key: "IsPrivate", Value: 1},
+			{Key: "CreatedAt", Value: 1},
+			{Key: "UpdatedAt", Value: 1},
+			{Key: "Categories", Value: 1},
+			{Key: "AdPricePerDay", Value: 1},
+			{Key: "Banner", Value: 1},
+			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},
+			{Key: "creator", Value: bson.D{
+				{Key: "userID", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails._id", 0}}}},
+				{Key: "banner", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.banner", 0}}}},
+				{Key: "avatar", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.Avatar", 0}}}},
+				{Key: "nameUser", Value: bson.D{{Key: "$arrayElemAt", Value: bson.A{"$creatorDetails.NameUser", 0}}}},
+			}},
+		}}},
+	}
+
+	// Ejecutar el pipeline
+	cursor, err := communitiesCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	// Almacenar los resultados
+	var communities []communitiesdomain.CommunityDetails
+	for cursor.Next(ctx) {
+		var community communitiesdomain.CommunityDetails
+		if err := cursor.Decode(&community); err != nil {
+			return nil, err
+		}
+		communities = append(communities, community)
+	}
+
+	return communities, nil
+}
 func (repo *CommunitiesRepository) AddModerator(ctx context.Context, communityID, newModID, modID primitive.ObjectID) error {
 	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
 
@@ -1086,11 +1150,12 @@ func (repo *CommunitiesRepository) GetCommunityRecommended(ctx context.Context, 
 	}
 
 	followingIDs := userResult.FollowingIDs
+	if followingIDs == nil {
+		followingIDs = []primitive.ObjectID{}
+	}
 
-	// Calcular el valor de skip basado en page y limit
 	skip := (page - 1) * limit
 
-	// Pipeline para buscar comunidades relevantes con paginación
 	pipeline := bson.A{
 		bson.D{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
@@ -1111,6 +1176,7 @@ func (repo *CommunitiesRepository) GetCommunityRecommended(ctx context.Context, 
 				}},
 			}},
 		}}},
+
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
 			{Key: "CommunityName", Value: 1},
