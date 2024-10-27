@@ -1807,10 +1807,9 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 		{{Key: "$match", Value: bson.D{
 			{Key: "UserID", Value: id},
 
-			{Key: "$or", Value: bson.A{
-				bson.D{{Key: "communityID", Value: primitive.NilObjectID}},
-				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: false}}}},
-			}},
+			{Key: "$and", Value: bson.A{
+				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: true}}}},
+				bson.D{{Key: "communityID", Value: bson.D{{Key: "$ne", Value: primitive.NilObjectID}}}}}},
 			{Key: "$or", Value: bson.A{
 				bson.D{{Key: "IsPrivate", Value: false}},
 				bson.D{{Key: "IsPrivate", Value: bson.D{{Key: "$exists", Value: false}}}},
