@@ -3,9 +3,11 @@ package tweetinfrastructure
 import (
 	communitiesdomain "PINKKER-BACKEND/internal/Comunidades/communities"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
+	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -2535,6 +2537,164 @@ func (t *TweetRepository) IsUserMemberOfCommunity(communityID, userID primitive.
 	}
 
 	return true, community.IsPrivate, nil
+}
+
+func (repo *TweetRepository) GetCommunityPosts(ctx context.Context, communityID primitive.ObjectID, ExcludeFilterlID []primitive.ObjectID, idT primitive.ObjectID) ([]tweetdomain.GetPostcommunitiesRandom, error) {
+	db := repo.mongoClient.Database("PINKKER-BACKEND")
+	collPosts := db.Collection("Post")
+	_, err := repo.GetSubscriptionByUserIDsAndcommunityID(idT, communityID, idT)
+	if err != nil {
+		return nil, err
+	}
+	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: ExcludeFilterlID}}}}
+
+	includeFilter := bson.D{
+		{Key: "communityID", Value: communityID},
+		{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
+	}
+
+	matchFilter := bson.D{
+		{Key: "$and", Value: bson.A{
+			excludeFilter,
+			includeFilter,
+		}},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: matchFilter}},
+
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "TimeStamp", Value: -1}, // Ordenar por fecha de creación
+		}}},
+		bson.D{{Key: "$limit", Value: 15}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: 1},
+			{Key: "PostImage", Value: 1},
+			{Key: "Type", Value: 1},
+			{Key: "TimeStamp", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
+			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
+			{Key: "OriginalPost", Value: 1},
+		}}},
+	}
+
+	cursor, err := collPosts.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var postsWithUserInfo []tweetdomain.GetPostcommunitiesRandom
+	for cursor.Next(ctx) {
+		var postWithUserInfo tweetdomain.GetPostcommunitiesRandom
+		if err := cursor.Decode(&postWithUserInfo); err != nil {
+			return nil, err
+		}
+		postsWithUserInfo = append(postsWithUserInfo, postWithUserInfo)
+	}
+	if err := repo.addOriginalPostDataCommunity(ctx, collPosts, postsWithUserInfo); err != nil {
+		return nil, err
+	}
+	if err := repo.PostcommunitiesRandomAddView(context.TODO(), collPosts, postsWithUserInfo, idT); err != nil {
+		return nil, err
+	}
+	return postsWithUserInfo, nil
+}
+func (r *TweetRepository) GetSubscriptionByUserIDsAndcommunityID(sourceUserID, communityID, idT primitive.ObjectID) (*subscriptiondomain.Subscription, error) {
+	communitiesCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+
+	redisKey := fmt.Sprintf("community:%s", communityID.Hex())
+	redisData, err := r.redisClient.Get(context.Background(), redisKey).Result()
+
+	var community struct {
+		CreatorID primitive.ObjectID `bson:"CreatorID"`
+		IsPrivate bool               `bson:"IsPrivate"`
+		IsPaid    bool               `bson:"IsPaid"`
+	}
+
+	if err == redis.Nil {
+		err := communitiesCollection.FindOne(context.Background(), bson.M{"_id": communityID}).Decode(&community)
+		if err != nil {
+			return nil, fmt.Errorf("error al obtener el creador de la comunidad: %v", err)
+		}
+
+		communityJSON, err := json.Marshal(community)
+		if err == nil {
+			r.redisClient.Set(context.Background(), redisKey, communityJSON, time.Minute*1)
+		}
+	} else if err != nil {
+		return nil, fmt.Errorf("error al obtener datos de Redis: %v", err)
+	} else {
+		err = json.Unmarshal([]byte(redisData), &community)
+		if err != nil {
+			return nil, fmt.Errorf("error al deserializar datos de Redis: %v", err)
+		}
+	}
+
+	if community.CreatorID == sourceUserID {
+		return nil, nil
+	}
+
+	if !community.IsPrivate {
+		return nil, nil
+	}
+	if community.IsPaid {
+		filter := bson.M{
+			"_id":     communityID,
+			"Members": bson.M{"$in": []primitive.ObjectID{idT}}, // Verificar si idT está en Members
+		}
+
+		// Ejecutar la búsqueda
+		err = communitiesCollection.FindOne(context.Background(), filter).Decode(&community)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return nil, fmt.Errorf("el usuario no es miembro de la comunidad")
+			}
+			return nil, fmt.Errorf("error al buscar membresía en la comunidad: %v", err)
+		}
+
+	}
+	subscriptionsCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscriptions")
+
+	filter := bson.M{
+		"sourceUserID":      sourceUserID,
+		"destinationUserID": community.CreatorID,
+	}
+
+	var subscription subscriptiondomain.Subscription
+	err = subscriptionsCollection.FindOne(context.Background(), filter).Decode(&subscription)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, fmt.Errorf("no se encontró ninguna suscripción entre el usuario y el creador")
+		}
+		return nil, fmt.Errorf("error al buscar la suscripción: %v", err)
+	}
+
+	if subscription.SubscriptionEnd.Before(time.Now()) {
+		return nil, fmt.Errorf("la suscripción ha expirado")
+	}
+
+	return &subscription, nil
 }
 
 // views
