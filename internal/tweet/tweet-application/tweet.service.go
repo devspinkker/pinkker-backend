@@ -223,5 +223,5 @@ func (t *TweetService) GetTrendsByPrefix(prefix string) ([]tweetdomain.Trend, er
 }
 
 func (s *TweetService) GetCommunityPosts(ctx context.Context, CommunityID primitive.ObjectID, ExcludeFilterIDs []primitive.ObjectID, idT primitive.ObjectID) ([]tweetdomain.GetPostcommunitiesRandom, error) {
-	return s.TweetRepository.GetCommunityPosts(ctx, CommunityID, ExcludeFilterIDs, idT, 10)
+	return s.TweetRepository.GetCommunityPosts(ctx, CommunityID, ExcludeFilterIDs, idT)
 }
