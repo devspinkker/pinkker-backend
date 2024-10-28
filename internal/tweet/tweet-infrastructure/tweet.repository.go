@@ -2584,6 +2584,8 @@ func (repo *TweetRepository) GetCommunityPosts(ctx context.Context, communityID 
 			{Key: "Status", Value: 1},
 			{Key: "PostImage", Value: 1},
 			{Key: "Type", Value: 1},
+			{Key: "Type", Value: 1},
+			{Key: "Views", Value: 1},
 			{Key: "TimeStamp", Value: 1},
 			{Key: "UserID", Value: 1},
 			{Key: "Comments", Value: 1},
@@ -2672,7 +2674,7 @@ func (r *TweetRepository) GetSubscriptionByUserIDsAndcommunityID(sourceUserID, c
 			}
 			return nil, fmt.Errorf("error al buscar membresía en la comunidad: %v", err)
 		}
-
+		return nil, nil
 	}
 	subscriptionsCollection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscriptions")
 

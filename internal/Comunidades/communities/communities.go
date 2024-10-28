@@ -34,6 +34,17 @@ type CreateCommunity struct {
 	SubscriptionAmount int      `json:"subscription_amount" form:"subscription_amount"`
 	AdPricePerDay      int      `json:"AdPricePerDay" form:"AdPricePerDay"`
 }
+type EditCommunity struct {
+	CommunityID        primitive.ObjectID `json:"CommunityID" form:"CommunityID"`
+	Banner             string             `json:"Banner" bson:"Banner"`
+	CommunityName      string             `json:"community_name" form:"community_name"`
+	Description        string             `json:"description" form:"description"`
+	IsPrivate          bool               `json:"is_private" form:"is_private"`
+	Categories         []string           `json:"categories" form:"categories"`
+	IsPaid             bool               `json:"is_paid" form:"is_paid"`
+	SubscriptionAmount int                `json:"subscription_amount" form:"subscription_amount"`
+	AdPricePerDay      int                `json:"AdPricePerDay" form:"AdPricePerDay"`
+}
 
 func (u *Community) ValidateReqCreateCommunities() error {
 

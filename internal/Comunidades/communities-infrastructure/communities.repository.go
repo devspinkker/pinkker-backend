@@ -6,6 +6,7 @@ import (
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -34,7 +35,7 @@ func NewcommunitiesRepository(redisClient *redis.Client, mongoClient *mongo.Clie
 func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req communitiesdomain.CreateCommunity, Banner string, creatorID primitive.ObjectID) (*communitiesdomain.Community, error) {
 	var user struct {
 		PinkkerPrime *userdomain.PinkkerPrime `bson:"PinkkerPrime"`
-		Pixeles      int                      `bson:"Pixeles"`
+		Pixeles      float64                  `bson:"Pixeles"`
 	}
 
 	usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
@@ -112,6 +113,51 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 	}
 
 	return community, nil
+}
+func (repo *CommunitiesRepository) EditCommunity(ctx context.Context, req communitiesdomain.EditCommunity, Banner string, creatorID primitive.ObjectID) (*communitiesdomain.Community, error) {
+
+	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
+
+	var community struct {
+		CreatorID primitive.ObjectID `bson:"CreatorID"`
+	}
+
+	err := collection.FindOne(ctx, bson.M{"_id": req.CommunityID}, options.FindOne().SetProjection(bson.M{
+		"CreatorID": 1,
+	})).Decode(&community)
+	if err != nil {
+		return nil, err
+	}
+
+	if community.CreatorID != creatorID {
+		return nil, errors.New("no autorizado")
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"AdPricePerDay":      req.AdPricePerDay,
+			"Description":        req.Description,
+			"SubscriptionAmount": req.SubscriptionAmount,
+			"Categories":         req.Categories,
+			"IsPaid":             req.IsPaid,
+			"Banner":             Banner,
+			"UpdatedAt":          time.Now(),
+		},
+	}
+
+	// Ejecutamos el update
+	_, err = collection.UpdateOne(ctx, bson.M{"_id": req.CommunityID}, update)
+	if err != nil {
+		return nil, fmt.Errorf("error al actualizar la comunidad: %v", err)
+	}
+
+	var updatedCommunity communitiesdomain.Community
+	err = collection.FindOne(ctx, bson.M{"_id": req.CommunityID}).Decode(&updatedCommunity)
+	if err != nil {
+		return nil, fmt.Errorf("error al recuperar la comunidad actualizada: %v", err)
+	}
+
+	return &updatedCommunity, nil
 }
 
 func (repo *CommunitiesRepository) FindUserCommunities(ctx context.Context, userID primitive.ObjectID) ([]communitiesdomain.CommunityDetails, error) {
@@ -213,6 +259,7 @@ func (repo *CommunitiesRepository) CommunityOwnerUser(ctx context.Context, userI
 			{Key: "CreatedAt", Value: 1},
 			{Key: "UpdatedAt", Value: 1},
 			{Key: "Categories", Value: 1},
+			{Key: "SubscriptionAmount", Value: 1},
 			{Key: "AdPricePerDay", Value: 1},
 			{Key: "Banner", Value: 1},
 			{Key: "membersCount", Value: bson.D{{Key: "$size", Value: "$Members"}}},

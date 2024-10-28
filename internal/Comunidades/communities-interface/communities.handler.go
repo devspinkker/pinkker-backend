@@ -54,6 +54,41 @@ func (h *CommunitiesHandler) CreateCommunity(c *fiber.Ctx) error {
 		"community": community,
 	})
 }
+
+func (h *CommunitiesHandler) EditCommunity(c *fiber.Ctx) error {
+	fileHeader, _ := c.FormFile("Banner")
+	PostImageChanel := make(chan string)
+	errChanel := make(chan error)
+
+	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+	Banner := <-PostImageChanel
+	idValue := c.Context().UserValue("_id").(string)
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	req := communitiesdomain.EditCommunity{}
+	if err := c.BodyParser(&req); err != nil {
+
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Error parsing request",
+		})
+	}
+	community, err := h.Service.EditCommunity(c.Context(), req, Banner, idValueToken)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error creating community",
+			"error":   err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":   "Community created successfully",
+		"community": community,
+	})
+}
 func (h *CommunitiesHandler) FindUserCommunities(c *fiber.Ctx) error {
 	var req struct {
 		UserId primitive.ObjectID `json:"UserId"`

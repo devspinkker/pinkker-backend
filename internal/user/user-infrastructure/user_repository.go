@@ -2460,7 +2460,6 @@ func (r *UserRepository) AcceptOrDeleteAdvertisement(userId primitive.ObjectID, 
 
 		// Calcular el monto que se le suma al usuario (90% del total)
 		amountToAdd := advertisement.PricePTotalCommunity * 0.90
-		fmt.Println(amountToAdd)
 		// Actualizar el saldo del usuario con el nuevo valor
 		_, err = Users.UpdateOne(ctx, bson.M{"_id": userId}, bson.M{
 			"$inc": bson.M{

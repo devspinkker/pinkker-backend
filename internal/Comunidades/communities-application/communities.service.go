@@ -23,6 +23,10 @@ func (s *CommunitiesService) CreateCommunity(ctx context.Context, req communitie
 	return s.communitiesRepository.CreateCommunity(ctx, req, Banner, creatorID)
 }
 
+func (s *CommunitiesService) EditCommunity(ctx context.Context, req communitiesdomain.EditCommunity, Banner string, creatorID primitive.ObjectID) (interface{}, error) {
+	return s.communitiesRepository.EditCommunity(ctx, req, Banner, creatorID)
+}
+
 // Agregar un miembro a la comunidad
 func (s *CommunitiesService) AddMember(ctx context.Context, communityID, userID primitive.ObjectID) error {
 
