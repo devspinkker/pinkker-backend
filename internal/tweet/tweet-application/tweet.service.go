@@ -159,7 +159,7 @@ func (ts *TweetService) GetPostuser(page int, id primitive.ObjectID) ([]tweetdom
 	Tweets, errGetFollowedUsers := ts.TweetRepository.GetPostuser(page, id, 10)
 	return Tweets, errGetFollowedUsers
 }
-func (ts *TweetService) GetPostsWithImages(page int, id primitive.ObjectID) ([]tweetdomain.TweetGetFollowReq, error) {
+func (ts *TweetService) GetPostsWithImages(page int, id primitive.ObjectID) ([]tweetdomain.GetPostcommunitiesRandom, error) {
 	Tweets, errGetFollowedUsers := ts.TweetRepository.GetPostsWithImages(page, id, 10)
 	return Tweets, errGetFollowedUsers
 }
@@ -224,4 +224,8 @@ func (t *TweetService) GetTrendsByPrefix(prefix string) ([]tweetdomain.Trend, er
 
 func (s *TweetService) GetCommunityPosts(ctx context.Context, CommunityID primitive.ObjectID, ExcludeFilterIDs []primitive.ObjectID, idT primitive.ObjectID) ([]tweetdomain.GetPostcommunitiesRandom, error) {
 	return s.TweetRepository.GetCommunityPosts(ctx, CommunityID, ExcludeFilterIDs, idT)
+}
+
+func (s *TweetService) GetCommunityPostsGallery(ctx context.Context, CommunityID primitive.ObjectID, ExcludeFilterIDs []primitive.ObjectID, idT primitive.ObjectID) ([]tweetdomain.GetPostcommunitiesRandom, error) {
+	return s.TweetRepository.GetCommunityPostsGallery(ctx, CommunityID, ExcludeFilterIDs, idT)
 }

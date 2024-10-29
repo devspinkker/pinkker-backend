@@ -1951,9 +1951,8 @@ func (t *TweetRepository) GetPostuserLogueado(page int, id, idt primitive.Object
 
 	return tweetsWithUserInfo, nil
 }
-func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, limit int) ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, limit int) ([]tweetdomain.GetPostcommunitiesRandom, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
-
 	skip := (page - 1) * 10
 	pipeline := []bson.D{
 		{{Key: "$match", Value: bson.D{
@@ -1961,16 +1960,14 @@ func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, li
 			{Key: "Type", Value: bson.M{"$in": []string{"Post", "CitaPost"}}},
 			{Key: "PostImage", Value: bson.D{{Key: "$ne", Value: ""}}},
 
-			{Key: "$or", Value: bson.A{
-				bson.D{{Key: "communityID", Value: primitive.NilObjectID}},
-				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: false}}}},
-			}},
+			{Key: "$and", Value: bson.A{
+				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: true}}}},
+				bson.D{{Key: "communityID", Value: bson.D{{Key: "$ne", Value: primitive.NilObjectID}}}}}},
 			{Key: "$or", Value: bson.A{
 				bson.D{{Key: "IsPrivate", Value: false}},
 				bson.D{{Key: "IsPrivate", Value: bson.D{{Key: "$exists", Value: false}}}},
 			}},
 		}}},
-		// Realizar lookup para obtener datos de usuario
 		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "Users"},
 			{Key: "localField", Value: "UserID"},
@@ -2018,10 +2015,10 @@ func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, li
 	}
 	defer cursor.Close(context.Background())
 
-	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
+	var tweetsWithUserInfo []tweetdomain.GetPostcommunitiesRandom
 	var originalPostIDs []primitive.ObjectID
 	for cursor.Next(context.Background()) {
-		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
+		var tweetWithUserInfo tweetdomain.GetPostcommunitiesRandom
 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
 			return nil, err
 		}
@@ -2034,17 +2031,9 @@ func (t *TweetRepository) GetPostsWithImages(page int, id primitive.ObjectID, li
 	}
 
 	// Incrementar las vistas en 1
-	var idsToUpdate []primitive.ObjectID
-	for _, tweet := range tweetsWithUserInfo {
-		idsToUpdate = append(idsToUpdate, tweet.ID)
-	}
-
-	_, err = GoMongoDBCollTweets.UpdateMany(context.Background(), bson.M{"_id": bson.M{"$in": idsToUpdate}}, bson.D{
-		{Key: "$inc", Value: bson.D{{Key: "Views", Value: 1}}},
-	})
-	if err != nil {
-		return nil, err
-	}
+	// if err := t.PostcommunitiesRandomAddView(context.TODO(), GoMongoDBCollTweets, tweetsWithUserInfo, idt); err != nil {
+	// 	return tweetsWithUserInfo, err
+	// }
 
 	// Obtener los datos del OriginalPost si existen
 	if len(originalPostIDs) > 0 {
@@ -2584,6 +2573,88 @@ func (repo *TweetRepository) GetCommunityPosts(ctx context.Context, communityID 
 			{Key: "Status", Value: 1},
 			{Key: "PostImage", Value: 1},
 			{Key: "Type", Value: 1},
+			{Key: "Views", Value: 1},
+			{Key: "TimeStamp", Value: 1},
+			{Key: "UserID", Value: 1},
+			{Key: "Comments", Value: 1},
+			{Key: "UserInfo.FullName", Value: 1},
+			{Key: "UserInfo.Avatar", Value: 1},
+			{Key: "UserInfo.NameUser", Value: 1},
+			{Key: "UserInfo.Online", Value: 1},
+			{Key: "likeCount", Value: 1},
+			{Key: "CommentsCount", Value: 1},
+			{Key: "isLikedByID", Value: 1},
+			{Key: "OriginalPost", Value: 1},
+		}}},
+	}
+
+	cursor, err := collPosts.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var postsWithUserInfo []tweetdomain.GetPostcommunitiesRandom
+	for cursor.Next(ctx) {
+		var postWithUserInfo tweetdomain.GetPostcommunitiesRandom
+		if err := cursor.Decode(&postWithUserInfo); err != nil {
+			return nil, err
+		}
+		postsWithUserInfo = append(postsWithUserInfo, postWithUserInfo)
+	}
+	if err := repo.addOriginalPostDataCommunity(ctx, collPosts, postsWithUserInfo); err != nil {
+		return nil, err
+	}
+	if err := repo.PostcommunitiesRandomAddView(context.TODO(), collPosts, postsWithUserInfo, idT); err != nil {
+		return nil, err
+	}
+	return postsWithUserInfo, nil
+}
+func (repo *TweetRepository) GetCommunityPostsGallery(ctx context.Context, communityID primitive.ObjectID, ExcludeFilterlID []primitive.ObjectID, idT primitive.ObjectID) ([]tweetdomain.GetPostcommunitiesRandom, error) {
+	db := repo.mongoClient.Database("PINKKER-BACKEND")
+	collPosts := db.Collection("Post")
+	_, err := repo.GetSubscriptionByUserIDsAndcommunityID(idT, communityID, idT)
+	if err != nil {
+		return nil, err
+	}
+	excludeFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$nin", Value: ExcludeFilterlID}}}}
+
+	includeFilter := bson.D{
+		{Key: "communityID", Value: communityID},
+		{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
+		{Key: "PostImage", Value: bson.D{{Key: "$ne", Value: ""}}},
+	}
+
+	matchFilter := bson.D{
+		{Key: "$and", Value: bson.A{
+			excludeFilter,
+			includeFilter,
+		}},
+	}
+
+	pipeline := bson.A{
+		bson.D{{Key: "$match", Value: matchFilter}},
+
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "Users"},
+			{Key: "localField", Value: "UserID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "UserInfo"},
+		}}},
+		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
+		bson.D{{Key: "$addFields", Value: bson.D{
+			{Key: "likeCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}},
+			{Key: "CommentsCount", Value: bson.D{{Key: "$size", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$Comments", bson.A{}}}}}}},
+			{Key: "isLikedByID", Value: bson.D{{Key: "$in", Value: bson.A{idT, bson.D{{Key: "$ifNull", Value: bson.A{"$Likes", bson.A{}}}}}}}},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "TimeStamp", Value: -1}, // Ordenar por fecha de creación
+		}}},
+		bson.D{{Key: "$limit", Value: 15}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "id", Value: "$_id"},
+			{Key: "Status", Value: 1},
+			{Key: "PostImage", Value: 1},
 			{Key: "Type", Value: 1},
 			{Key: "Views", Value: 1},
 			{Key: "TimeStamp", Value: 1},
