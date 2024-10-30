@@ -822,12 +822,8 @@ func (r *StreamSummaryRepository) updatePinkkerProfitPerMonth(ctx context.Contex
 	// Paso 1: Inserta el documento si no existe con la estructura básica
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
 		"$setOnInsert": bson.M{
-			"timestamp": currentTime,
-			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.Week{
-				Impressions: 0,
-				Clicks:      0,
-				Pixels:      0.0,
-			},
+			"timestamp":            currentTime,
+			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.NewDefaultWeek(),
 		},
 	}, options.Update().SetUpsert(true))
 	if err != nil {

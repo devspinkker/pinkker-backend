@@ -16,6 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"PINKKER-BACKEND/config"
+	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
@@ -127,8 +128,12 @@ func (r *SubscriptionRepository) Subscription(Source, Destination primitive.Obje
 	if err := r.updateUserSource(ctx, sourceUser, usersCollection, Destination, subscriptionID, totalSub); err != nil {
 		return sourceUser.NameUser, sourceUser.Avatar, err
 	}
-
 	err = r.updateUserDest(ctx, destUser, usersCollection, subscriberID, moneySubs)
+	if err != nil {
+		return sourceUser.NameUser, sourceUser.Avatar, err
+	}
+	CommissionsSub := totalSub * 0.02
+	err = r.updatePinkkerProfitPerMonth(ctx, CommissionsSub)
 	return sourceUser.NameUser, sourceUser.Avatar, err
 }
 
@@ -589,4 +594,60 @@ func (u *SubscriptionRepository) GetUserID(ctx context.Context, db *mongo.Databa
 		return "", err
 	}
 	return user.NameUser, nil
+}
+func (r *SubscriptionRepository) updatePinkkerProfitPerMonth(ctx context.Context, CostToCreateCommunity float64) error {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
+
+	currentTime := time.Now()
+	currentMonth := int(currentTime.Month())
+	currentYear := currentTime.Year()
+	currentWeek := getWeekOfMonth(currentTime)
+
+	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
+	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
+
+	monthlyFilter := bson.M{
+		"timestamp": bson.M{
+			"$gte": startOfMonth,
+			"$lt":  startOfNextMonth,
+		},
+	}
+
+	// Paso 1: Inserta el documento si no existe con la estructura básica
+	_, err := GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
+		"$setOnInsert": bson.M{
+			"timestamp":            currentTime,
+			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.NewDefaultWeek(),
+		},
+	}, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+
+	monthlyUpdate := bson.M{
+		"$inc": bson.M{
+			"total": CostToCreateCommunity,
+			"weeks." + currentWeek + ".CommissionsSuscripcion": CostToCreateCommunity,
+		},
+	}
+
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func getWeekOfMonth(t time.Time) string {
+	startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+	dayOfMonth := t.Day()
+	dayOfWeek := int(startOfMonth.Weekday())
+	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
+
+	if weekNumber > 4 {
+		weekNumber = 4
+	}
+
+	return "week_" + strconv.Itoa(weekNumber)
 }

@@ -2,6 +2,7 @@ package userinfrastructure
 
 import (
 	"PINKKER-BACKEND/config"
+	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
@@ -83,10 +84,65 @@ func (u *UserRepository) PurchasePinkkerPrime(userID primitive.ObjectID) (bool, 
 	if err != nil {
 		return false, fmt.Errorf("error updating user with PinkkerPrime: %v", err)
 	}
-
+	u.updatePinkkerProfitPerMonth(context.TODO(), PinkkerPrimeCost)
 	return true, nil
 }
+func (r *UserRepository) updatePinkkerProfitPerMonth(ctx context.Context, PinkkerPrimeCost int) error {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
 
+	currentTime := time.Now()
+	currentMonth := int(currentTime.Month())
+	currentYear := currentTime.Year()
+	currentWeek := getWeekOfMonth(currentTime)
+
+	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
+	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
+
+	monthlyFilter := bson.M{
+		"timestamp": bson.M{
+			"$gte": startOfMonth,
+			"$lt":  startOfNextMonth,
+		},
+	}
+
+	// Paso 1: Inserta el documento si no existe con la estructura básica
+	_, err := GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
+		"$setOnInsert": bson.M{
+			"timestamp":            currentTime,
+			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.NewDefaultWeek(),
+		},
+	}, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+
+	monthlyUpdate := bson.M{
+		"$inc": bson.M{
+			"total":                                  PinkkerPrimeCost,
+			"weeks." + currentWeek + ".pinkkerPrime": PinkkerPrimeCost,
+		},
+	}
+
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func getWeekOfMonth(t time.Time) string {
+	startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+	dayOfMonth := t.Day()
+	dayOfWeek := int(startOfMonth.Weekday())
+	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
+
+	if weekNumber > 4 {
+		weekNumber = 4
+	}
+
+	return "week_" + strconv.Itoa(weekNumber)
+}
 func (u *UserRepository) IsUserBlocked(nameUser string) (bool, error) {
 	blockKey := fmt.Sprintf("login_blocked:%s", nameUser)
 

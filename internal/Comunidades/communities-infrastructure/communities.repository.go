@@ -1,13 +1,16 @@
 package communitiestinfrastructure
 
 import (
+	"PINKKER-BACKEND/config"
 	communitiesdomain "PINKKER-BACKEND/internal/Comunidades/communities"
+	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -38,9 +41,15 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 		Pixeles      float64                  `bson:"Pixeles"`
 	}
 
+	CostToCreateCommunityStr := config.CostToCreateCommunity()
+	CostToCreateCommunity, err := strconv.ParseFloat(CostToCreateCommunityStr, 64)
+	if err != nil {
+		return nil, fmt.Errorf("error converting PinkkerPrime cost to integer: %v", err)
+	}
+
 	usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
-	err := usersCollection.FindOne(ctx, primitive.M{"_id": creatorID}).Decode(&user)
+	err = usersCollection.FindOne(ctx, primitive.M{"_id": creatorID}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +60,7 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 	}
 
 	// Verificar si el usuario tiene al menos 5000 pixeles
-	if user.Pixeles < 5000 {
+	if user.Pixeles < CostToCreateCommunity {
 		return nil, fiber.NewError(fiber.StatusForbidden, "El usuario no tiene suficientes pixeles")
 	}
 
@@ -100,20 +109,66 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 		ctx,
 		primitive.M{"_id": creatorID},
 		primitive.M{
-			"$inc": primitive.M{"Pixeles": -5000},
+			"$inc": primitive.M{"Pixeles": -CostToCreateCommunity},
 			"$addToSet": primitive.M{
 				"InCommunities":    communityID,
 				"OwnerCommunities": communityID,
 			},
 		},
 	)
-
+	repo.updatePinkkerProfitPerMonth(ctx, CostToCreateCommunity)
 	if err != nil {
 		return nil, err
 	}
 
 	return community, nil
 }
+
+func (r *CommunitiesRepository) updatePinkkerProfitPerMonth(ctx context.Context, CostToCreateCommunity float64) error {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
+
+	currentTime := time.Now()
+	currentMonth := int(currentTime.Month())
+	currentYear := currentTime.Year()
+	currentWeek := getWeekOfMonth(currentTime)
+
+	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
+	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
+
+	monthlyFilter := bson.M{
+		"timestamp": bson.M{
+			"$gte": startOfMonth,
+			"$lt":  startOfNextMonth,
+		},
+	}
+
+	// Paso 1: Inserta el documento si no existe con la estructura básica
+	_, err := GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
+		"$setOnInsert": bson.M{
+			"timestamp":            currentTime,
+			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.NewDefaultWeek(),
+		},
+	}, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+
+	monthlyUpdate := bson.M{
+		"$inc": bson.M{
+			"total":                                  CostToCreateCommunity,
+			"weeks." + currentWeek + ".communityBuy": CostToCreateCommunity,
+		},
+	}
+
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (repo *CommunitiesRepository) EditCommunity(ctx context.Context, req communitiesdomain.EditCommunity, Banner string, creatorID primitive.ObjectID) (*communitiesdomain.Community, error) {
 
 	collection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
@@ -430,6 +485,13 @@ func (repo *CommunitiesRepository) AddMember(ctx context.Context, communityID pr
 				session.AbortTransaction(sc)
 				return err
 			}
+
+			PaidCommunities := float64(community.SubscriptionAmount) * 0.05
+			err := repo.updatePinkkerProfitPerMonthPaidCommunities(context.TODO(), PaidCommunities)
+			if err != nil {
+				session.AbortTransaction(sc)
+				return err
+			}
 		} else {
 			_, err = repo.GetSubscriptionByUserIDs(userID, community)
 			if err != nil {
@@ -473,7 +535,62 @@ func (repo *CommunitiesRepository) AddMember(ctx context.Context, communityID pr
 
 	return nil
 }
+func (r *CommunitiesRepository) updatePinkkerProfitPerMonthPaidCommunities(ctx context.Context, costo float64) error {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
 
+	currentTime := time.Now()
+	currentMonth := int(currentTime.Month())
+	currentYear := currentTime.Year()
+	currentWeek := getWeekOfMonth(currentTime)
+
+	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
+	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
+
+	monthlyFilter := bson.M{
+		"timestamp": bson.M{
+			"$gte": startOfMonth,
+			"$lt":  startOfNextMonth,
+		},
+	}
+
+	// Paso 1: Inserta el documento si no existe con la estructura básica
+	_, err := GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
+		"$setOnInsert": bson.M{
+			"timestamp":            currentTime,
+			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.NewDefaultWeek(),
+		},
+	}, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+
+	monthlyUpdate := bson.M{
+		"$inc": bson.M{
+			"total": costo,
+			"weeks." + currentWeek + ".PaidCommunities": costo,
+		},
+	}
+
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func getWeekOfMonth(t time.Time) string {
+	startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+	dayOfMonth := t.Day()
+	dayOfWeek := int(startOfMonth.Weekday())
+	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
+
+	if weekNumber > 4 {
+		weekNumber = 4
+	}
+
+	return "week_" + strconv.Itoa(weekNumber)
+}
 func (repo *CommunitiesRepository) RemoveMember(ctx context.Context, communityID primitive.ObjectID, userID primitive.ObjectID) error {
 	session, err := repo.mongoClient.StartSession()
 	if err != nil {

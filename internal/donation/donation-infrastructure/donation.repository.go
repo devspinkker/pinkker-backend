@@ -1,6 +1,7 @@
 package donationtinfrastructure
 
 import (
+	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
@@ -9,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/websocket/v2"
@@ -288,6 +290,8 @@ func (d *DonationRepository) DonatePixels(FromUser, ToUser primitive.ObjectID, P
 		return err
 	}
 
+	CommissionsDonation := Pixels * 0.02
+	d.updatePinkkerProfitPerMonth(context.TODO(), CommissionsDonation)
 	return err
 }
 
@@ -471,4 +475,60 @@ func (d *DonationRepository) UpdateDonationsNotifiedStatus(donations []donationd
 
 	return nil
 
+}
+func (r *DonationRepository) updatePinkkerProfitPerMonth(ctx context.Context, CostToCreateCommunity float64) error {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
+
+	currentTime := time.Now()
+	currentMonth := int(currentTime.Month())
+	currentYear := currentTime.Year()
+	currentWeek := getWeekOfMonth(currentTime)
+
+	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
+	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
+
+	monthlyFilter := bson.M{
+		"timestamp": bson.M{
+			"$gte": startOfMonth,
+			"$lt":  startOfNextMonth,
+		},
+	}
+
+	// Paso 1: Inserta el documento si no existe con la estructura básica
+	_, err := GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
+		"$setOnInsert": bson.M{
+			"timestamp":            currentTime,
+			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.NewDefaultWeek(),
+		},
+	}, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+
+	monthlyUpdate := bson.M{
+		"$inc": bson.M{
+			"total": CostToCreateCommunity,
+			"weeks." + currentWeek + ".CommissionsDonation": CostToCreateCommunity,
+		},
+	}
+
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func getWeekOfMonth(t time.Time) string {
+	startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+	dayOfMonth := t.Day()
+	dayOfWeek := int(startOfMonth.Weekday())
+	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
+
+	if weekNumber > 4 {
+		weekNumber = 4
+	}
+
+	return "week_" + strconv.Itoa(weekNumber)
 }

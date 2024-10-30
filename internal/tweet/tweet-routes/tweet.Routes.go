@@ -47,4 +47,5 @@ func TweetdRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.C
 
 	App.Post("/communities/GetCommunityPosts", middleware.UseExtractor(), tweetHandler.GetCommunityPosts)
 	App.Post("/communities/GetCommunityPostsGallery", middleware.UseExtractor(), tweetHandler.GetCommunityPostsGallery)
+
 }

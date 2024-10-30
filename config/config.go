@@ -130,3 +130,9 @@ func PinkkerPrimeCost() string {
 	}
 	return os.Getenv("PinkkerPrimeCost")
 }
+func CostToCreateCommunity() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("CostToCreateCommunity")
+}
