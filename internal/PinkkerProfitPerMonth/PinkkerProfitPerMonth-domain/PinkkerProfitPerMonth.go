@@ -15,6 +15,7 @@ type Week struct {
 	PaidCommunities        float64 `json:"PaidCommunities" bson:"PaidCommunities"`
 	CommissionsSuscripcion float64 `json:"CommissionsSuscripcion" bson:"CommissionsSuscripcion"`
 	CommissionsDonation    float64 `json:"CommissionsDonation" bson:"CommissionsDonation"`
+	CommissionsCommunity   float64 `json:"CommissionsCommunity" bson:"CommissionsCommunity"`
 }
 
 type PinkkerProfitPerMonth struct {
@@ -34,5 +35,6 @@ func NewDefaultWeek() Week {
 		PaidCommunities:        0,
 		CommissionsSuscripcion: 0,
 		CommissionsDonation:    0,
+		CommissionsCommunity:   0,
 	}
 }

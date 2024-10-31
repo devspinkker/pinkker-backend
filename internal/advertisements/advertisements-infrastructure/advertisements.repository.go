@@ -859,7 +859,7 @@ func (r *AdvertisementsRepository) BuyadMuroCommunity(ad advertisements.UpdateAd
 	daysAd := math.Floor(time.Until(ad.DaysTheAd).Hours() / 24)
 
 	// Validar que el anuncio tenga un número de días válido
-	if daysAd <= 0 {
+	if daysAd <= 3 {
 		return advertisements.Advertisements{}, errors.New("invalid number of days for the ad")
 	}
 

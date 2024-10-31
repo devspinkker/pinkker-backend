@@ -69,7 +69,7 @@ func (th *TweetHandler) CreatePost(c *fiber.Ctx) error {
 					"message": err.Error(),
 				})
 			}
-			Tweet, errTweetGetFollow := th.TweetServise.GetPostId(idTweet)
+			Tweet, errTweetGetFollow := th.TweetServise.GetPostIdLogueado(idTweet, idValueObj)
 			if errTweetGetFollow != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"message": "StatusInternalServerError",

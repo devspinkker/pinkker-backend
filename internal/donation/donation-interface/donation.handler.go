@@ -3,9 +3,11 @@ package donationtinterfaces
 import (
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	donationapplication "PINKKER-BACKEND/internal/donation/donation-application"
+	"errors"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type DonationHandler struct {
@@ -58,20 +60,20 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 	err = d.VodServise.UserHasNumberPikels(FromUser, idReq.Pixeles)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": err.Error(),
+			"message": "FromUser no tiene pixeles",
 		})
 	}
 	errdonatePixels := d.VodServise.DonatePixels(FromUser, idReq.ToUser, idReq.Pixeles, idReq.Text)
 	if errdonatePixels != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": errdonatePixels.Error(),
+			"message": "errdonatePixels",
 		})
 	}
 
 	LatestStreamSummaryByUpdate := d.VodServise.LatestStreamSummaryByUpdateDonations(idReq.ToUser, idReq.Pixeles)
-	if LatestStreamSummaryByUpdate != nil {
+	if !errors.Is(LatestStreamSummaryByUpdate, mongo.ErrNoDocuments) {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": LatestStreamSummaryByUpdate.Error(),
+			"message": "error update summary",
 		})
 	}
 	d.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", nameUser, avatar, idReq.Pixeles, idReq.Text)
