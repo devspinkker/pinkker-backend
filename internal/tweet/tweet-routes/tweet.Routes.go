@@ -19,7 +19,7 @@ func TweetdRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.C
 
 	App.Post("/post/postCreate", middleware.UseExtractor(), tweetHandler.CreatePost)
 	App.Post("/post/CommentPost", middleware.UseExtractor(), tweetHandler.CommentPost)
-	App.Post("/post/Repost", middleware.UseExtractor(), tweetHandler.RePost)
+	// App.Post("/post/Repost", middleware.UseExtractor(), tweetHandler.RePost)
 	App.Post("/post/Citapost", middleware.UseExtractor(), tweetHandler.CitaPost)
 
 	App.Post("/post/posttLike", middleware.UseExtractor(), tweetHandler.PostLike)
