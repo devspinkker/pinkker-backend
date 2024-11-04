@@ -1196,25 +1196,6 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 		tweetsWithUserInfo = append(tweetsWithUserInfo, tweetWithUserInfo)
 	}
 
-	// Actualizamos los documentos para incrementar las vistas
-	tweetIDs := make([]primitive.ObjectID, len(tweetsWithUserInfo))
-	for i, tweet := range tweetsWithUserInfo {
-		tweetIDs[i] = tweet.ID
-	}
-
-	if len(tweetIDs) > 0 {
-		updateFilter := bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: tweetIDs}}}}
-		update := bson.D{
-			{Key: "$inc", Value: bson.D{
-				{Key: "Views", Value: 1},
-			}},
-		}
-		_, err := GoMongoDBCollTweets.UpdateMany(context.Background(), updateFilter, update)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	// Recolectamos los IDs de los OriginalPosts
 	var originalPostIDs []primitive.ObjectID
 	for _, tweet := range tweetsWithUserInfo {
