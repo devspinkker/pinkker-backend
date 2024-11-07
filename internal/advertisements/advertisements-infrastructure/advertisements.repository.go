@@ -5,6 +5,7 @@ import (
 	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	clipdomain "PINKKER-BACKEND/internal/clip/clip-domain"
+	"PINKKER-BACKEND/pkg/helpers"
 	"context"
 	"errors"
 	"fmt"
@@ -124,7 +125,9 @@ func (r *AdvertisementsRepository) updatePinkkerProfitPerMonth(ctx context.Conte
 	currentTime := time.Now()
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
-	currentWeek := getWeekOfMonth(currentTime)
+
+	// Usamos la función para obtener el día en formato "YYYY-MM-DD"
+	currentDay := helpers.GetDayOfMonth(currentTime)
 
 	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
 	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
@@ -139,18 +142,19 @@ func (r *AdvertisementsRepository) updatePinkkerProfitPerMonth(ctx context.Conte
 	// Paso 1: Inserta el documento si no existe con la estructura básica
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
 		"$setOnInsert": bson.M{
-			"timestamp":            currentTime,
-			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.NewDefaultWeek(),
+			"timestamp":          currentTime,
+			"days." + currentDay: PinkkerProfitPerMonthdomain.NewDefaultDay(),
 		},
 	}, options.Update().SetUpsert(true))
 	if err != nil {
 		return err
 	}
 
+	// Paso 2: Incrementa los valores en 'days.day_x'
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
-			"total":                            AdvertisementsClicks,
-			"weeks." + currentWeek + ".clicks": AdvertisementsClicks,
+			"total":                          AdvertisementsClicks,
+			"days." + currentDay + ".clicks": AdvertisementsClicks,
 		},
 	}
 
@@ -162,18 +166,6 @@ func (r *AdvertisementsRepository) updatePinkkerProfitPerMonth(ctx context.Conte
 	return nil
 }
 
-func getWeekOfMonth(t time.Time) string {
-	startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
-	dayOfMonth := t.Day()
-	dayOfWeek := int(startOfMonth.Weekday())
-	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
-
-	if weekNumber > 4 {
-		weekNumber = 4
-	}
-
-	return "week_" + strconv.Itoa(weekNumber)
-}
 func (r *AdvertisementsRepository) AdvertisementsGet(page int64) ([]advertisements.Advertisements, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	Advertisements := db.Collection("Advertisements")

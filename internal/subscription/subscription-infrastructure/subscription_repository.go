@@ -20,6 +20,7 @@ import (
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
+	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/utils"
 )
 
@@ -595,18 +596,23 @@ func (u *SubscriptionRepository) GetUserID(ctx context.Context, db *mongo.Databa
 	}
 	return user.NameUser, nil
 }
-func (r *SubscriptionRepository) updatePinkkerProfitPerMonth(ctx context.Context, CostToCreateCommunity float64) error {
+func (r *SubscriptionRepository) updatePinkkerProfitPerMonth(ctx context.Context, CommissionsSub float64) error {
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
 
 	currentTime := time.Now()
+
+	// Obtenemos el día en formato "YYYY-MM-DD"
+	currentDay := helpers.GetDayOfMonth(currentTime)
+
+	// Definimos el mes actual para filtrar los documentos
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
-	currentWeek := getWeekOfMonth(currentTime)
 
 	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
 	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
 
+	// Filtro para el documento del mes actual
 	monthlyFilter := bson.M{
 		"timestamp": bson.M{
 			"$gte": startOfMonth,
@@ -614,21 +620,22 @@ func (r *SubscriptionRepository) updatePinkkerProfitPerMonth(ctx context.Context
 		},
 	}
 
-	// Paso 1: Inserta el documento si no existe con la estructura básica
+	// Inserta el documento si no existe con la estructura básica para el día actual
 	_, err := GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
 		"$setOnInsert": bson.M{
-			"timestamp":            currentTime,
-			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.NewDefaultWeek(),
+			"timestamp":          currentTime,
+			"days." + currentDay: PinkkerProfitPerMonthdomain.NewDefaultDay(),
 		},
 	}, options.Update().SetUpsert(true))
 	if err != nil {
 		return err
 	}
 
+	// Actualización diaria del valor total y el campo CommissionsSuscripcion para el día actual
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
-			"total": CostToCreateCommunity,
-			"weeks." + currentWeek + ".CommissionsSuscripcion": CostToCreateCommunity,
+			"total": CommissionsSub,
+			"days." + currentDay + ".CommissionsSuscripcion": CommissionsSub,
 		},
 	}
 
@@ -638,16 +645,4 @@ func (r *SubscriptionRepository) updatePinkkerProfitPerMonth(ctx context.Context
 	}
 
 	return nil
-}
-func getWeekOfMonth(t time.Time) string {
-	startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
-	dayOfMonth := t.Day()
-	dayOfWeek := int(startOfMonth.Weekday())
-	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
-
-	if weekNumber > 4 {
-		weekNumber = 4
-	}
-
-	return "week_" + strconv.Itoa(weekNumber)
 }

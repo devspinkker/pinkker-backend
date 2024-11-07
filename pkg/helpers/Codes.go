@@ -24,3 +24,6 @@ func GenerateCodecharset(length int) string {
 	}
 	return string(b)
 }
+func GetDayOfMonth(t time.Time) string {
+	return t.Format("2006-01-02")
+}

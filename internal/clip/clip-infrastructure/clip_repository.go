@@ -7,6 +7,7 @@ import (
 	clipdomain "PINKKER-BACKEND/internal/clip/clip-domain"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
+	"PINKKER-BACKEND/pkg/helpers"
 	"context"
 	"errors"
 	"fmt"
@@ -1539,7 +1540,9 @@ func (r *ClipRepository) updatePinkkerProfitPerMonth(ctx context.Context) error 
 	currentTime := time.Now()
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
-	currentWeek := getWeekOfMonth(currentTime)
+
+	// Usamos la función para obtener el día en formato "YYYY-MM-DD"
+	currentDay := helpers.GetDayOfMonth(currentTime)
 
 	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
 	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
@@ -1554,19 +1557,19 @@ func (r *ClipRepository) updatePinkkerProfitPerMonth(ctx context.Context) error 
 	// Paso 1: Inserta el documento si no existe con la estructura básica
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
 		"$setOnInsert": bson.M{
-			"timestamp":            currentTime,
-			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.NewDefaultWeek(),
+			"timestamp":          currentTime,
+			"days." + currentDay: PinkkerProfitPerMonthdomain.NewDefaultDay(),
 		},
 	}, options.Update().SetUpsert(true))
 	if err != nil {
 		return err
 	}
 
-	// Paso 2: Incrementa los valores en 'weeks.week_x'
+	// Paso 2: Incrementa los valores en 'days.day_x'
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
-			"total":                                 AdvertisementsPayPerPrintFloat,
-			"weeks." + currentWeek + ".impressions": impressions,
+			"total":                               AdvertisementsPayPerPrintFloat,
+			"days." + currentDay + ".impressions": impressions,
 		},
 	}
 
@@ -1576,16 +1579,4 @@ func (r *ClipRepository) updatePinkkerProfitPerMonth(ctx context.Context) error 
 	}
 
 	return nil
-}
-func getWeekOfMonth(t time.Time) string {
-	startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
-	dayOfMonth := t.Day()
-	dayOfWeek := int(startOfMonth.Weekday())
-	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
-
-	if weekNumber > 4 {
-		weekNumber = 4
-	}
-
-	return "week_" + strconv.Itoa(weekNumber)
 }

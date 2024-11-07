@@ -94,11 +94,13 @@ func (r *UserRepository) updatePinkkerProfitPerMonth(ctx context.Context, Pinkke
 	currentTime := time.Now()
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
-	currentWeek := getWeekOfMonth(currentTime)
+
+	currentDay := helpers.GetDayOfMonth(currentTime)
 
 	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
 	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
 
+	// Filtro para el documento del mes actual
 	monthlyFilter := bson.M{
 		"timestamp": bson.M{
 			"$gte": startOfMonth,
@@ -106,11 +108,10 @@ func (r *UserRepository) updatePinkkerProfitPerMonth(ctx context.Context, Pinkke
 		},
 	}
 
-	// Paso 1: Inserta el documento si no existe con la estructura básica
 	_, err := GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
 		"$setOnInsert": bson.M{
-			"timestamp":            currentTime,
-			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.NewDefaultWeek(),
+			"timestamp":          currentTime,
+			"days." + currentDay: PinkkerProfitPerMonthdomain.NewDefaultDay(),
 		},
 	}, options.Update().SetUpsert(true))
 	if err != nil {
@@ -119,8 +120,8 @@ func (r *UserRepository) updatePinkkerProfitPerMonth(ctx context.Context, Pinkke
 
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
-			"total":                                  PinkkerPrimeCost,
-			"weeks." + currentWeek + ".pinkkerPrime": PinkkerPrimeCost,
+			"total":                                PinkkerPrimeCost,
+			"days." + currentDay + ".pinkkerPrime": PinkkerPrimeCost,
 		},
 	}
 
@@ -131,18 +132,7 @@ func (r *UserRepository) updatePinkkerProfitPerMonth(ctx context.Context, Pinkke
 
 	return nil
 }
-func getWeekOfMonth(t time.Time) string {
-	startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
-	dayOfMonth := t.Day()
-	dayOfWeek := int(startOfMonth.Weekday())
-	weekNumber := (dayOfMonth+dayOfWeek-1)/7 + 1
 
-	if weekNumber > 4 {
-		weekNumber = 4
-	}
-
-	return "week_" + strconv.Itoa(weekNumber)
-}
 func (u *UserRepository) IsUserBlocked(nameUser string) (bool, error) {
 	blockKey := fmt.Sprintf("login_blocked:%s", nameUser)
 
@@ -2757,11 +2747,14 @@ func (r *UserRepository) updatePinkkerProfitPerMonthAAdCommunity(ctx context.Con
 	currentTime := time.Now()
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
-	currentWeek := getWeekOfMonth(currentTime)
+
+	// Usamos la función para obtener el día en formato "YYYY-MM-DD"
+	currentDay := helpers.GetDayOfMonth(currentTime)
 
 	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
 	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
 
+	// Filtro para el documento del mes actual
 	monthlyFilter := bson.M{
 		"timestamp": bson.M{
 			"$gte": startOfMonth,
@@ -2769,21 +2762,22 @@ func (r *UserRepository) updatePinkkerProfitPerMonthAAdCommunity(ctx context.Con
 		},
 	}
 
-	// Paso 1: Inserta el documento si no existe con la estructura básica
+	// Paso 1: Inserta el documento si no existe con la estructura básica para el día actual
 	_, err := GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
 		"$setOnInsert": bson.M{
-			"timestamp":            currentTime,
-			"weeks." + currentWeek: PinkkerProfitPerMonthdomain.NewDefaultWeek(),
+			"timestamp":          currentTime,
+			"days." + currentDay: PinkkerProfitPerMonthdomain.NewDefaultDay(),
 		},
 	}, options.Update().SetUpsert(true))
 	if err != nil {
 		return err
 	}
 
+	// Actualización diaria del valor total y el campo CommissionsCommunity para el día actual
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
 			"total": CostToCreateCommunity,
-			"weeks." + currentWeek + ".CommissionsCommunity": CostToCreateCommunity,
+			"days." + currentDay + ".CommissionsCommunity": CostToCreateCommunity,
 		},
 	}
 
