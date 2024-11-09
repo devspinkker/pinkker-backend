@@ -2302,27 +2302,46 @@ func (u *UserRepository) getUserAndCheckFollow(filter bson.D, id primitive.Objec
 }
 
 func (r *UserRepository) GetStreamByNameUser(nameUser string) (*streamdomain.Stream, error) {
+	ctx := context.Background()
+	cacheKey := "stream:" + nameUser
+
+	// Intentar buscar en Redis primero
+	cachedStream, err := r.redisClient.Get(ctx, cacheKey).Result()
+	if err == nil {
+		// Si encontramos el stream en la caché, lo deserializamos y lo devolvemos
+		var stream streamdomain.Stream
+		if err := json.Unmarshal([]byte(cachedStream), &stream); err == nil {
+			return &stream, nil
+		}
+	}
+
+	// Si no está en la caché o hay un error, consultamos en la base de datos
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
 	FindStreamInDb := bson.D{
 		{Key: "Streamer", Value: nameUser},
 	}
-	var FindStreamsByStreamer *streamdomain.Stream
-	errCollStreams := GoMongoDBCollStreams.FindOne(context.Background(), FindStreamInDb).Decode(&FindStreamsByStreamer)
-	return FindStreamsByStreamer, errCollStreams
+	var FindStreamsByStreamer streamdomain.Stream
+	errCollStreams := GoMongoDBCollStreams.FindOne(ctx, FindStreamInDb).Decode(&FindStreamsByStreamer)
+	if errCollStreams != nil {
+		return nil, errCollStreams
+	}
+
+	// Serializamos el resultado y lo almacenamos en Redis
+	streamData, err := json.Marshal(FindStreamsByStreamer)
+	if err == nil {
+		err = r.redisClient.Set(ctx, cacheKey, streamData, 5*time.Minute).Err()
+		if err != nil {
+			return &FindStreamsByStreamer, errors.New("user not found")
+		}
+	}
+
+	return &FindStreamsByStreamer, nil
 }
+
 func (r *UserRepository) GetStreamAndUserData(nameUser string, id primitive.ObjectID, nameUserToken string) (*streamdomain.Stream, *userdomain.GetUser, *domain.UserInfo, error) {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
-	FindStreamInDb := bson.D{
-		{Key: "Streamer", Value: nameUser},
-	}
 	stream, err := r.GetStreamByNameUser(nameUser)
 	if err != nil {
 		return nil, nil, nil, err
-	}
-	var FindStreamsByStreamer *streamdomain.Stream
-	errCollStreams := GoMongoDBCollStreams.FindOne(context.Background(), FindStreamInDb).Decode(&FindStreamsByStreamer)
-	if errCollStreams != nil {
-		return nil, nil, nil, errCollStreams
 	}
 	filter := bson.D{
 		{Key: "$or", Value: bson.A{
@@ -2333,9 +2352,10 @@ func (r *UserRepository) GetStreamAndUserData(nameUser string, id primitive.Obje
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	UserInfo, err := r.GetInfoUserInRoom(nameUserToken, FindStreamsByStreamer.ID)
+	UserInfo, err := r.GetInfoUserInRoom(nameUserToken, stream.ID)
 	return stream, user, UserInfo, err
 }
+
 func (r *UserRepository) GetInfoUserInRoom(nameUser string, getInfoUserInRoom primitive.ObjectID) (*domain.UserInfo, error) {
 	database := r.mongoClient.Database("PINKKER-BACKEND")
 	var room *domain.UserInfo

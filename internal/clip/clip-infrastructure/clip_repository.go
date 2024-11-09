@@ -9,6 +9,7 @@ import (
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"PINKKER-BACKEND/pkg/helpers"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -849,6 +850,20 @@ func (c *ClipRepository) GetClipsCategory(page int, Category string, lastClipID 
 	return clips, nil
 }
 func (c *ClipRepository) GetClipsMostViewed(page int) ([]clipdomain.Clip, error) {
+	ctx := context.Background()
+	cacheKey := fmt.Sprintf("clips:most_viewed:page:%d", page)
+
+	// Intentar obtener el resultado de la caché de Redis
+	cachedClips, err := c.redisClient.Get(ctx, cacheKey).Result()
+	if err == nil {
+		// Si los clips están en la caché, los deserializamos y los devolvemos
+		var clips []clipdomain.Clip
+		if err := json.Unmarshal([]byte(cachedClips), &clips); err == nil {
+			return clips, nil
+		}
+	}
+
+	// Si no están en la caché o hay un error, consultamos en MongoDB
 	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
 
 	options := options.Find()
@@ -861,15 +876,22 @@ func (c *ClipRepository) GetClipsMostViewed(page int) ([]clipdomain.Clip, error)
 		{Key: "Type", Value: bson.M{"$ne": "Ad"}},
 	}
 
-	cursor, err := GoMongoDBColl.Find(context.Background(), filter, options)
+	cursor, err := GoMongoDBColl.Find(ctx, filter, options)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(context.Background())
+	defer cursor.Close(ctx)
 
 	var clips []clipdomain.Clip
-	if err := cursor.All(context.Background(), &clips); err != nil {
+	if err := cursor.All(ctx, &clips); err != nil {
 		return nil, err
+	}
+
+	// Almacenar los resultados en Redis para futuras consultas
+	clipsData, err := json.Marshal(clips)
+	if err == nil {
+		// Cachear por 5 minutos
+		_ = c.redisClient.Set(ctx, cacheKey, clipsData, 5*time.Minute).Err()
 	}
 
 	return clips, nil

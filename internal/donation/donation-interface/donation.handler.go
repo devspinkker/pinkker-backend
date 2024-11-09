@@ -4,6 +4,7 @@ import (
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	donationapplication "PINKKER-BACKEND/internal/donation/donation-application"
 	"errors"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -71,7 +72,8 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 	}
 
 	LatestStreamSummaryByUpdate := d.VodServise.LatestStreamSummaryByUpdateDonations(idReq.ToUser, idReq.Pixeles)
-	if !errors.Is(LatestStreamSummaryByUpdate, mongo.ErrNoDocuments) {
+	if errors.Is(LatestStreamSummaryByUpdate, mongo.ErrNoDocuments) {
+		fmt.Println(LatestStreamSummaryByUpdate)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "error update summary",
 		})
