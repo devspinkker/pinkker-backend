@@ -182,6 +182,10 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 		}
 
 		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
+
+		pipeline := r.redisClient.Pipeline()
+		cacheKey := "stream:" + StreamFind.Streamer
+		pipeline.Del(context.Background(), cacheKey)
 		if err != nil {
 			return LastStreamSummary, err
 		}
@@ -315,6 +319,9 @@ func (r *StreamRepository) RedisCacheDeleteRoomMessagesAndUserInfo(Room primitiv
 	pipeline.Del(context.Background(), MensajesParaElVod)
 	// elimina el modo del chat
 	pipeline.Del(context.Background(), Room.Hex())
+
+	cacheKey := "stream:" + NameUser
+	pipeline.Del(context.Background(), cacheKey)
 
 	// Ejecuta la transacción
 	_, err := pipeline.Exec(context.Background())
