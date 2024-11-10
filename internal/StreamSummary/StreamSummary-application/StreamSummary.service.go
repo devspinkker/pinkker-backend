@@ -22,7 +22,9 @@ func (s *StreamSummaryService) UpdateStreamSummaryByIDAndStreamerID(id primitive
 	return s.StreamSummaryRepository.UpdateStreamSummaryByIDAndStreamerID(id, streamerID, newTitle)
 }
 func (s *StreamSummaryService) DeleteStreamSummaryByIDAndStreamerID(id primitive.ObjectID, streamerID primitive.ObjectID) error {
-	return s.StreamSummaryRepository.DeleteStreamSummaryByIDAndStreamerID(id, streamerID)
+
+	Available := false
+	return s.StreamSummaryRepository.SetStreamSummaryUnavailableByIDAndStreamerID(id, streamerID, Available)
 
 }
 

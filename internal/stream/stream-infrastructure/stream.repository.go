@@ -178,6 +178,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			TotalMoney:           0,
 			Online:               true,
 			RecommendationScore:  0,
+			Available:            true,
 		}
 
 		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)

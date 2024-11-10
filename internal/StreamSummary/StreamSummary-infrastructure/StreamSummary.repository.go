@@ -31,23 +31,32 @@ func NewStreamSummaryRepository(redisClient *redis.Client, mongoClient *mongo.Cl
 		mongoClient: mongoClient,
 	}
 }
-func (r *StreamSummaryRepository) DeleteStreamSummaryByIDAndStreamerID(id primitive.ObjectID, streamerID primitive.ObjectID) error {
+func (r *StreamSummaryRepository) SetStreamSummaryUnavailableByIDAndStreamerID(id primitive.ObjectID, streamerID primitive.ObjectID, Available bool) error {
 	ctx := context.Background()
 
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("StreamSummary")
 
+	// Filtro para encontrar el documento con el ID y StreamerID especificados
 	filter := bson.M{
 		"_id":        id,
 		"StreamerID": streamerID,
 	}
 
-	result, err := collection.DeleteOne(ctx, filter)
+	// Actualización para establecer Available en false
+	update := bson.M{
+		"$set": bson.M{
+			"Available": Available,
+		},
+	}
+
+	// Ejecutar la actualización
+	result, err := collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}
 
-	if result.DeletedCount == 0 {
+	if result.MatchedCount == 0 {
 		return errors.New("no se encontró ningún resumen de stream con el ID o no pertenece al streamer")
 	}
 
@@ -466,6 +475,7 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 		"StartOfStream": bson.M{
 			"$gte": fortyEightHoursAgo,
 		},
+		"Available": true,
 	}
 
 	pipeline := bson.A{
@@ -521,7 +531,10 @@ func (r *StreamSummaryRepository) GetStreamSummaryByTitle(title string) ([]Strea
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("StreamSummary")
 
-	filter := bson.M{"Title": primitive.Regex{Pattern: title, Options: "i"}}
+	filter := bson.M{
+		"Title":     primitive.Regex{Pattern: title, Options: "i"},
+		"Available": true,
+	}
 
 	pipeline := bson.A{
 		bson.D{{Key: "$match", Value: filter}},
@@ -575,6 +588,7 @@ func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(strea
 		"StartOfStream": bson.M{
 			"$gte": thirtyDaysAgo,
 		},
+		"Available": true,
 	}
 
 	pipeline := bson.A{
@@ -622,7 +636,10 @@ func (r *StreamSummaryRepository) GetStreamSummaryByID(id primitive.ObjectID) (*
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collection := db.Collection("StreamSummary")
 
-	filter := bson.M{"_id": id}
+	filter := bson.M{
+		"_id":       id,
+		"Available": true,
+	}
 
 	projection := bson.D{
 		{Key: "_id", Value: 1},
@@ -954,6 +971,7 @@ func (r *StreamSummaryRepository) GetLastSixStreamSummariesBeforeDate(StreamerID
 		"StartOfStream": bson.M{
 			"$lt": date,
 		},
+		"Available": true,
 	}
 
 	opts := options.Find().SetSort(bson.D{{Key: "StartOfStream", Value: -1}}).SetLimit(6)

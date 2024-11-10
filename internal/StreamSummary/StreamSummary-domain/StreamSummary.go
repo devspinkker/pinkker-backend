@@ -30,6 +30,7 @@ type StreamSummary struct {
 	Online               bool               `json:"Online" bson:"Online"`
 	UniqueInteractions   int                `json:"UniqueInteractions" bson:"UniqueInteractions"`
 	RecommendationScore  float64            `json:"RecommendationScore" bson:"RecommendationScore"`
+	Available            bool               `json:"Available" bson:"Available"`
 }
 type StreamSummaryGet struct {
 	Title               string             `json:"Title" bson:"Title"`
