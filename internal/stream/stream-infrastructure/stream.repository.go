@@ -183,9 +183,8 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 
 		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
 
-		pipeline := r.redisClient.Pipeline()
-		cacheKey := "stream:" + StreamFind.Streamer
-		pipeline.Del(context.Background(), cacheKey)
+		cacheKey := "stream:" + userFind.NameUser
+		r.RedisDeleteKey(cacheKey)
 		if err != nil {
 			return LastStreamSummary, err
 		}
