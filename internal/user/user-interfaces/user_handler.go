@@ -12,6 +12,7 @@ import (
 	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/jwt"
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -129,6 +130,10 @@ func (h *UserHandler) Pinker_notifications(c *websocket.Conn) error {
 	for {
 		go func() {
 			for {
+				if c == nil {
+					fmt.Println("WebSocket connection is closed.")
+					break
+				}
 				_, _, err := c.ReadMessage()
 				if err != nil {
 					h.userService.CloseSubscription(sub)

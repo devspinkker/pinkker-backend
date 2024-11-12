@@ -95,6 +95,10 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 		}()
 
 		for {
+			if c == nil {
+				fmt.Println("WebSocket connection is closed.")
+				break
+			}
 			_, _, err := c.ReadMessage()
 			if err != nil {
 				break

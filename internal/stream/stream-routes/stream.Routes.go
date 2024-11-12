@@ -6,6 +6,7 @@ import (
 	streaminterfaces "PINKKER-BACKEND/internal/stream/stream-interface"
 	"PINKKER-BACKEND/pkg/middleware"
 	"PINKKER-BACKEND/pkg/utils"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -58,6 +59,10 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 		}()
 
 		for {
+			if c == nil {
+				fmt.Println("WebSocket connection is closed.")
+				break
+			}
 			_, _, err := c.ReadMessage()
 			if err != nil {
 				break

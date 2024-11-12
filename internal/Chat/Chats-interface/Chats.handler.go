@@ -6,6 +6,7 @@ import (
 	"PINKKER-BACKEND/pkg/jwt"
 	"PINKKER-BACKEND/pkg/utils"
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -276,6 +277,10 @@ func (h *ChatsHandler) WebSocketHandler(c *websocket.Conn) {
 	}()
 
 	for {
+		if c == nil {
+			fmt.Println("WebSocket connection is closed.")
+			break
+		}
 		_, msg, err := c.ReadMessage()
 		if err != nil {
 			break
