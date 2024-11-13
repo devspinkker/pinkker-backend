@@ -17,7 +17,7 @@ type Emote struct {
 	Name      string             `json:"name" bson:"name"`
 	Emotes    []EmotePair        `json:"emotes" bson:"emotes"`
 	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
-	Type      string             `json:"type" bson:"type"`
+	Type      string             `json:"type" bson:"type"`                         // seccion de la que ocupa, global o es de pinkker o sub etc
 	UserID    primitive.ObjectID `json:"userId,omitempty" bson:"userId,omitempty"` // Solo para emotes de usuario
 }
 

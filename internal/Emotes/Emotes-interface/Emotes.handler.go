@@ -46,7 +46,6 @@ func (s *EmotesRepository) CreateOrUpdateEmoteWithImage(c *fiber.Ctx) error {
 			Name: req.Name,
 			URL:  imageUrl,
 		}
-
 		createdEmote, err := s.Servise.CreateOrUpdateEmote(IdUserTokenP, req.TypeEmote, emote)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -166,7 +165,6 @@ func (s *EmotesRepository) AddEmoteAut(c *fiber.Ctx) error {
 	fileHeader, _ := c.FormFile("emoteImage")
 	PostImageChanel := make(chan string)
 	errChanel := make(chan error)
-
 	go helpers.ProcessImageEmotes(fileHeader, PostImageChanel, errChanel, nameUser+"aut", req.Type)
 
 	select {

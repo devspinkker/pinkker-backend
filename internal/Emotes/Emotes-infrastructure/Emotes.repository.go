@@ -283,8 +283,26 @@ func (r *EmotesRepository) GetEmotesByType(emoteType string) ([]EmotesDomain.Emo
 		emotes = append(emotes, emote)
 	}
 
+	if len(emotes) == 0 {
+		defaultEmote := EmotesDomain.Emote{
+			ID:        primitive.NewObjectID(),
+			Name:      emoteType,
+			Type:      emoteType,
+			CreatedAt: time.Now(),
+			Emotes:    []EmotesDomain.EmotePair{},
+		}
+
+		_, err := collection.InsertOne(context.Background(), defaultEmote)
+		if err != nil {
+			return nil, err
+		}
+
+		emotes = append(emotes, defaultEmote)
+	}
+
 	return emotes, nil
 }
+
 func (r *EmotesRepository) AutCode(id primitive.ObjectID, code string) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	collectionUsers := db.Collection("Users")
