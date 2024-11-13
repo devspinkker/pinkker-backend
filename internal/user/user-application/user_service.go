@@ -1,6 +1,7 @@
 package userapplication
 
 import (
+	"PINKKER-BACKEND/config"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
@@ -60,8 +61,10 @@ func (u *UserService) UserDomaionUpdata(newUser *domain.UserModelValidator, avat
 
 	modelNewUser.Avatar = avatarUrl
 	if modelNewUser.Avatar == "" {
-		modelNewUser.Avatar = "https://res.cloudinary.com/pinkker/image/upload/v1676850748/avatar/u0wa6m0xqrzceuopdawi.jpg"
+		avatarConf := config.FotoPerfilAleatoria()
+		modelNewUser.Avatar = avatarConf
 	}
+
 	modelNewUser.FullName = newUser.FullName
 	modelNewUser.NameUser = newUser.NameUser
 	modelNewUser.PasswordHash = passwordHash

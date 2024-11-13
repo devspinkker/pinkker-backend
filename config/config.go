@@ -3,7 +3,9 @@ package config
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -135,4 +137,21 @@ func CostToCreateCommunity() string {
 		log.Fatal("godotenv.Load error")
 	}
 	return os.Getenv("CostToCreateCommunity")
+}
+func FotoPerfilAleatoria() string {
+	// Cargar las variables de entorno
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error cargando el archivo .env")
+	}
+
+	// Lista de IDs de perfiles disponibles
+	ids := []string{"3", "4", "5", "6", "7", "8"}
+
+	// Semilla para generar un número aleatorio
+	rand.Seed(time.Now().UnixNano())
+	// Elegir un índice aleatorio de la lista
+	randomID := ids[rand.Intn(len(ids))]
+
+	// Retornar la URL correspondiente al ID seleccionado
+	return os.Getenv("FOTO_PERFIL_" + randomID)
 }
