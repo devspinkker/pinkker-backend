@@ -53,22 +53,34 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 		client := &utils.Client{Connection: c}
 		chatService.AddClientToRoom(roomID, client)
 
+		// Garantizar que se cierre la conexión cuando termine el manejo de la conexión.
 		defer func() {
+			// Eliminar al cliente de la sala.
 			chatService.RemoveClientFromRoom(roomID, client)
-			_ = c.Close()
+			if err := c.Close(); err != nil {
+				// Log del error al intentar cerrar la conexión.
+				fmt.Println("Error cerrando WebSocket:", err)
+			}
 		}()
 
+		// Bucle para recibir mensajes desde el WebSocket.
 		for {
 			if c == nil {
-				fmt.Println("WebSocket connection is closed.")
+				// Verificar si la conexión se cerró.
+				fmt.Println("Conexión WebSocket cerrada.")
 				break
 			}
+
+			// Intentar leer un mensaje.
 			_, _, err := c.ReadMessage()
 			if err != nil {
+				// Log del error al leer el mensaje.
+				fmt.Println("Error al leer mensaje WebSocket:", err)
 				break
 			}
 		}
 	}))
+
 	// esto se tiene que mover a una carpeta especifica
 	App.Get("/categorie/GetCategories", streamHandler.GetCategories)
 	App.Get("/categorie/GetCategoria", streamHandler.GetCategoria)
