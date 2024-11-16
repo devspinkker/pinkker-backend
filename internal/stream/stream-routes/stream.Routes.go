@@ -65,20 +65,17 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 
 		// Bucle para recibir mensajes desde el WebSocket.
 		for {
-			if c == nil {
-				// Verificar si la conexión se cerró.
-				fmt.Println("Conexión WebSocket cerrada.")
+			_, _, err := c.ReadMessage()
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				fmt.Println("Conexión cerrada:", err)
 				break
 			}
-
-			// Intentar leer un mensaje.
-			_, _, err := c.ReadMessage()
 			if err != nil {
-				// Log del error al leer el mensaje.
-				fmt.Println("Error al leer mensaje WebSocket:", err)
+				fmt.Println("Error leyendo mensaje:", err)
 				break
 			}
 		}
+
 	}))
 
 	// esto se tiene que mover a una carpeta especifica
