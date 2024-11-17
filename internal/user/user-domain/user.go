@@ -353,6 +353,8 @@ func (u *Google_callback_Complete_Profile_And_Username) ValidateUser() error {
 	if u.BirthDate.IsZero() || u.BirthDate.String() == "" {
 		u.BirthDate = time.Now()
 	}
+	validate.RegisterValidation("nameUser", nameUserValidator)
+
 	return validate.Struct(u)
 }
 
