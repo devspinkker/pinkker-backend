@@ -1050,6 +1050,11 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 	if _, err := dbColeccionCategorias.UpdateOne(context.Background(), bson.M{"Name": updateInfo.Category}, categoryUpdate); err != nil {
 		return err
 	}
+	cacheKey := "stream:" + streamerName
+	_, err = r.redisClient.Del(context.Background(), cacheKey).Result()
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	return nil
 }
