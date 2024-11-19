@@ -1055,7 +1055,12 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 	if err != nil {
 		fmt.Println(err)
 	}
-
+	notification := map[string]interface{}{
+		"action":         "updateInfoStream",
+		"title":          updateInfo.Title,
+		"StreamCategory": updateInfo.Category,
+	}
+	r.PublishAction(previousStream.ID.Hex()+"action", notification)
 	return nil
 }
 func (r *StreamRepository) UpdateModChat(updateInfo streamdomain.UpdateModChat, id primitive.ObjectID) error {
