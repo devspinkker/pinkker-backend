@@ -88,35 +88,36 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 		chatService := utils.NewChatService()
 		client := &utils.Client{Connection: c}
 
+		// Agregar cliente a la sala
 		chatService.AddClientToRoom(user, client)
 		defer func() {
+			// Eliminar cliente y cerrar conexión de forma segura
 			chatService.RemoveClientFromRoom(user, client)
 			fmt.Println("WebSocket connection closed for user:", user)
-			_ = c.Close()
+			if err := c.Close(); err != nil {
+				fmt.Printf("Error closing WebSocket connection: %v\n", err)
+			}
 		}()
 
+		// Bucle para leer mensajes
 		for {
-			if c == nil {
-				fmt.Println("WebSocket connection is nil. Exiting loop.")
+			_, _, err := c.ReadMessage()
+			if err != nil {
+				// Manejo de errores esperados
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					fmt.Printf("WebSocket closed normally: %v\n", err)
+					break
+				}
+
+				// Manejo de errores inesperados
+				fmt.Printf("Unexpected WebSocket error: %v\n", err)
 				break
 			}
-			for {
-				_, _, err := c.ReadMessage()
-				if err != nil {
-					if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-						// Error esperado cuando el cliente cierra la conexión normalmente
-						fmt.Println("WebSocket closed:", err)
-						break
-					} else {
-						// Error inesperado, podrías loggear para depuración
-						fmt.Printf("Unexpected WebSocket error: %v\n", err)
-						break
-					}
-				}
-			}
 
+			// Aquí puedes manejar el mensaje si es necesario
 		}
 	}))
+
 	App.Get("/ws/pinker_notifications/:token", websocket.New(func(c *websocket.Conn) {
 		UserHandler.Pinker_notifications(c)
 		defer func() {

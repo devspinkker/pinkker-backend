@@ -288,6 +288,11 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 		if err != nil {
 			return LastStreamSummary, err
 		}
+		notification := map[string]interface{}{
+			"action": "Online",
+			"Online": false,
+		}
+		r.PublishAction(StreamFind.ID.Hex()+"action", notification)
 
 	}
 
