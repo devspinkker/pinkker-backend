@@ -654,7 +654,7 @@ func (clip *ClipHandler) MoreViewOfTheClip(c *fiber.Ctx) error {
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Dislike",
+		"message": "ok",
 	})
 }
 func (clip *ClipHandler) ClipsRecommended(c *fiber.Ctx) error {

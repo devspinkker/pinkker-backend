@@ -1125,8 +1125,8 @@ func (c *ClipRepository) MoreViewOfTheClip(ClipId primitive.ObjectID, idt primit
 
 	// Crear filtro para encontrar el clip y verificar que el usuario no lo haya visto antes
 	filter := bson.M{
-		"_id":                   bson.M{"$in": ClipId}, // Filtro para los tweets seleccionados
-		"IdOfTheUsersWhoViewed": bson.M{"$ne": idt},    // Solo actualizamos si el usuario no ha visto ya el tweet
+		"_id":                   ClipId,             // Filtro para los tweets seleccionados
+		"IdOfTheUsersWhoViewed": bson.M{"$ne": idt}, // Solo actualizamos si el usuario no ha visto ya el tweet
 	}
 
 	// Actualización que agrega el ID del usuario y mantiene el límite de 50 IDs
@@ -1190,6 +1190,12 @@ func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username
 	userCollection := db.Collection("Users")
 	update := bson.D{{Key: "$addToSet", Value: bson.D{{Key: "ClipsComment", Value: insertResult.InsertedID}}}}
 	_, err = userCollection.UpdateOne(ctx, bson.M{"_id": userID}, update)
+	if err != nil {
+		return clipdomain.ClipCommentGet{}, err
+	}
+
+	update = bson.D{{Key: "$addToSet", Value: bson.D{{Key: "Comments", Value: insertResult.InsertedID}}}}
+	_, err = clipCollection.UpdateOne(ctx, bson.M{"_id": clipID}, update)
 	if err != nil {
 		return clipdomain.ClipCommentGet{}, err
 	}
