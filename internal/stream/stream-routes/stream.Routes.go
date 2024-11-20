@@ -6,6 +6,7 @@ import (
 	streaminterfaces "PINKKER-BACKEND/internal/stream/stream-interface"
 	"PINKKER-BACKEND/pkg/middleware"
 	"PINKKER-BACKEND/pkg/utils"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -52,25 +53,30 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 		client := &utils.Client{Connection: c}
 		chatService.AddClientToRoom(roomID, client)
 
-		// Garantizar que se cierre la conexión cuando termine el manejo de la conexión.
+		// Asegurar cierre correcto de recursos
 		defer func() {
-			// Eliminar al cliente de la sala.
 			chatService.RemoveClientFromRoom(roomID, client)
 			if err := c.Close(); err != nil {
-				// Log del error al intentar cerrar la conexión.
+				fmt.Printf("Error closing WebSocket connection: %v\n", err)
 			}
+			fmt.Println("WebSocket connection closed")
 		}()
 
-		// Bucle para recibir mensajes desde el WebSocket.
+		// Bucle para leer mensajes
 		for {
 			_, _, err := c.ReadMessage()
-			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-			}
 			if err != nil {
-				break
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					fmt.Printf("WebSocket closed by client: %v\n", err)
+					break
+				} else if websocket.IsUnexpectedCloseError(err) {
+					fmt.Printf("Unexpected WebSocket close: %v\n", err)
+				} else {
+					fmt.Printf("WebSocket read error: %v\n", err)
+				}
+				break // Salir del bucle si hay error
 			}
 		}
-
 	}))
 
 	// esto se tiene que mover a una carpeta especifica

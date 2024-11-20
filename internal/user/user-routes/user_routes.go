@@ -87,22 +87,34 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 		user := c.Params("user") + "ActivityFeed"
 		chatService := utils.NewChatService()
 		client := &utils.Client{Connection: c}
-		chatService.AddClientToRoom(user, client)
 
+		chatService.AddClientToRoom(user, client)
 		defer func() {
 			chatService.RemoveClientFromRoom(user, client)
+			fmt.Println("WebSocket connection closed for user:", user)
 			_ = c.Close()
 		}()
 
 		for {
 			if c == nil {
-				fmt.Println("WebSocket connection is closed.")
+				fmt.Println("WebSocket connection is nil. Exiting loop.")
 				break
 			}
-			_, _, err := c.ReadMessage()
-			if err != nil {
-				break
+			for {
+				_, _, err := c.ReadMessage()
+				if err != nil {
+					if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+						// Error esperado cuando el cliente cierra la conexión normalmente
+						fmt.Println("WebSocket closed:", err)
+						break
+					} else {
+						// Error inesperado, podrías loggear para depuración
+						fmt.Printf("Unexpected WebSocket error: %v\n", err)
+						break
+					}
+				}
 			}
+
 		}
 	}))
 	App.Get("/ws/pinker_notifications/:token", websocket.New(func(c *websocket.Conn) {
