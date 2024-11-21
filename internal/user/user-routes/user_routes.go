@@ -93,7 +93,6 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 		defer func() {
 			// Eliminar cliente y cerrar conexión de forma segura
 			chatService.RemoveClientFromRoom(user, client)
-			fmt.Println("WebSocket connection closed for user:", user)
 			if err := c.Close(); err != nil {
 				fmt.Printf("Error closing WebSocket connection: %v\n", err)
 			}
@@ -105,12 +104,9 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 			if err != nil {
 				// Manejo de errores esperados
 				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					fmt.Printf("WebSocket closed normally: %v\n", err)
 					break
 				}
 
-				// Manejo de errores inesperados
-				fmt.Printf("Unexpected WebSocket error: %v\n", err)
 				break
 			}
 
