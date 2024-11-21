@@ -6,7 +6,6 @@ import (
 	streaminterfaces "PINKKER-BACKEND/internal/stream/stream-interface"
 	"PINKKER-BACKEND/pkg/middleware"
 	"PINKKER-BACKEND/pkg/utils"
-	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -57,9 +56,7 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 		defer func() {
 			chatService.RemoveClientFromRoom(roomID, client)
 			if err := c.Close(); err != nil {
-				fmt.Printf("Error closing WebSocket connection: %v\n", err)
 			}
-			fmt.Println("WebSocket connection closed")
 		}()
 
 		// Bucle para leer mensajes
@@ -67,14 +64,9 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 			_, _, err := c.ReadMessage()
 			if err != nil {
 				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					fmt.Printf("WebSocket closed by client: %v\n", err)
 					break
-				} else if websocket.IsUnexpectedCloseError(err) {
-					fmt.Printf("Unexpected WebSocket close: %v\n", err)
-				} else {
-					fmt.Printf("WebSocket read error: %v\n", err)
 				}
-				break // Salir del bucle si hay error
+				break
 			}
 		}
 	}))
