@@ -331,7 +331,11 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 			"messages": "Bad Request",
 		})
 	}
+	fmt.Println(newUser)
+
 	if err := newUser.ValidateUser(); err != nil {
+		fmt.Println(newUser)
+
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad Request",
 			"error":   err.Error(),

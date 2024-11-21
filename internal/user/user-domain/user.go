@@ -335,7 +335,7 @@ func (u *EditProfile) ValidateEditProfile() error {
 }
 
 type Google_callback_Complete_Profile_And_Username struct {
-	NameUser   string    `json:"nameUser" validate:"required,min=5,max=20"`
+	NameUser   string    `json:"nameUser" validate:"nameuser,required,min=5,max=20"`
 	Email      string    `json:"email" validate:"required,email"`
 	Password   string    `json:"password" validate:"required,min=8"`
 	Pais       string    `json:"pais" bson:"Pais"`
@@ -353,7 +353,7 @@ func (u *Google_callback_Complete_Profile_And_Username) ValidateUser() error {
 	if u.BirthDate.IsZero() || u.BirthDate.String() == "" {
 		u.BirthDate = time.Now()
 	}
-	validate.RegisterValidation("nameUser", nameUserValidator)
+	validate.RegisterValidation("nameuser", nameUserValidator)
 
 	return validate.Struct(u)
 }
