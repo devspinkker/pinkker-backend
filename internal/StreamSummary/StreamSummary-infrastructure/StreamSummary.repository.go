@@ -7,6 +7,7 @@ import (
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	"PINKKER-BACKEND/pkg/helpers"
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"strconv"
@@ -921,6 +922,11 @@ func (r *StreamSummaryRepository) UpdateInfoStreamSummary(StreamerID primitive.O
 			"RecommendationScore": recommendationScore,
 		},
 	}
+	notification := map[string]interface{}{
+		"action": "views",
+		"views":  Stream.ViewerCount,
+	}
+	r.PublishAction(Stream.ID.Hex()+"action", notification)
 	filterUpdateStream := bson.M{"_id": Stream.ID}
 	_, err = GoMongoDBCollStreams.UpdateOne(ctx, filterUpdateStream, updateStream)
 	if err != nil {
@@ -929,7 +935,23 @@ func (r *StreamSummaryRepository) UpdateInfoStreamSummary(StreamerID primitive.O
 
 	return nil
 }
+func (r *StreamSummaryRepository) PublishAction(roomID string, noty map[string]interface{}) error {
 
+	chatMessageJSON, err := json.Marshal(noty)
+	if err != nil {
+		return err
+	}
+	err = r.redisClient.Publish(
+		context.Background(),
+		roomID,
+		string(chatMessageJSON),
+	).Err()
+	if err != nil {
+		return err
+	}
+
+	return err
+}
 func (r *StreamSummaryRepository) AddUniqueUserInteractionInStreamSummary(Room primitive.ObjectID) (int64, error) {
 	key := Room.Hex() + ":uniqueinteractions"
 
