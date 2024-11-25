@@ -728,6 +728,37 @@ func (clip *ClipHandler) CommentClip(c *fiber.Ctx) error {
 		"data":    comment,
 	})
 }
+func (clip *ClipHandler) DeleteComment(c *fiber.Ctx) error {
+
+	var req clipdomain.CommentClipId
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+
+	idValue := c.Context().UserValue("_id").(string)
+
+	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
+	if errorID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    errorID.Error(),
+		})
+	}
+
+	errLike := clip.ClipService.DeleteComment(req.IdClip, idValueToken)
+	if errLike != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    errLike.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "commented delete",
+	})
+}
 func (clip *ClipHandler) LikeCommentClip(c *fiber.Ctx) error {
 
 	var IDClipReq IDClipT

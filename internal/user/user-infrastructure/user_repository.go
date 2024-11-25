@@ -1708,10 +1708,10 @@ func (u *UserRepository) EditProfile(profile domain.EditProfile, id primitive.Ob
 		return err
 	}
 
-	timeSinceLastChange := time.Since(existingUser.EditProfiile.Biography)
-	if timeSinceLastChange < 15*24*time.Hour {
-		return fmt.Errorf("no puedes actualizar la biografía hasta que pasen 60 días desde el último cambio")
-	}
+	// timeSinceLastChange := time.Since(existingUser.EditProfiile.Biography)
+	// if timeSinceLastChange < 15*24*time.Hour {
+	// 	return fmt.Errorf("no puedes actualizar la biografía hasta que pasen 60 días desde el último cambio")
+	// }
 
 	update := bson.M{
 		"$set": bson.M{

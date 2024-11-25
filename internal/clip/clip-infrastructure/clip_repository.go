@@ -1252,6 +1252,67 @@ func (c *ClipRepository) CommentClip(clipID, userID primitive.ObjectID, username
 
 	return clipdomain.ClipCommentGet{}, errors.New("no se encontró ningún comentario")
 }
+func (c *ClipRepository) DeleteComment(commentID, userID primitive.ObjectID) error {
+	ctx := context.Background()
+	db := c.mongoClient.Database("PINKKER-BACKEND")
+
+	// Obtener información del comentario
+	commentCollection := db.Collection("CommentsClips")
+	var comment struct {
+		ClipID primitive.ObjectID `bson:"clipId"`
+		UserID primitive.ObjectID `bson:"UserID"`
+	}
+	err := commentCollection.FindOne(ctx, bson.M{"_id": commentID}).Decode(&comment)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return errors.New("el comentario no existe")
+		}
+		return err
+	}
+
+	// Obtener información del clip
+	clipCollection := db.Collection("Clips")
+	var clip struct {
+		UserID primitive.ObjectID `bson:"UserID"`
+	}
+	err = clipCollection.FindOne(ctx, bson.M{"_id": comment.ClipID}).Decode(&clip)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return errors.New("el clip asociado al comentario no existe")
+		}
+		return err
+	}
+
+	// Verificar si el usuario es el dueño del clip o del comentario
+	if comment.UserID != userID && clip.UserID != userID {
+		return errors.New("no tienes permiso para eliminar este comentario")
+	}
+
+	// Eliminar el comentario
+	_, err = commentCollection.DeleteOne(ctx, bson.M{"_id": commentID})
+	if err != nil {
+		return err
+	}
+
+	// Actualizar el clip para eliminar la referencia al comentario
+	_, err = clipCollection.UpdateOne(ctx, bson.M{"_id": comment.ClipID}, bson.D{
+		{Key: "$pull", Value: bson.D{{Key: "Comments", Value: commentID}}},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Actualizar el usuario para eliminar la referencia al comentario
+	userCollection := db.Collection("Users")
+	_, err = userCollection.UpdateOne(ctx, bson.M{"_id": comment.UserID}, bson.D{
+		{Key: "$pull", Value: bson.D{{Key: "ClipsComment", Value: commentID}}},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func (c *ClipRepository) LikeComment(commentID, userID primitive.ObjectID) error {
 	ctx := context.Background()

@@ -135,6 +135,9 @@ func (u *ClipService) CommentClip(clipID, userID primitive.ObjectID, username, c
 	return u.ClipRepository.CommentClip(clipID, userID, username, comment)
 }
 
+func (u *ClipService) DeleteComment(commentID primitive.ObjectID, idValueToken primitive.ObjectID) error {
+	return u.ClipRepository.DeleteComment(commentID, idValueToken)
+}
 func (u *ClipService) LikeCommentClip(idClip primitive.ObjectID, idValueToken primitive.ObjectID) error {
 	return u.ClipRepository.LikeComment(idClip, idValueToken)
 }

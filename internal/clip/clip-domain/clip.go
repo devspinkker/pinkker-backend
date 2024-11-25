@@ -121,6 +121,9 @@ type CommentClip struct {
 	CommentClip string             `json:"CommentClip" validate:"required,min=2,max=100"`
 	IdClip      primitive.ObjectID `json:"IdClip" validate:"required"`
 }
+type CommentClipId struct {
+	IdClip primitive.ObjectID `json:"IdClip" validate:"required"`
+}
 
 func (u *CommentClip) ValidateCommentClip() error {
 
