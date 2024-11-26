@@ -35,15 +35,26 @@ func (s *ChatService) AddClientToRoom(roomID string, client *Client) {
 }
 
 // RemoveClientFromRoom elimina un cliente de una sala
-func (s *ChatService) RemoveClientFromRoom(roomID string, client *Client) {
-	clients := s.rooms[roomID]
+func (s *ChatService) RemoveClientFromRoom(roomID string, client *Client) error {
+	clients, exists := s.rooms[roomID]
+	if !exists {
+		return nil
+	}
+
+	clientFound := false
 	for i, c := range clients {
 		if c == client {
-			// Elimina el cliente de la lista
 			s.rooms[roomID] = append(clients[:i], clients[i+1:]...)
+			clientFound = true
 			break
 		}
 	}
+
+	if !clientFound {
+		return nil
+	}
+
+	return nil
 }
 
 // GetWebSocketClientsInRoom devuelve una lista de conexiones WebSocket de clientes en una sala

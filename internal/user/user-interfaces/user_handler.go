@@ -124,38 +124,58 @@ func (h *UserHandler) UpdateLastConnection(idToken primitive.ObjectID) error {
 
 }
 func (h *UserHandler) Pinker_notifications(c *websocket.Conn) error {
+	// Crear contexto con cancelación
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // Garantiza que se limpie el contexto al salir
 
 	sub := h.userService.SubscribeToRoom("pinker_notifications")
+	defer h.userService.CloseSubscription(sub) // Garantiza el cierre de la suscripción
 
-	for {
-		go func() {
-			for {
-				if c == nil {
-					fmt.Println("WebSocket connection is closed.")
-					break
-				}
-				_, _, err := c.ReadMessage()
-				if err != nil {
-					h.userService.CloseSubscription(sub)
-					c.Close()
-					return
-				}
+	// Canal para capturar errores
+	errChan := make(chan error, 1)
+
+	// Goroutine para leer mensajes del cliente
+	go func() {
+		for {
+			if c == nil {
+				errChan <- fmt.Errorf("WebSocket connection is nil")
+				return
 			}
-		}()
-
-		message, err := sub.ReceiveMessage(context.Background())
-		if err != nil {
-			h.userService.CloseSubscription(sub)
-			return err
+			_, _, err := c.ReadMessage()
+			if err != nil {
+				errChan <- fmt.Errorf("error reading WebSocket message: %w", err)
+				return
+			}
 		}
+	}()
 
-		err = c.WriteMessage(websocket.TextMessage, []byte(message.Payload))
-		if err != nil {
-			h.userService.CloseSubscription(sub)
-			return err
+	// Goroutine para recibir mensajes de la suscripción
+	go func() {
+		for {
+			message, err := sub.ReceiveMessage(ctx)
+			if err != nil {
+				errChan <- fmt.Errorf("error receiving subscription message: %w", err)
+				return
+			}
+
+			// Enviar mensaje al cliente WebSocket
+			err = c.WriteMessage(websocket.TextMessage, []byte(message.Payload))
+			if err != nil {
+				errChan <- fmt.Errorf("error writing WebSocket message: %w", err)
+				return
+			}
 		}
+	}()
+
+	// Manejo de errores y finalización
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errChan:
+		return err
 	}
 }
+
 func (h *UserHandler) PanelAdminPinkkerPartnerUser(c *fiber.Ctx) error {
 	var PanelAdminPinkkerPartnerUser domain.PanelAdminPinkkerInfoUserReq
 	if err := c.BodyParser(&PanelAdminPinkkerPartnerUser); err != nil {
