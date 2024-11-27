@@ -155,3 +155,9 @@ func FotoPerfilAleatoria() string {
 	// Retornar la URL correspondiente al ID seleccionado
 	return os.Getenv("FOTO_PERFIL_" + randomID)
 }
+func BANNER() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("BANNER")
+}

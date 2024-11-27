@@ -331,8 +331,8 @@ func (t *TweetRepository) GetRandomPostcommunities(idT primitive.ObjectID, exclu
 				bson.D{{Key: "IsPrivate", Value: bson.D{{Key: "$exists", Value: false}}}},
 			}},
 			{Key: "$and", Value: bson.A{
-				bson.D{{Key: "communityID", Value: bson.D{{Key: "$exists", Value: true}}}},
-				bson.D{{Key: "communityID", Value: bson.D{{Key: "$ne", Value: primitive.NilObjectID}}}}}},
+				bson.D{{Key: "communityID", Value: bson.D{{Key: "$ne", Value: []primitive.ObjectID{idT}}}}},
+			}},
 		}}},
 
 		// Unimos la información de la comunidad
@@ -439,13 +439,11 @@ func (t *TweetRepository) GetPostsFromUserCommunities(idT primitive.ObjectID, ex
 		return nil, fiber.NewError(fiber.StatusNotFound, "The user is not part of any communities")
 	}
 
-	last24Hours := time.Now().Add(-24 * time.Hour)
-
 	pipeline := bson.A{
 		// Filtramos por posts de las comunidades en las que el usuario está
 		bson.D{{Key: "$match", Value: bson.D{
 			{Key: "_id", Value: bson.D{{Key: "$nin", Value: excludeIDs}}},
-			{Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
+			// {Key: "TimeStamp", Value: bson.D{{Key: "$gte", Value: last24Hours}}},
 			{Key: "Type", Value: bson.M{"$in": []string{"Post", "RePost", "CitaPost"}}},
 			// {Key: "$or", Value: bson.A{
 			// 	bson.D{{Key: "IsPrivate", Value: false}},

@@ -81,6 +81,7 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 		req.IsPrivate = true
 	}
 	// Crear la nueva comunidad
+
 	community := &communitiesdomain.Community{
 		CommunityName:      req.CommunityName,
 		Description:        req.Description,
@@ -98,7 +99,9 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 		Banner:             Banner,
 		AdPricePerDay:      req.AdPricePerDay,
 	}
-
+	if Banner == "" {
+		community.Banner = config.BANNER()
+	}
 	result, err := communitiesCollection.InsertOne(ctx, community)
 	if err != nil {
 		return nil, err
