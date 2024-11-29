@@ -1421,22 +1421,21 @@ func (u *UserRepository) FollowUser(IdUserTokenP, followedUserID primitive.Objec
 	// Buscar al usuario seguido (followedUserID)
 	filterFollowe := bson.M{"_id": followedUserID}
 
-	var userFolloer domain.User
+	var userFolloer domain.GetUser
 	err := GoMongoDBCollUsers.FindOne(context.Background(), filterFollowe).Decode(&userFolloer)
 	if err != nil {
 		return "", err
 	}
 
-	// Obtener el Avatar del usuario seguido
-	avatar := userFolloer.Avatar
-
 	// Buscar al usuario que sigue (IdUserTokenP)
 	filterToken := bson.M{"_id": IdUserTokenP}
-	var usertoken domain.User
+	var usertoken domain.GetUser
 	err = GoMongoDBCollUsers.FindOne(context.Background(), filterToken).Decode(&usertoken)
 	if err != nil {
 		return "", err
 	}
+	// Obtener el Avatar del usuario seguido
+	avatar := usertoken.Avatar
 
 	Followingadd := domain.FollowInfo{
 		Since:         time.Now(),
