@@ -925,8 +925,8 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 			"data":    errdeleteUser,
 		})
 	}
-	h.NotifyActivityFeed(IdUser.Hex()+"ActivityFeed", nameUser, avatar)
-	Notification := helpers.CreateNotification("Follow", nameUser, avatar, "", 0)
+	h.NotifyActivityFeed(IdUser.Hex()+"ActivityFeed", nameUser, avatar, IdUserTokenP)
+	Notification := helpers.CreateNotification("Follow", nameUser, avatar, "", 0, IdUserTokenP)
 	err = h.userService.SaveNotification(IdUser, Notification)
 	if err != nil {
 		fmt.Println(err)
@@ -939,7 +939,7 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 		"message": "Follow",
 	})
 }
-func (h *UserHandler) NotifyActivityFeed(room, user, Avatar string) error {
+func (h *UserHandler) NotifyActivityFeed(room, user, Avatar string, id primitive.ObjectID) error {
 	clients, err := h.userService.GetWebSocketActivityFeed(room)
 	if err != nil {
 		return err
@@ -949,6 +949,7 @@ func (h *UserHandler) NotifyActivityFeed(room, user, Avatar string) error {
 		"Type":     "follow",
 		"Nameuser": user,
 		"Avatar":   Avatar,
+		"IdUser":   id,
 	}
 
 	for _, client := range clients {

@@ -63,6 +63,7 @@ func (r *NotificationsRepository) GetRecentNotifications(userID primitive.Object
 			"text":      "$notifications.text",
 			"pixeles":   "$notifications.pixeles",
 			"timestamp": "$notifications.timestamp",
+			"idUser":    "$notifications.idUser",
 		}},
 	}
 
@@ -133,6 +134,7 @@ func (r *NotificationsRepository) GetOldNotifications(userID primitive.ObjectID,
 			"text":      "$notifications.text",
 			"pixeles":   "$notifications.pixeles",
 			"timestamp": "$notifications.timestamp",
+			"idUser":    "$notifications.idUser",
 		}},
 	}
 

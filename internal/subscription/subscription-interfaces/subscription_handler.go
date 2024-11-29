@@ -77,8 +77,8 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 		})
 	}
 	h.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", user, avatar, idReq.Text)
-	h.NotifyActivityToChat(idReq.ToUser, user, idReq.Text)
-	Notification := helpers.CreateNotification("Suscribirse", user, avatar, idReq.Text, 0)
+	h.NotifyActivityToChat(idReq.ToUser, user, idReq.Text, FromUser)
+	Notification := helpers.CreateNotification("Suscribirse", user, avatar, idReq.Text, 0, FromUser)
 	err = h.subscriptionService.SaveNotification(idReq.ToUser, Notification)
 	if err != nil {
 		fmt.Println(err)
@@ -114,12 +114,13 @@ func (h *SubscriptionHandler) NotifyActivityFeed(room, user, Avatar, text string
 
 	return nil
 }
-func (h *SubscriptionHandler) NotifyActivityToChat(UserToken primitive.ObjectID, user string, text string) error {
+func (h *SubscriptionHandler) NotifyActivityToChat(UserToken primitive.ObjectID, user string, text string, id primitive.ObjectID) error {
 
 	notification := map[string]interface{}{
 		"action": "Subs",
 		"Text":   text,
 		"data":   user,
+		"IdUser": id,
 	}
 	h.subscriptionService.PublishNotification(UserToken, notification)
 	return nil
