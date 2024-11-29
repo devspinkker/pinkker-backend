@@ -7,6 +7,7 @@ import (
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
+	"PINKKER-BACKEND/pkg/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/redis/go-redis/v9"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -2926,3 +2928,8 @@ func (r *TweetRepository) SaveNotification(userID primitive.ObjectID, notificati
 }
 
 // get notificaciones
+func (u *TweetRepository) GetWebSocketClientsInRoom(roomID string) ([]*websocket.Conn, error) {
+	clients, err := utils.NewChatService().GetWebSocketClientsInRoom(roomID)
+
+	return clients, err
+}

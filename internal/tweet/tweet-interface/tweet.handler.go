@@ -124,6 +124,7 @@ func (th *TweetHandler) PostLike(c *fiber.Ctx) error {
 			"data":    errLike.Error(),
 		})
 	}
+	th.NotifyActivityFeed(id.Hex()+"ActivityFeed", nameUser, avatarToken)
 	Notification := helpers.CreateNotification("LikePost", nameUser, avatarToken, idTweetReq.IDTweet, 0)
 	err = th.TweetServise.SaveNotification(id, Notification)
 	if err != nil {
@@ -136,6 +137,27 @@ func (th *TweetHandler) PostLike(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Like",
 	})
+}
+func (th *TweetHandler) NotifyActivityFeed(room, user, Avatar string) error {
+	clients, err := th.TweetServise.GetWebSocketActivityFeed(room)
+	if err != nil {
+		return err
+	}
+
+	notification := map[string]interface{}{
+		"Type":     "LikePost",
+		"Nameuser": user,
+		"Avatar":   Avatar,
+	}
+
+	for _, client := range clients {
+		err = client.WriteJSON(notification)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 func (th *TweetHandler) PostDislike(c *fiber.Ctx) error {
 	var idTweetReq IDTweet

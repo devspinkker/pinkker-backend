@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofiber/websocket/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -232,4 +233,8 @@ func (s *TweetService) GetCommunityPostsGallery(ctx context.Context, CommunityID
 func (u *TweetService) SaveNotification(userID primitive.ObjectID, notification notificationsdomain.Notification) error {
 	err := u.TweetRepository.SaveNotification(userID, notification)
 	return err
+}
+func (u *TweetService) GetWebSocketActivityFeed(user string) ([]*websocket.Conn, error) {
+	client, err := u.TweetRepository.GetWebSocketClientsInRoom(user)
+	return client, err
 }
