@@ -40,12 +40,12 @@ func main() {
 		BodyLimit: 200 * 1024 * 1024,
 	})
 	app.Use(cors.New(
-	// cors.Config{
-	// 	AllowCredentials: true,
-	// 	AllowOrigins:     "https://www.pinkker.tv",
-	// 	AllowHeaders:     "Origin, Content-Type, Accept, Accept-Language, Content-Length",
-	// 	AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
-	// },
+		cors.Config{
+			AllowCredentials: true,
+			AllowOrigins:     "https://www.pinkker.tv",
+			AllowHeaders:     "Origin, Content-Type, Accept, Accept-Language, Content-Length",
+			AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH,OPTIONS",
+		},
 	))
 	app.Use("/ws", func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
