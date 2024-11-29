@@ -1,6 +1,7 @@
 package tweetapplication
 
 import (
+	notificationsdomain "PINKKER-BACKEND/internal/notifications/notifications"
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	tweetinfrastructure "PINKKER-BACKEND/internal/tweet/tweet-infrastructure"
 	"context"
@@ -96,9 +97,8 @@ func (ts *TweetService) SaveComment(status string, CommentTo primitive.ObjectID,
 }
 
 // like
-func (ts *TweetService) LikeTweet(idTweet primitive.ObjectID, idValueToken primitive.ObjectID) error {
-	err := ts.TweetRepository.LikeTweet(idTweet, idValueToken)
-	return err
+func (ts *TweetService) LikeTweet(idTweet primitive.ObjectID, idValueToken primitive.ObjectID) (primitive.ObjectID, string, error) {
+	return ts.TweetRepository.LikeTweet(idTweet, idValueToken)
 }
 
 func (ts *TweetService) TweetDislike(idTweet primitive.ObjectID, idValueToken primitive.ObjectID) error {
@@ -228,4 +228,8 @@ func (s *TweetService) GetCommunityPosts(ctx context.Context, CommunityID primit
 
 func (s *TweetService) GetCommunityPostsGallery(ctx context.Context, CommunityID primitive.ObjectID, ExcludeFilterIDs []primitive.ObjectID, idT primitive.ObjectID) ([]tweetdomain.GetPostcommunitiesRandom, error) {
 	return s.TweetRepository.GetCommunityPostsGallery(ctx, CommunityID, ExcludeFilterIDs, idT)
+}
+func (u *TweetService) SaveNotification(userID primitive.ObjectID, notification notificationsdomain.Notification) error {
+	err := u.TweetRepository.SaveNotification(userID, notification)
+	return err
 }

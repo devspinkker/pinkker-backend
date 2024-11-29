@@ -3,6 +3,7 @@ package donationtinfrastructure
 import (
 	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
+	notificationsdomain "PINKKER-BACKEND/internal/notifications/notifications"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"PINKKER-BACKEND/pkg/helpers"
@@ -517,6 +518,36 @@ func (r *DonationRepository) updatePinkkerProfitPerMonth(ctx context.Context, Co
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (r *DonationRepository) SaveNotification(userID primitive.ObjectID, notification notificationsdomain.Notification) error {
+	// Colección de notificaciones
+	ctx := context.Background()
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+
+	notificationsCollection := db.Collection("Notifications")
+
+	// Asegurar que la notificación tenga una marca de tiempo
+	if notification.Timestamp.IsZero() {
+		notification.Timestamp = time.Now()
+	}
+
+	// Filtro para buscar el documento del usuario
+	filter := bson.M{"userId": userID}
+
+	// Actualización para agregar la notificación y crear el documento si no existe
+	update := bson.M{
+		"$push":        bson.M{"notifications": notification}, // Agrega la notificación al array
+		"$setOnInsert": bson.M{"userId": userID},              // Crea el documento si no existe
+	}
+
+	// Realizar la operación con upsert
+	_, err := notificationsCollection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+	if err != nil {
+		return fmt.Errorf("error al guardar la notificación: %v", err)
 	}
 
 	return nil

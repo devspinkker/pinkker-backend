@@ -3,6 +3,7 @@ package donationapplication
 import (
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	donationtinfrastructure "PINKKER-BACKEND/internal/donation/donation-infrastructure"
+	notificationsdomain "PINKKER-BACKEND/internal/notifications/notifications"
 
 	"github.com/gofiber/websocket/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -71,5 +72,9 @@ func (D *DonationService) GetPixelesDonationsChat(id primitive.ObjectID) ([]dona
 // actualzaa el Notified
 func (D *DonationService) UpdateDonationsNotifiedStatus(donation []donationdomain.ResDonation) error {
 	err := D.DonationRepository.UpdateDonationsNotifiedStatus(donation)
+	return err
+}
+func (D *DonationService) SaveNotification(userID primitive.ObjectID, notification notificationsdomain.Notification) error {
+	err := D.DonationRepository.SaveNotification(userID, notification)
 	return err
 }

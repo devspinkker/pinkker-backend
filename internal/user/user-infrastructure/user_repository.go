@@ -5,6 +5,7 @@ import (
 	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
+	notificationsdomain "PINKKER-BACKEND/internal/notifications/notifications"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	domain "PINKKER-BACKEND/internal/user/user-domain"
@@ -1158,6 +1159,8 @@ func (u *UserRepository) UpdateLastConnection(userID primitive.ObjectID) error {
 }
 
 // last notificaciones
+
+// esto se va
 func (u *UserRepository) GetRecentFollowsBeforeFirstConnection(IdUserTokenP primitive.ObjectID, page int) ([]domain.FollowInfoRes, error) {
 	db := u.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollUsers := db.Collection("Users")
@@ -2808,3 +2811,35 @@ func (r *UserRepository) updatePinkkerProfitPerMonthAAdCommunity(ctx context.Con
 
 	return nil
 }
+
+func (r *UserRepository) SaveNotification(userID primitive.ObjectID, notification notificationsdomain.Notification) error {
+	// Colección de notificaciones
+	ctx := context.Background()
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+
+	notificationsCollection := db.Collection("Notifications")
+
+	// Asegurar que la notificación tenga una marca de tiempo
+	if notification.Timestamp.IsZero() {
+		notification.Timestamp = time.Now()
+	}
+
+	// Filtro para buscar el documento del usuario
+	filter := bson.M{"userId": userID}
+
+	// Actualización para agregar la notificación y crear el documento si no existe
+	update := bson.M{
+		"$push":        bson.M{"notifications": notification}, // Agrega la notificación al array
+		"$setOnInsert": bson.M{"userId": userID},              // Crea el documento si no existe
+	}
+
+	// Realizar la operación con upsert
+	_, err := notificationsCollection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+	if err != nil {
+		return fmt.Errorf("error al guardar la notificación: %v", err)
+	}
+
+	return nil
+}
+
+// get notificaciones

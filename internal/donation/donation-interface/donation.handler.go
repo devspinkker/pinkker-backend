@@ -3,6 +3,7 @@ package donationtinterfaces
 import (
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	donationapplication "PINKKER-BACKEND/internal/donation/donation-application"
+	"PINKKER-BACKEND/pkg/helpers"
 	"errors"
 	"fmt"
 
@@ -80,6 +81,16 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 	}
 	d.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", nameUser, avatar, idReq.Pixeles, idReq.Text)
 	d.NotifyActivityToChat(idReq.ToUser, nameUser, idReq.Pixeles, idReq.Text)
+
+	Notification := helpers.CreateNotification("DonatePixels", nameUser, avatar, idReq.Text, idReq.Pixeles)
+	err = d.VodServise.SaveNotification(idReq.ToUser, Notification)
+	if err != nil {
+		fmt.Println(err)
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "ok",
+			"data":    "SaveNotification error",
+		})
+	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})

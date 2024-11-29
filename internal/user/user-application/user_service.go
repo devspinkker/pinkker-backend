@@ -4,6 +4,7 @@ import (
 	"PINKKER-BACKEND/config"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
+	notificationsdomain "PINKKER-BACKEND/internal/notifications/notifications"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	domain "PINKKER-BACKEND/internal/user/user-domain"
@@ -359,4 +360,8 @@ func (u *UserService) GetActiveAdsByEndAdCommunity(page int, IdUser primitive.Ob
 func (u *UserService) GetAdsByNameUser(page int, IdUser primitive.ObjectID, nameUser string) ([]advertisements.Advertisements, error) {
 	return u.roomRepository.GetAdsByNameUser(page, IdUser, nameUser)
 
+}
+func (u *UserService) SaveNotification(userID primitive.ObjectID, notification notificationsdomain.Notification) error {
+	err := u.roomRepository.SaveNotification(userID, notification)
+	return err
 }

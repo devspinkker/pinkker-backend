@@ -926,6 +926,15 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 		})
 	}
 	h.NotifyActivityFeed(IdUser.Hex()+"ActivityFeed", nameUser, avatar)
+	Notification := helpers.CreateNotification("Follow", nameUser, avatar, "", 0)
+	err = h.userService.SaveNotification(IdUser, Notification)
+	if err != nil {
+		fmt.Println(err)
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "ok",
+			"data":    "SaveNotification error",
+		})
+	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Follow",
 	})

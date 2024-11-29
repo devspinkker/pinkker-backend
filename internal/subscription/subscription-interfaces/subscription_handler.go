@@ -3,6 +3,8 @@ package subscriptioninterfaces
 import (
 	subscriptionapplication "PINKKER-BACKEND/internal/subscription/subscription-application"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
+	"PINKKER-BACKEND/pkg/helpers"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -76,7 +78,15 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 	}
 	h.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", user, avatar, idReq.Text)
 	h.NotifyActivityToChat(idReq.ToUser, user, idReq.Text)
-
+	Notification := helpers.CreateNotification("Suscribirse", user, avatar, idReq.Text, 0)
+	err = h.subscriptionService.SaveNotification(idReq.ToUser, Notification)
+	if err != nil {
+		fmt.Println(err)
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "ok",
+			"data":    "SaveNotification error",
+		})
+	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 	})

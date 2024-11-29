@@ -1,6 +1,7 @@
 package subscriptionapplication
 
 import (
+	notificationsdomain "PINKKER-BACKEND/internal/notifications/notifications"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	subscriptioninfrastructure "PINKKER-BACKEND/internal/subscription/subscription-infrastructure"
 
@@ -59,4 +60,8 @@ func (u *SubscriptionService) DeleteRedisUserChatInOneRoom(userToDelete primitiv
 func (u *SubscriptionService) StateTheUserInChat(Donado primitive.ObjectID, Donante primitive.ObjectID) (bool, error) {
 	return u.roomRepository.StateTheUserInChat(Donado, Donante)
 
+}
+func (u *SubscriptionService) SaveNotification(userID primitive.ObjectID, notification notificationsdomain.Notification) error {
+	err := u.roomRepository.SaveNotification(userID, notification)
+	return err
 }

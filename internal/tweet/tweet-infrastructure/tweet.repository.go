@@ -3,6 +3,7 @@ package tweetinfrastructure
 import (
 	communitiesdomain "PINKKER-BACKEND/internal/Comunidades/communities"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
+	notificationsdomain "PINKKER-BACKEND/internal/notifications/notifications"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
@@ -1051,37 +1052,66 @@ func (t *TweetRepository) UpdateTweetbyId(tweet tweetdomain.Post) error {
 }
 
 // Like
-func (t *TweetRepository) LikeTweet(TweetId, idValueToken primitive.ObjectID) error {
+func (t *TweetRepository) LikeTweet(TweetId, idValueToken primitive.ObjectID) (primitive.ObjectID, string, error) {
 	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
-	count, err := GoMongoDBColl.CountDocuments(context.Background(), bson.D{{Key: "_id", Value: TweetId}})
-	if err != nil {
-		return err
+	// Obtener el UserID (propietario del Tweet)
+	var tweet struct {
+		UserID primitive.ObjectID `bson:"UserID"`
 	}
 
-	if count == 0 {
-		return fmt.Errorf("el TweetId no existe")
+	err := GoMongoDBColl.FindOne(context.Background(), bson.D{{Key: "_id", Value: TweetId}}).Decode(&tweet)
+	if err != nil {
+		return primitive.NilObjectID, "", fmt.Errorf("error obteniendo el UserID: %v", err)
 	}
+
+	// Obtener el avatar del usuario que da el "like"
+	userLike, err := t.GetUserByID(idValueToken)
+	if err != nil {
+		return primitive.NilObjectID, "", err
+	}
+
+	// Agregar el idValueToken a los Likes del Tweet
 	filter := bson.D{{Key: "_id", Value: TweetId}}
 	update := bson.D{{Key: "$addToSet", Value: bson.D{{Key: "Likes", Value: idValueToken}}}}
 
 	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		return err
+		return primitive.NilObjectID, "", err
 	}
-	GoMongoDBColl = t.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
+	// Agregar el TweetId a los Likes del usuario
+	GoMongoDBColl = t.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 	filter = bson.D{{Key: "_id", Value: idValueToken}}
 	update = bson.D{{Key: "$addToSet", Value: bson.D{{Key: "Likes", Value: TweetId}}}}
 
 	_, err = GoMongoDBColl.UpdateOne(context.Background(), filter, update)
 	if err != nil {
-		return err
+		return primitive.NilObjectID, "", err
 	}
 
-	return nil
-
+	// Retornar el UserID y los Avatares de ambos usuarios
+	return tweet.UserID, userLike.Avatar, nil
 }
+func (t *TweetRepository) GetUserByID(userID primitive.ObjectID) (struct {
+	UserID primitive.ObjectID `bson:"_id"`
+	Avatar string             `bson:"Avatar"`
+}, error) {
+	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+
+	var user struct {
+		UserID primitive.ObjectID `bson:"_id"`
+		Avatar string             `bson:"Avatar"`
+	}
+
+	err := GoMongoDBColl.FindOne(context.Background(), bson.D{{Key: "_id", Value: userID}}).Decode(&user)
+	if err != nil {
+		return user, fmt.Errorf("error obteniendo el usuario: %v", err)
+	}
+
+	return user, nil
+}
+
 func (t *TweetRepository) TweetDislike(TweetId, idValueToken primitive.ObjectID) error {
 	GoMongoDBColl := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
@@ -2864,3 +2894,35 @@ func (t *TweetRepository) updatePostCommentViews(ctx context.Context, collTweets
 
 	return nil
 }
+
+func (r *TweetRepository) SaveNotification(userID primitive.ObjectID, notification notificationsdomain.Notification) error {
+	// Colección de notificaciones
+	ctx := context.Background()
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+
+	notificationsCollection := db.Collection("Notifications")
+
+	// Asegurar que la notificación tenga una marca de tiempo
+	if notification.Timestamp.IsZero() {
+		notification.Timestamp = time.Now()
+	}
+
+	// Filtro para buscar el documento del usuario
+	filter := bson.M{"userId": userID}
+
+	// Actualización para agregar la notificación y crear el documento si no existe
+	update := bson.M{
+		"$push":        bson.M{"notifications": notification}, // Agrega la notificación al array
+		"$setOnInsert": bson.M{"userId": userID},              // Crea el documento si no existe
+	}
+
+	// Realizar la operación con upsert
+	_, err := notificationsCollection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+	if err != nil {
+		return fmt.Errorf("error al guardar la notificación: %v", err)
+	}
+
+	return nil
+}
+
+// get notificaciones

@@ -108,6 +108,8 @@ func (th *TweetHandler) PostLike(c *fiber.Ctx) error {
 		})
 	}
 	idValue := c.Context().UserValue("_id").(string)
+	nameUser := c.Context().UserValue("nameUser").(string)
+
 	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
 	if errorID != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -115,11 +117,20 @@ func (th *TweetHandler) PostLike(c *fiber.Ctx) error {
 		})
 	}
 
-	errLike := th.TweetServise.LikeTweet(IdTweet, idValueToken)
+	id, avatarToken, errLike := th.TweetServise.LikeTweet(IdTweet, idValueToken)
 	if errLike != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
 			"data":    errLike.Error(),
+		})
+	}
+	Notification := helpers.CreateNotification("LikePost", nameUser, avatarToken, idTweetReq.IDTweet, 0)
+	err = th.TweetServise.SaveNotification(id, Notification)
+	if err != nil {
+		fmt.Println(err)
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "ok",
+			"data":    "SaveNotification error",
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
