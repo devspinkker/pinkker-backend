@@ -140,6 +140,7 @@ func (r *NotificationsRepository) GetOldNotifications(userID primitive.ObjectID,
 
 	// Ejecutar el pipeline de agregación
 	cursor, err := notificationsColl.Aggregate(context.Background(), pipeline)
+
 	if err != nil {
 		return nil, fmt.Errorf("error ejecutando el pipeline: %v", err)
 	}
