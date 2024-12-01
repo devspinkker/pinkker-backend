@@ -425,10 +425,10 @@ func (s *UserRepository) SubscribeToRoom(roomID string) *redis.PubSub {
 func (s *UserRepository) CloseSubscription(sub *redis.PubSub) error {
 	return sub.Close()
 }
-func (u *UserRepository) PanelAdminPinkkerInfoUser(PanelAdminPinkkerInfoUserReq domain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) (*domain.User, streamdomain.Stream, error) {
+func (u *UserRepository) PanelAdminPinkkerInfoUser(PanelAdminPinkkerInfoUserReq domain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) (*userdomain.GetUser, streamdomain.Stream, error) {
 	err := u.AutCode(id, PanelAdminPinkkerInfoUserReq.Code)
 	if err != nil {
-		return &domain.User{}, streamdomain.Stream{}, err
+		return nil, streamdomain.Stream{}, err
 	}
 	db := u.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollStream := db.Collection("Streams")
@@ -442,17 +442,17 @@ func (u *UserRepository) PanelAdminPinkkerInfoUser(PanelAdminPinkkerInfoUserReq 
 		userFilter = bson.D{{Key: "NameUser", Value: PanelAdminPinkkerInfoUserReq.NameUser}}
 
 	} else {
-		return &domain.User{}, streamdomain.Stream{}, errors.New("IdUser and NameUser are empty")
+		return nil, streamdomain.Stream{}, errors.New("IdUser and NameUser are empty")
 	}
-	userResult, err := u.getFullUser(userFilter)
+	userResult, err := u.getUser(userFilter)
 	if err != nil {
-		return &domain.User{}, streamdomain.Stream{}, err
+		return nil, streamdomain.Stream{}, err
 	}
 	streamFilter := bson.M{"StreamerID": userResult.ID}
 	var streamResult streamdomain.Stream
 	err = GoMongoDBCollStream.FindOne(ctx, streamFilter).Decode(&streamResult)
 	if err != nil {
-		return &domain.User{}, streamdomain.Stream{}, err
+		return nil, streamdomain.Stream{}, err
 	}
 
 	return userResult, streamResult, nil

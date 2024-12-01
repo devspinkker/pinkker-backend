@@ -496,7 +496,7 @@ func (r *DonationRepository) updatePinkkerProfitPerMonth(ctx context.Context, Co
 		},
 	}
 
-	// Paso 1: Inserta el documento si no existe con la estructura básica
+	// Paso 1: Inserta el documento si no existe, inicializando valores básicos
 	_, err := GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
 		"$setOnInsert": bson.M{
 			"timestamp":          currentTime,
@@ -507,14 +507,24 @@ func (r *DonationRepository) updatePinkkerProfitPerMonth(ctx context.Context, Co
 		return err
 	}
 
-	// Paso 2: Incrementa los valores en 'days.day_x'
+	// Paso 2: Inicializa 'days.currentDay' si no existe
+	monthlyUpdateEnsureDay := bson.M{
+		"$set": bson.M{
+			"days." + currentDay: PinkkerProfitPerMonthdomain.NewDefaultDay(),
+		},
+	}
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdateEnsureDay)
+	if err != nil {
+		return err
+	}
+
+	// Paso 3: Incrementa los valores en 'days.currentDay'
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
 			"total": CostToCreateCommunity,
 			"days." + currentDay + ".CommissionsDonation": CostToCreateCommunity,
 		},
 	}
-
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
 	if err != nil {
 		return err

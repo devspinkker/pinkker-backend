@@ -91,6 +91,7 @@ func (r *NotificationsRepository) GetRecentNotifications(userID primitive.Object
 
 	return notifications, nil
 }
+
 func (r *NotificationsRepository) GetOldNotifications(userID primitive.ObjectID, page int, limit int) ([]notificationsdomain.Notification, error) {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
 	notificationsColl := db.Collection("Notifications")
@@ -163,3 +164,87 @@ func (r *NotificationsRepository) GetOldNotifications(userID primitive.ObjectID,
 
 	return notifications, nil
 }
+
+// func (r *NotificationsRepository) GetOldNotifications(userID primitive.ObjectID, page, limit int) ([]notificationsdomain.NotificationRes, error) {
+// 	db := r.mongoClient.Database("PINKKER-BACKEND")
+// 	collection := db.Collection("Notifications")
+
+// 	skip := (page - 1) * limit
+
+// 	// Pipeline de agregación
+// 	pipeline := bson.A{
+// 		// 1. Filtrar notificaciones del usuario
+// 		bson.M{"$match": bson.M{"userId": userID}},
+// 		// 2. Lookup para obtener información del usuario (incluyendo Following)
+// 		bson.M{"$lookup": bson.M{
+// 			"from":         "Users",
+// 			"localField":   "userId",
+// 			"foreignField": "_id",
+// 			"as":           "userInfo",
+// 		}},
+// 		// 3. Descomponer el array de userInfo
+// 		bson.M{"$unwind": bson.M{
+// 			"path":                       "$userInfo",
+// 			"preserveNullAndEmptyArrays": false,
+// 		}},
+// 		// 4. Descomponer las notificaciones en documentos individuales
+// 		bson.M{"$unwind": "$notifications"},
+// 		// 5. Filtrar notificaciones con timestamp anterior a LastConnection
+// 		bson.M{"$match": bson.M{
+// 			"$expr": bson.M{"$lt": bson.A{"$notifications.timestamp", "$userInfo.LastConnection"}},
+// 		}},
+// 		// 6. Agregar el campo isFollowed usando $cond
+// 		bson.M{"$addFields": bson.M{
+// 			"notifications.isFollowed": bson.M{
+// 				"$cond": bson.M{
+// 					"if": bson.M{
+// 						"$in": bson.A{
+// 							"$notifications.idUser", // idUser de la notificación
+// 							bson.M{
+// 								"$map": bson.M{
+// 									"input": bson.M{"$objectToArray": "$userInfo.Following"},
+// 									"as":    "item",
+// 									"in":    "$$item.k", // Verifica si el idUser está en los Following
+// 								},
+// 							},
+// 						},
+// 					},
+// 					"then": true,
+// 					"else": false,
+// 				},
+// 			},
+// 		}},
+// 		// 7. Ordenar las notificaciones por fecha (más recientes primero)
+// 		bson.M{"$sort": bson.M{"notifications.timestamp": -1}},
+// 		// 8. Aplicar skip para paginación
+// 		bson.M{"$skip": skip},
+// 		// 9. Limitar el número de resultados
+// 		bson.M{"$limit": limit},
+// 		// 10. Proyectar los datos necesarios
+// 		bson.M{"$project": bson.M{
+// 			"type":       "$notifications.type",
+// 			"nameuser":   "$notifications.nameuser",
+// 			"avatar":     "$notifications.avatar",
+// 			"text":       "$notifications.text",
+// 			"pixeles":    "$notifications.pixeles",
+// 			"timestamp":  "$notifications.timestamp",
+// 			"idUser":     "$notifications.idUser",
+// 			"isFollowed": "$notifications.isFollowed", // Proyectamos el campo isFollowed calculado
+// 		}},
+// 	}
+
+// 	// Ejecutar el pipeline de agregación
+// 	cursor, err := collection.Aggregate(context.Background(), pipeline)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("error al obtener las notificaciones antiguas: %v", err)
+// 	}
+// 	defer cursor.Close(context.Background())
+
+// 	// Decodificar resultados
+// 	var notifications []notificationsdomain.NotificationRes
+// 	if err := cursor.All(context.Background(), &notifications); err != nil {
+// 		return nil, fmt.Errorf("error al decodificar notificaciones antiguas: %v", err)
+// 	}
+
+// 	return notifications, nil
+// }

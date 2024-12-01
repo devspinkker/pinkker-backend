@@ -295,7 +295,7 @@ func (u *UserService) EditSocialNetworks(SocialNetwork userdomain.SocialNetwork,
 	err := u.roomRepository.EditSocialNetworks(SocialNetwork, id)
 	return err
 }
-func (u *UserService) PanelAdminPinkkerInfoUser(dt userdomain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) (*domain.User, streamdomain.Stream, error) {
+func (u *UserService) PanelAdminPinkkerInfoUser(dt userdomain.PanelAdminPinkkerInfoUserReq, id primitive.ObjectID) (*domain.GetUser, streamdomain.Stream, error) {
 	user, stream, err := u.roomRepository.PanelAdminPinkkerInfoUser(dt, id)
 	return user, stream, err
 }
