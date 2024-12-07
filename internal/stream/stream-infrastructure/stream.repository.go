@@ -181,12 +181,17 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 			Available:            true,
 		}
 
-		_, err = GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
-
+		StreamSummaryRes, err := GoMongoDBCollStreamSummary.InsertOne(ctx, summary)
+		StreamSummaryResId := StreamSummaryRes.InsertedID
+		streamSummaryID, ok := StreamSummaryResId.(primitive.ObjectID)
 		cacheKey := "stream:" + userFind.NameUser
 		r.RedisDeleteKey(cacheKey)
+		if !ok {
+			return primitive.NilObjectID, fmt.Errorf("failed to convert InsertedID to ObjectID")
+		}
+
 		if err != nil {
-			return LastStreamSummary, err
+			return streamSummaryID, err
 		}
 	} else {
 
