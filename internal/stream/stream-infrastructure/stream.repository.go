@@ -193,6 +193,7 @@ func (r *StreamRepository) UpdateOnline(Key string, state bool) (primitive.Objec
 		if err != nil {
 			return streamSummaryID, err
 		}
+		LastStreamSummary = streamSummaryID
 	} else {
 
 		err := r.RedisCacheDeleteRoomMessagesAndUserInfo(StreamFind.ID, StreamFind.Streamer)
