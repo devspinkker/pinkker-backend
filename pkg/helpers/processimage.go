@@ -7,7 +7,30 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"strings"
 )
+
+// sanitizeFileName reemplaza espacios y asegura que el nombre del archivo no se repita.
+func sanitizeFileName(basePath, originalName string) string {
+	// Reemplaza espacios por guiones bajos
+	name := strings.ReplaceAll(originalName, " ", "_")
+	
+	// Asegura que no exista un archivo con el mismo nombre
+	finalName := name
+	count := 1
+	for {
+		if _, err := os.Stat(filepath.Join(basePath, finalName)); os.IsNotExist(err) {
+			break
+		}
+		// Agregar un sufijo al nombre del archivo
+		ext := filepath.Ext(name)
+		base := strings.TrimSuffix(name, ext)
+		finalName = fmt.Sprintf("%s_%d%s", base, count, ext)
+		count++
+	}
+
+	return finalName
+}
 
 // ProcessImageEmotes guarda imágenes de emotes en el servidor local
 func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error, nameUser, typeEmote string) {
@@ -32,7 +55,10 @@ func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan s
 			return
 		}
 
-		filePath := filepath.Join(basePath, fileHeader.Filename)
+		// Sanitizar el nombre del archivo
+		fileName := sanitizeFileName(basePath, fileHeader.Filename)
+		filePath := filepath.Join(basePath, fileName)
+
 		out, err := os.Create(filePath)
 		if err != nil {
 			errChanel <- err
@@ -50,14 +76,14 @@ func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan s
 			return
 		}
 
-		PostImageChanel <- fmt.Sprintf("%s/emotes/%s/%s/%s", config.MediaBaseURL(), nameUser, typeEmote, fileHeader.Filename)
+		PostImageChanel <- fmt.Sprintf("%s/emotes/%s/%s/%s", config.MediaBaseURL(), nameUser, typeEmote, fileName)
 	} else {
 		PostImageChanel <- ""
 	}
 }
 
+// ProcessImage guarda imágenes generales en el servidor local
 func ProcessImage(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
-	fmt.Println("Iniciando ProcessImage")
 	if fileHeader != nil {
 		file, err := fileHeader.Open()
 		if err != nil {
@@ -67,44 +93,34 @@ func ProcessImage(fileHeader *multipart.FileHeader, PostImageChanel chan string,
 		defer file.Close()
 
 		// Ruta base de almacenamiento local
-		basePath := fmt.Sprintf("%s/images", config.BasePathUpload())
-		fmt.Println("Base path:", basePath)
-
-		// Crear el directorio si no existe
+		basePath := filepath.Join(config.BasePathUpload(), "images")
 		if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
-			fmt.Printf("Error creando directorio %s: %v\n", basePath, err)
 			errChanel <- err
 			return
 		}
 
-		// Ruta completa del archivo
-		filePath := filepath.Join(basePath, fileHeader.Filename)
-		fmt.Println("File path:", filePath)
+		// Sanitizar el nombre del archivo
+		fileName := sanitizeFileName(basePath, fileHeader.Filename)
+		filePath := filepath.Join(basePath, fileName)
 
-		// Crear archivo
 		out, err := os.Create(filePath)
 		if err != nil {
-			fmt.Printf("Error creando archivo %s: %v\n", filePath, err)
 			errChanel <- err
 			return
 		}
 		defer out.Close()
 
-		// Escribir datos en el archivo
 		if _, err := file.Seek(0, 0); err != nil {
 			errChanel <- err
 			return
 		}
 
-		bytesWritten, err := out.ReadFrom(file)
-		if err != nil {
-			fmt.Printf("Error escribiendo archivo %s: %v\n", filePath, err)
+		if _, err := out.ReadFrom(file); err != nil {
 			errChanel <- err
 			return
 		}
 
-		fmt.Printf("Bytes escritos: %d\n", bytesWritten)
-		PostImageChanel <- fmt.Sprintf("%s/images/%s", config.MediaBaseURL(), fileHeader.Filename)
+		PostImageChanel <- fmt.Sprintf("%s/images/%s", config.MediaBaseURL(), fileName)
 	} else {
 		PostImageChanel <- ""
 	}
@@ -112,11 +128,13 @@ func ProcessImage(fileHeader *multipart.FileHeader, PostImageChanel chan string,
 
 // UpdateClipPreviouImage guarda un archivo existente en una nueva ubicación
 func UpdateClipPreviouImage(filePath string) (string, error) {
-	newPath := filepath.Join(config.BasePathUpload(), "clips", filepath.Base(filePath))
-
-	if err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm); err != nil {
+	basePath := filepath.Join(config.BasePathUpload(), "clips")
+	if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
 		return "", err
 	}
+
+	fileName := sanitizeFileName(basePath, filepath.Base(filePath))
+	newPath := filepath.Join(basePath, fileName)
 
 	input, err := os.Open(filePath)
 	if err != nil {
@@ -138,16 +156,18 @@ func UpdateClipPreviouImage(filePath string) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("%s/clips/%s", config.MediaBaseURL(), filepath.Base(newPath)), nil
+	return fmt.Sprintf("%s/clips/%s", config.MediaBaseURL(), fileName), nil
 }
 
 // UploadVideo guarda videos en el servidor local
 func UploadVideo(filePath string) (string, error) {
-	newPath := filepath.Join(config.BasePathUpload(), "videos", filepath.Base(filePath))
-
-	if err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm); err != nil {
+	basePath := filepath.Join(config.BasePathUpload(), "videos")
+	if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
 		return "", err
 	}
+
+	fileName := sanitizeFileName(basePath, filepath.Base(filePath))
+	newPath := filepath.Join(basePath, fileName)
 
 	input, err := os.Open(filePath)
 	if err != nil {
@@ -169,5 +189,5 @@ func UploadVideo(filePath string) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("%s/videos/%s", config.MediaBaseURL(), filepath.Base(newPath)), nil
+	return fmt.Sprintf("%s/videos/%s", config.MediaBaseURL(), fileName), nil
 }
