@@ -58,7 +58,7 @@ func (th *TweetHandler) CreatePost(c *fiber.Ctx) error {
 		}
 		IsPrivate = Private
 	}
-	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+	go helpers.ProcessImage(fileHeader, PostImageChanel, errChanel)
 
 	for {
 		select {
@@ -559,7 +559,7 @@ func (th *TweetHandler) CommentPost(c *fiber.Ctx) error {
 		}
 		IsPrivate = private
 	}
-	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+	go helpers.ProcessImage(fileHeader, PostImageChanel, errChanel)
 
 	for {
 		select {
@@ -675,7 +675,7 @@ func (th *TweetHandler) CitaPost(c *fiber.Ctx) error {
 	fileHeader, _ := c.FormFile("imgPost")
 	PostImageChanel := make(chan string)
 	errChanel := make(chan error)
-	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+	go helpers.ProcessImage(fileHeader, PostImageChanel, errChanel)
 
 	var req tweetdomain.CitaPostModelValidator
 	if err := c.BodyParser(&req); err != nil {

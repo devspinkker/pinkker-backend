@@ -2,16 +2,14 @@ package helpers
 
 import (
 	"PINKKER-BACKEND/config"
-	"context"
 	"errors"
+	"fmt"
 	"mime/multipart"
 	"os"
-	"strings"
-
-	"github.com/cloudinary/cloudinary-go/v2"
-	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
+	"path/filepath"
 )
 
+// ProcessImageEmotes guarda imágenes de emotes en el servidor local
 func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error, nameUser, typeEmote string) {
 	if fileHeader != nil {
 		file, err := fileHeader.Open()
@@ -21,39 +19,45 @@ func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan s
 		}
 		defer file.Close()
 
-		ctx := context.Background()
-
 		fileSize := fileHeader.Size
 		if fileSize > 1<<20 {
 			errChanel <- errors.New("el tamaño de la imagen excede 1MB")
 			return
 		}
 
-		cldService, err := cloudinary.NewFromURL(config.CLOUDINARY_URL())
-		if err != nil {
+		// Definir la ruta de almacenamiento local
+		basePath := filepath.Join(config.BasePathUpload(), "emotes", nameUser, typeEmote)
+		if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
 			errChanel <- err
 			return
 		}
 
-		params := uploader.UploadParams{
-			Folder: "emotes/" + nameUser + "/" + typeEmote,
-		}
-		resp, err := cldService.Upload.Upload(ctx, file, params)
+		filePath := filepath.Join(basePath, fileHeader.Filename)
+		out, err := os.Create(filePath)
 		if err != nil {
 			errChanel <- err
 			return
 		}
+		defer out.Close()
 
-		if !strings.HasPrefix(resp.SecureURL, "https://") {
-			errChanel <- errors.New("la URL de la imagen no tiene un protocolo seguro")
+		if _, err := file.Seek(0, 0); err != nil {
+			errChanel <- err
 			return
 		}
-		PostImageChanel <- resp.SecureURL
+
+		if _, err := out.ReadFrom(file); err != nil {
+			errChanel <- err
+			return
+		}
+
+		PostImageChanel <- fmt.Sprintf("%s/emotes/%s/%s/%s", config.MediaBaseURL(), nameUser, typeEmote, fileHeader.Filename)
 	} else {
 		PostImageChanel <- ""
 	}
 }
-func Processimage(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
+
+func ProcessImage(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
+	fmt.Println("Iniciando ProcessImage")
 	if fileHeader != nil {
 		file, err := fileHeader.Open()
 		if err != nil {
@@ -62,69 +66,108 @@ func Processimage(fileHeader *multipart.FileHeader, PostImageChanel chan string,
 		}
 		defer file.Close()
 
-		ctx := context.Background()
+		// Ruta base de almacenamiento local
+		basePath := fmt.Sprintf("%s/images", config.BasePathUpload())
+		fmt.Println("Base path:", basePath)
 
-		cldService, errcloudinary := cloudinary.NewFromURL(config.CLOUDINARY_URL())
-		if errcloudinary != nil {
-			errChanel <- errcloudinary
+		// Crear el directorio si no existe
+		if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
+			fmt.Printf("Error creando directorio %s: %v\n", basePath, err)
+			errChanel <- err
+			return
 		}
-		resp, errcldService := cldService.Upload.Upload(ctx, file, uploader.UploadParams{})
 
-		if errcldService != nil || !strings.HasPrefix(resp.SecureURL, "https://") {
-			errChanel <- errcldService
+		// Ruta completa del archivo
+		filePath := filepath.Join(basePath, fileHeader.Filename)
+		fmt.Println("File path:", filePath)
+
+		// Crear archivo
+		out, err := os.Create(filePath)
+		if err != nil {
+			fmt.Printf("Error creando archivo %s: %v\n", filePath, err)
+			errChanel <- err
+			return
 		}
-		PostImageChanel <- resp.SecureURL
+		defer out.Close()
+
+		// Escribir datos en el archivo
+		if _, err := file.Seek(0, 0); err != nil {
+			errChanel <- err
+			return
+		}
+
+		bytesWritten, err := out.ReadFrom(file)
+		if err != nil {
+			fmt.Printf("Error escribiendo archivo %s: %v\n", filePath, err)
+			errChanel <- err
+			return
+		}
+
+		fmt.Printf("Bytes escritos: %d\n", bytesWritten)
+		PostImageChanel <- fmt.Sprintf("%s/images/%s", config.MediaBaseURL(), fileHeader.Filename)
 	} else {
 		PostImageChanel <- ""
 	}
 }
+
+// UpdateClipPreviouImage guarda un archivo existente en una nueva ubicación
 func UpdateClipPreviouImage(filePath string) (string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
+	newPath := filepath.Join(config.BasePathUpload(), "clips", filepath.Base(filePath))
 
-	ctx := context.Background()
-
-	cldService, err := cloudinary.NewFromURL(config.CLOUDINARY_URL())
-	if err != nil {
+	if err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm); err != nil {
 		return "", err
 	}
 
-	resp, err := cldService.Upload.Upload(ctx, file, uploader.UploadParams{})
+	input, err := os.Open(filePath)
 	if err != nil {
 		return "", err
 	}
+	defer input.Close()
 
-	if !strings.HasPrefix(resp.SecureURL, "https://") {
-		return "", errors.New("Invalid secure URL format")
+	output, err := os.Create(newPath)
+	if err != nil {
+		return "", err
+	}
+	defer output.Close()
+
+	if _, err := input.Seek(0, 0); err != nil {
+		return "", err
 	}
 
-	return resp.SecureURL, nil
+	if _, err := output.ReadFrom(input); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s/clips/%s", config.MediaBaseURL(), filepath.Base(newPath)), nil
 }
+
+// UploadVideo guarda videos en el servidor local
 func UploadVideo(filePath string) (string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
+	newPath := filepath.Join(config.BasePathUpload(), "videos", filepath.Base(filePath))
 
-	ctx := context.Background()
-
-	cldService, err := cloudinary.NewFromURL(config.CLOUDINARY_URL())
-	if err != nil {
+	if err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm); err != nil {
 		return "", err
 	}
 
-	resp, err := cldService.Upload.Upload(ctx, file, uploader.UploadParams{})
+	input, err := os.Open(filePath)
 	if err != nil {
 		return "", err
 	}
+	defer input.Close()
 
-	if !strings.HasPrefix(resp.SecureURL, "https://") {
-		return "", errors.New("Invalid secure URL format")
+	output, err := os.Create(newPath)
+	if err != nil {
+		return "", err
+	}
+	defer output.Close()
+
+	if _, err := input.Seek(0, 0); err != nil {
+		return "", err
 	}
 
-	return resp.SecureURL, nil
+	if _, err := output.ReadFrom(input); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s/videos/%s", config.MediaBaseURL(), filepath.Base(newPath)), nil
 }

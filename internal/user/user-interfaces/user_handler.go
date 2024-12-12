@@ -344,7 +344,7 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 	fileHeader, _ := c.FormFile("avatar")
 	PostImageChanel := make(chan string)
 	errChanel := make(chan error)
-	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+	go helpers.ProcessImage(fileHeader, PostImageChanel, errChanel)
 
 	if err := c.BodyParser(&newUser); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -1288,7 +1288,7 @@ func (h *UserHandler) EditAvatar(c *fiber.Ctx) error {
 	PostImageChanel := make(chan string)
 	errChanel := make(chan error)
 
-	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+	go helpers.ProcessImage(fileHeader, PostImageChanel, errChanel)
 
 	IdUserToken := c.Context().UserValue("_id").(string)
 	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
@@ -1324,7 +1324,7 @@ func (h *UserHandler) EditBanner(c *fiber.Ctx) error {
 	PostImageChanel := make(chan string)
 	errChanel := make(chan error)
 
-	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+	go helpers.ProcessImage(fileHeader, PostImageChanel, errChanel)
 
 	IdUserToken := c.Context().UserValue("_id").(string)
 	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)

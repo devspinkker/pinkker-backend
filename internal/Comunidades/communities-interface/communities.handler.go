@@ -25,7 +25,7 @@ func (h *CommunitiesHandler) CreateCommunity(c *fiber.Ctx) error {
 	PostImageChanel := make(chan string)
 	errChanel := make(chan error)
 
-	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+	go helpers.ProcessImage(fileHeader, PostImageChanel, errChanel)
 	Banner := <-PostImageChanel
 	idValue := c.Context().UserValue("_id").(string)
 	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)
@@ -60,7 +60,7 @@ func (h *CommunitiesHandler) EditCommunity(c *fiber.Ctx) error {
 	PostImageChanel := make(chan string)
 	errChanel := make(chan error)
 
-	go helpers.Processimage(fileHeader, PostImageChanel, errChanel)
+	go helpers.ProcessImage(fileHeader, PostImageChanel, errChanel)
 	Banner := <-PostImageChanel
 	idValue := c.Context().UserValue("_id").(string)
 	idValueToken, errorID := primitive.ObjectIDFromHex(idValue)

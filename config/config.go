@@ -161,3 +161,15 @@ func BANNER() string {
 	}
 	return os.Getenv("BANNER")
 }
+func BasePathUpload() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("BasePathUpload")
+}
+func MediaBaseURL() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("MediaBaseURL")
+}
