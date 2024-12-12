@@ -8,13 +8,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // sanitizeFileName reemplaza espacios y asegura que el nombre del archivo no se repita.
 func sanitizeFileName(basePath, originalName string) string {
 	// Reemplaza espacios por guiones bajos
 	name := strings.ReplaceAll(originalName, " ", "_")
-	
+
 	// Asegura que no exista un archivo con el mismo nombre
 	finalName := name
 	count := 1
@@ -161,12 +163,16 @@ func UpdateClipPreviouImage(filePath string) (string, error) {
 
 // UploadVideo guarda videos en el servidor local
 func UploadVideo(filePath string) (string, error) {
+	// Ruta base para almacenar videos
 	basePath := filepath.Join(config.BasePathUpload(), "videos")
 	if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
 		return "", err
 	}
 
-	fileName := sanitizeFileName(basePath, filepath.Base(filePath))
+	uniqueID := uuid.New().String()
+	ext := filepath.Ext(filePath)
+
+	fileName := fmt.Sprintf("%s%s", uniqueID, ext)
 	newPath := filepath.Join(basePath, fileName)
 
 	input, err := os.Open(filePath)
@@ -184,7 +190,6 @@ func UploadVideo(filePath string) (string, error) {
 	if _, err := input.Seek(0, 0); err != nil {
 		return "", err
 	}
-
 	if _, err := output.ReadFrom(input); err != nil {
 		return "", err
 	}

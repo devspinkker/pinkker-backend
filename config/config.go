@@ -145,7 +145,7 @@ func FotoPerfilAleatoria() string {
 	}
 
 	// Lista de IDs de perfiles disponibles
-	ids := []string{"3", "4", "5", "6", "7", "8"}
+	ids := []string{"1", "2", "3", "4", "5"}
 
 	// Semilla para generar un número aleatorio
 	rand.Seed(time.Now().UnixNano())
