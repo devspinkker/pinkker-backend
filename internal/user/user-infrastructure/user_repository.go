@@ -1612,8 +1612,8 @@ func (u *UserRepository) IsFollowing(IdUserTokenP, followedUserID primitive.Obje
 
 	// Consulta MongoDB para verificar si el usuario sigue a followedUserID
 	filter := bson.M{
-		"_id":                               IdUserTokenP,
-		"Following." + followedUserID.Hex(): bson.M{"$exists": true},
+		"_id":                             followedUserID,
+		"Following." + IdUserTokenP.Hex(): bson.M{"$exists": true},
 	}
 
 	count, err := GoMongoDBCollUsers.CountDocuments(context.Background(), filter)
