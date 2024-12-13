@@ -173,3 +173,9 @@ func MediaBaseURL() string {
 	}
 	return os.Getenv("MediaBaseURL")
 }
+func KeyEmotes() string {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("godotenv.Load error")
+	}
+	return os.Getenv("KeyEmotes")
+}

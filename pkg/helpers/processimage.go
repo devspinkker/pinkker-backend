@@ -51,7 +51,7 @@ func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan s
 		}
 
 		// Definir la ruta de almacenamiento local
-		basePath := filepath.Join(config.BasePathUpload(), "emotes", nameUser, typeEmote)
+		basePath := filepath.Join(config.BasePathUpload(), config.KeyEmotes(), "emotes", nameUser, typeEmote)
 		if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
 			errChanel <- err
 			return
