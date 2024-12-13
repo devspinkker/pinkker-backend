@@ -17,9 +17,9 @@ func NewNotificationsService(repo *Notificationstinfrastructure.NotificationsRep
 	}
 }
 
-func (s *NotificationsService) GetRecentNotifications(userID primitive.ObjectID, page int) ([]notificationsdomain.Notification, error) {
+func (s *NotificationsService) GetRecentNotifications(userID primitive.ObjectID, page int) ([]notificationsdomain.NotificationRes, error) {
 	return s.NotificationsRepository.GetRecentNotifications(userID, page, 10)
 }
-func (s *NotificationsService) GetOldNotifications(userID primitive.ObjectID, page int) ([]notificationsdomain.Notification, error) {
+func (s *NotificationsService) GetOldNotifications(userID primitive.ObjectID, page int) ([]notificationsdomain.NotificationRes, error) {
 	return s.NotificationsRepository.GetOldNotifications(userID, page, 10)
 }
