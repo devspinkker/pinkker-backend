@@ -241,6 +241,12 @@ func (u *UserService) Unfollow(IdUserTokenP primitive.ObjectID, IdUser primitive
 	}
 	return err
 }
+
+func (u *UserService) IsFollowing(IdUserTokenP primitive.ObjectID, IdUser primitive.ObjectID) (bool, error) {
+	return u.roomRepository.IsFollowing(IdUserTokenP, IdUser)
+
+}
+
 func (u *UserService) DeleteRedisUserChatInOneRoom(userToDelete primitive.ObjectID, IdRoom primitive.ObjectID) error {
 	err := u.roomRepository.DeleteRedisUserChatInOneRoom(userToDelete, IdRoom)
 

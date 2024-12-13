@@ -1606,6 +1606,25 @@ func (u *UserRepository) UnfollowUser(userID, unfollowedUserID primitive.ObjectI
 
 	return nil
 }
+func (u *UserRepository) IsFollowing(IdUserTokenP, followedUserID primitive.ObjectID) (bool, error) {
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := db.Collection("Users")
+
+	// Consulta MongoDB para verificar si el usuario sigue a followedUserID
+	filter := bson.M{
+		"_id":                               IdUserTokenP,
+		"Following." + followedUserID.Hex(): bson.M{"$exists": true},
+	}
+
+	count, err := GoMongoDBCollUsers.CountDocuments(context.Background(), filter)
+	if err != nil {
+		return false, err
+	}
+
+	// Si se encontró al menos un documento, significa que lo sigue
+	return count > 0, nil
+}
+
 func (u *UserRepository) DeleteRedisUserChatInOneRoom(userToDelete, IdRoom primitive.ObjectID) error {
 	GoMongoDBColl := u.mongoClient.Database("PINKKER-BACKEND")
 	GoMongoDBCollStreams := GoMongoDBColl.Collection("Streams")
