@@ -79,7 +79,7 @@ func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan s
 			return
 		}
 
-		PostImageChanel <- fmt.Sprintf("%s/emotes/%s/%s/%s", config.MediaBaseURL(), nameUser, typeEmote, fileName)
+		PostImageChanel <- fmt.Sprintf("%s/emotes/%s/%s", config.MediaBaseURL(), typeEmote, fileName)
 	} else {
 		PostImageChanel <- ""
 	}
