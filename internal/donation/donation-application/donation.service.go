@@ -78,3 +78,6 @@ func (D *DonationService) SaveNotification(userID primitive.ObjectID, notificati
 	err := D.DonationRepository.SaveNotification(userID, notification)
 	return err
 }
+func (D *DonationService) IsFollowing(idUserTokenP primitive.ObjectID, followedUserID primitive.ObjectID) (bool, error) {
+	return D.DonationRepository.IsFollowing(idUserTokenP, followedUserID)
+}

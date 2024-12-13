@@ -79,7 +79,8 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 			"message": "error update summary",
 		})
 	}
-	d.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", nameUser, avatar, idReq.Pixeles, idReq.Text, FromUser)
+	IsFollowing, _ := d.VodServise.IsFollowing(FromUser, idReq.ToUser)
+	d.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", nameUser, avatar, idReq.Pixeles, idReq.Text, FromUser, IsFollowing)
 	d.NotifyActivityToChat(idReq.ToUser, nameUser, idReq.Pixeles, idReq.Text)
 
 	Notification := helpers.CreateNotification("DonatePixels", nameUser, avatar, idReq.Text, idReq.Pixeles, FromUser)
@@ -96,19 +97,20 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 	})
 }
 
-func (d *DonationHandler) NotifyActivityFeed(room, user, Avatar string, Pixeles float64, text string, id primitive.ObjectID) error {
+func (d *DonationHandler) NotifyActivityFeed(room, user, Avatar string, Pixeles float64, text string, id primitive.ObjectID, IsFollowing bool) error {
 	clients, err := d.VodServise.GetWebSocketActivityFeed(room)
 	if err != nil {
 		return err
 	}
 
 	notification := map[string]interface{}{
-		"Type":     "DonatePixels",
-		"Nameuser": user,
-		"Text":     text,
-		"Avatar":   Avatar,
-		"Pixeles":  Pixeles,
-		"IdUser":   id,
+		"Type":        "DonatePixels",
+		"Nameuser":    user,
+		"Text":        text,
+		"Avatar":      Avatar,
+		"Pixeles":     Pixeles,
+		"IdUser":      id,
+		"IsFollowing": IsFollowing,
 	}
 
 	for _, client := range clients {

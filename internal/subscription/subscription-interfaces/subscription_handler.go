@@ -76,7 +76,8 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 			"message": errupdataSubsChat,
 		})
 	}
-	h.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", user, avatar, idReq.Text)
+	IsFollowing, _ := h.subscriptionService.IsFollowing(FromUser, idReq.ToUser)
+	h.NotifyActivityFeed(idReq.ToUser.Hex()+"ActivityFeed", user, avatar, idReq.Text, IsFollowing)
 	h.NotifyActivityToChat(idReq.ToUser, user, idReq.Text, FromUser)
 	Notification := helpers.CreateNotification("Suscribirse", user, avatar, idReq.Text, 0, FromUser)
 	err = h.subscriptionService.SaveNotification(idReq.ToUser, Notification)
@@ -91,7 +92,7 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 		"message": "ok",
 	})
 }
-func (h *SubscriptionHandler) NotifyActivityFeed(room, user, Avatar, text string) error {
+func (h *SubscriptionHandler) NotifyActivityFeed(room, user, Avatar, text string, IsFollowing bool) error {
 	clients, err := h.subscriptionService.GetWebSocketActivityFeed(room)
 	if err != nil {
 		return err
@@ -99,10 +100,11 @@ func (h *SubscriptionHandler) NotifyActivityFeed(room, user, Avatar, text string
 	}
 
 	notification := map[string]interface{}{
-		"Type":     "Suscribirse",
-		"Nameuser": user,
-		"Text":     text,
-		"Avatar":   Avatar,
+		"Type":        "Suscribirse",
+		"Nameuser":    user,
+		"Text":        text,
+		"Avatar":      Avatar,
+		"IsFollowing": IsFollowing,
 	}
 
 	for _, client := range clients {

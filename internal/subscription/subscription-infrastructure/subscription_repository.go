@@ -677,3 +677,22 @@ func (r *SubscriptionRepository) SaveNotification(userID primitive.ObjectID, not
 
 	return nil
 }
+
+func (u *SubscriptionRepository) IsFollowing(IdUserTokenP, followedUserID primitive.ObjectID) (bool, error) {
+	db := u.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollUsers := db.Collection("Users")
+
+	// Consulta MongoDB para verificar si el usuario sigue a followedUserID
+	filter := bson.M{
+		"_id":                             followedUserID,
+		"Following." + IdUserTokenP.Hex(): bson.M{"$exists": true},
+	}
+
+	count, err := GoMongoDBCollUsers.CountDocuments(context.Background(), filter)
+	if err != nil {
+		return false, err
+	}
+
+	// Si se encontró al menos un documento, significa que lo sigue
+	return count > 0, nil
+}

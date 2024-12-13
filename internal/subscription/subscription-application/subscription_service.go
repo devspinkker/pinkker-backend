@@ -65,3 +65,6 @@ func (u *SubscriptionService) SaveNotification(userID primitive.ObjectID, notifi
 	err := u.roomRepository.SaveNotification(userID, notification)
 	return err
 }
+func (D *SubscriptionService) IsFollowing(idUserTokenP primitive.ObjectID, followedUserID primitive.ObjectID) (bool, error) {
+	return D.roomRepository.IsFollowing(idUserTokenP, followedUserID)
+}
