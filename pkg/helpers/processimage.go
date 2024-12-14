@@ -165,7 +165,7 @@ func ProcessImageThumbnail(fileHeader *multipart.FileHeader, PostImageChanel cha
 			return
 		}
 
-		PostImageChanel <- fmt.Sprintf("%s/images/%s", config.MediaBaseURL(), fileName)
+		PostImageChanel <- fmt.Sprintf("%s/images/Thumbnail/%s", config.MediaBaseURL(), fileName)
 	} else {
 		PostImageChanel <- ""
 	}
