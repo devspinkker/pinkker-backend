@@ -976,7 +976,7 @@ func (r *StreamRepository) Update_thumbnail(cmt, image string) error {
 	GoMongoDBCollUser := GoMongoDB.Collection("Users")
 	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
 
-	var userCmt *userdomain.User
+	var userCmt *userdomain.GetUser
 	filterUser := bson.D{
 		{Key: "Cmt", Value: cmt},
 	}
@@ -986,6 +986,7 @@ func (r *StreamRepository) Update_thumbnail(cmt, image string) error {
 	}
 	filter := bson.D{
 		{Key: "StreamerID", Value: userCmt.ID},
+		{Key: "StreamThumbnailPermanent", Value: false},
 	}
 
 	update := bson.D{
@@ -995,7 +996,6 @@ func (r *StreamRepository) Update_thumbnail(cmt, image string) error {
 	}
 
 	_, err = GoMongoDBCollStreams.UpdateOne(context.Background(), filter, update)
-
 	return err
 }
 
@@ -1018,19 +1018,20 @@ func (r *StreamRepository) Update_start_date(req streamdomain.Update_start_date)
 }
 func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStreamInfo, id primitive.ObjectID) error {
 	userFilter := bson.M{"_id": id}
-	var user userdomain.User
-	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users").FindOne(context.Background(), userFilter).Decode(&user); err != nil {
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+	var user userdomain.GetUser
+	if err := db.Collection("Users").FindOne(context.Background(), userFilter).Decode(&user); err != nil {
 		return err
 	}
 	streamerName := user.NameUser
 
 	var previousStream streamdomain.Stream
-	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").FindOne(context.Background(), bson.M{"Streamer": streamerName}).Decode(&previousStream); err != nil {
+	if err := db.Collection("Streams").FindOne(context.Background(), bson.M{"Streamer": streamerName}).Decode(&previousStream); err != nil {
 		return err
 	}
 	categoriaImgUpdateFilter := bson.M{"Name": updateInfo.Category}
 	var categoriaImgUpdate streamdomain.Categoria
-	dbColeccionCategorias := r.mongoClient.Database("PINKKER-BACKEND").Collection("Categorias")
+	dbColeccionCategorias := db.Collection("Categorias")
 	err := dbColeccionCategorias.FindOne(context.Background(), categoriaImgUpdateFilter).Decode(&categoriaImgUpdate)
 	if err != nil {
 		return err
@@ -1038,14 +1039,18 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 	streamFilter := bson.M{"Streamer": streamerName}
 	update := bson.M{
 		"$set": bson.M{
-			"StreamTitle":        updateInfo.Title,
-			"StreamNotification": updateInfo.Notification,
-			"StreamCategory":     updateInfo.Category,
-			"StreamTag":          updateInfo.Tag,
-			"StreamIdiom":        updateInfo.Idiom,
-			"StartDate":          updateInfo.Date,
-			"ImageCategorie":     categoriaImgUpdate.Img,
+			"StreamTitle":              updateInfo.Title,
+			"StreamNotification":       updateInfo.Notification,
+			"StreamCategory":           updateInfo.Category,
+			"StreamTag":                updateInfo.Tag,
+			"StreamIdiom":              updateInfo.Idiom,
+			"StartDate":                updateInfo.Date,
+			"ImageCategorie":           categoriaImgUpdate.Img,
+			"StreamThumbnailPermanent": updateInfo.StreamThumbnailPermanent,
 		},
+	}
+	if updateInfo.StreamThumbnailPermanent {
+		update["$set"].(bson.M)["StreamThumbnail"] = updateInfo.ThumbnailURL
 	}
 	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").UpdateOne(context.Background(), streamFilter, update); err != nil {
 		return err
@@ -1076,7 +1081,7 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 }
 func (r *StreamRepository) UpdateModChat(updateInfo streamdomain.UpdateModChat, id primitive.ObjectID) error {
 	userFilter := bson.M{"_id": id}
-	var user userdomain.User
+	var user userdomain.GetUser
 	if err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Users").FindOne(context.Background(), userFilter).Decode(&user); err != nil {
 		return err
 	}

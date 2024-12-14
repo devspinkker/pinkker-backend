@@ -8,38 +8,40 @@ import (
 )
 
 type Stream struct {
-	ID                 primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	StreamerID         primitive.ObjectID `json:"streamerId" bson:"StreamerID"`
-	Streamer           string             `json:"streamer" bson:"Streamer"`
-	StreamerAvatar     string             `json:"streamer_avatar" bson:"StreamerAvatar,omitempty"`
-	ViewerCount        int                `json:"ViewerCount"  bson:"ViewerCount,default:0"`
-	Online             bool               `json:"online" bson:"Online,default:false"`
-	StreamTitle        string             `json:"stream_title" bson:"StreamTitle"`
-	StreamCategory     string             `json:"stream_category" bson:"StreamCategory"`
-	ImageCategorie     string             `json:"ImageCategorie" bson:"ImageCategorie"`
-	StreamNotification string             `json:"stream_notification" bson:"StreamNotification"`
-	StreamTag          []string           `json:"stream_tag"  bson:"StreamTag,default:['Español']"`
-	StreamLikes        []string           `json:"stream_likes" bson:"StreamLikes"`
-	StreamIdiom        string             `json:"stream_idiom" default:"Español" bson:"StreamIdiom,default:'Español'"`
-	StreamThumbnail    string             `json:"stream_thumbnail" bson:"StreamThumbnail"`
-	StartDate          time.Time          `json:"start_date" bson:"StartDate"`
-	Timestamp          time.Time          `json:"Timestamp" bson:"Timestamp"`
-	EmotesChat         map[string]string  `json:"EmotesChat" bson:"EmotesChat"`
-	ModChat            string             `json:"ModChat" bson:"ModChat"`
-	ModSlowMode        int                `json:"ModSlowMode" bson:"ModSlowMode"`
-	Banned             bool               `json:"Banned" bson:"Banned"`
-	TotalTimeOnline    float64            `json:"TotalTimeOnline" bson:"TotalTimeOnline"`
-
-	RecommendationScore float64 `json:"RecommendationScore" bson:"RecommendationScore"`
+	ID                       primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	StreamerID               primitive.ObjectID `json:"streamerId" bson:"StreamerID"`
+	Streamer                 string             `json:"streamer" bson:"Streamer"`
+	StreamerAvatar           string             `json:"streamer_avatar" bson:"StreamerAvatar,omitempty"`
+	ViewerCount              int                `json:"ViewerCount"  bson:"ViewerCount,default:0"`
+	Online                   bool               `json:"online" bson:"Online,default:false"`
+	StreamTitle              string             `json:"stream_title" bson:"StreamTitle"`
+	StreamCategory           string             `json:"stream_category" bson:"StreamCategory"`
+	ImageCategorie           string             `json:"ImageCategorie" bson:"ImageCategorie"`
+	StreamNotification       string             `json:"stream_notification" bson:"StreamNotification"`
+	StreamTag                []string           `json:"stream_tag"  bson:"StreamTag,default:['Español']"`
+	StreamLikes              []string           `json:"stream_likes" bson:"StreamLikes"`
+	StreamIdiom              string             `json:"stream_idiom" default:"Español" bson:"StreamIdiom,default:'Español'"`
+	StreamThumbnail          string             `json:"stream_thumbnail" bson:"StreamThumbnail"`
+	StreamThumbnailPermanent bool               `json:"StreamThumbnailPermanent" bson:"StreamThumbnailPermanent"`
+	StartDate                time.Time          `json:"start_date" bson:"StartDate"`
+	Timestamp                time.Time          `json:"Timestamp" bson:"Timestamp"`
+	EmotesChat               map[string]string  `json:"EmotesChat" bson:"EmotesChat"`
+	ModChat                  string             `json:"ModChat" bson:"ModChat"`
+	ModSlowMode              int                `json:"ModSlowMode" bson:"ModSlowMode"`
+	Banned                   bool               `json:"Banned" bson:"Banned"`
+	TotalTimeOnline          float64            `json:"TotalTimeOnline" bson:"TotalTimeOnline"`
+	RecommendationScore      float64            `json:"RecommendationScore" bson:"RecommendationScore"`
 }
 
 type UpdateStreamInfo struct {
-	Date         int64    `json:"date"`
-	Title        string   `json:"title" validate:"min=5,max=70"`
-	Notification string   `json:"notification" validate:"min=5,max=30"`
-	Category     string   `json:"category" validate:"min=3"`
-	Tag          []string `json:"tag" `
-	Idiom        string   `json:"idiom"`
+	Date                     int64    `json:"date"`
+	Title                    string   `json:"title" validate:"min=5,max=70"`
+	Notification             string   `json:"notification" validate:"min=5,max=30"`
+	Category                 string   `json:"category" validate:"min=3"`
+	Tag                      []string `json:"tag" `
+	Idiom                    string   `json:"idiom"`
+	ThumbnailURL             string   `json:"ThumbnailURL"`
+	StreamThumbnailPermanent bool     `json:"StreamThumbnailPermanent"`
 }
 
 func (u *UpdateStreamInfo) Validate() error {

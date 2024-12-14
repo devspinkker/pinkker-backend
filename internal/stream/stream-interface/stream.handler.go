@@ -463,6 +463,8 @@ func (s *StreamHandler) UpdateStreamInfo(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
+
+	// Parse request body
 	var requestBody streamdomain.UpdateStreamInfo
 	if err := c.BodyParser(&requestBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -470,12 +472,33 @@ func (s *StreamHandler) UpdateStreamInfo(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
+
 	if err := requestBody.Validate(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": err.Error(),
 		})
 	}
 
+	// Procesar imagen si existe
+	fileHeader, _ := c.FormFile("ThumbnailImage")
+	imageURL := ""
+	if fileHeader != nil {
+		imageChan := make(chan string)
+		errorChan := make(chan error)
+		go helpers.ProcessImageThumbnail(fileHeader, imageChan, errorChan)
+
+		select {
+		case imageURL = <-imageChan:
+		case err := <-errorChan:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Error uploading image",
+				"data":    err.Error(),
+			})
+		}
+	}
+
+	// Pass imageURL and useThumbnail to the service layer
+	requestBody.ThumbnailURL = imageURL
 	if err := s.StreamServise.UpdateStreamInfo(requestBody, IdUserTokenP); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -486,6 +509,7 @@ func (s *StreamHandler) UpdateStreamInfo(c *fiber.Ctx) error {
 		"message": "ok",
 	})
 }
+
 func (s *StreamHandler) UpdateModChat(c *fiber.Ctx) error {
 	IdUserToken := c.Context().UserValue("_id").(string)
 	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)

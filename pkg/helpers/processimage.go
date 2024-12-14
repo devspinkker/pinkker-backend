@@ -128,6 +128,48 @@ func ProcessImage(fileHeader *multipart.FileHeader, PostImageChanel chan string,
 		PostImageChanel <- ""
 	}
 }
+func ProcessImageThumbnail(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
+	if fileHeader != nil {
+		file, err := fileHeader.Open()
+		if err != nil {
+			errChanel <- err
+			return
+		}
+		defer file.Close()
+
+		// Ruta base de almacenamiento local
+		basePath := filepath.Join(config.BasePathUpload(), "images", "Thumbnail")
+		if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
+			errChanel <- err
+			return
+		}
+
+		// Sanitizar el nombre del archivo
+		fileName := sanitizeFileName(basePath, fileHeader.Filename)
+		filePath := filepath.Join(basePath, fileName)
+
+		out, err := os.Create(filePath)
+		if err != nil {
+			errChanel <- err
+			return
+		}
+		defer out.Close()
+
+		if _, err := file.Seek(0, 0); err != nil {
+			errChanel <- err
+			return
+		}
+
+		if _, err := out.ReadFrom(file); err != nil {
+			errChanel <- err
+			return
+		}
+
+		PostImageChanel <- fmt.Sprintf("%s/images/%s", config.MediaBaseURL(), fileName)
+	} else {
+		PostImageChanel <- ""
+	}
+}
 
 // UpdateClipPreviouImage guarda un archivo existente en una nueva ubicación
 func UpdateClipPreviouImage(filePath string) (string, error) {
