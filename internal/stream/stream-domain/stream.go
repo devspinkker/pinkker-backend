@@ -31,22 +31,66 @@ type Stream struct {
 	Banned                   bool               `json:"Banned" bson:"Banned"`
 	TotalTimeOnline          float64            `json:"TotalTimeOnline" bson:"TotalTimeOnline"`
 	RecommendationScore      float64            `json:"RecommendationScore" bson:"RecommendationScore"`
+	AuthorizationToView      map[string]bool    `json:"AuthorizationToView" bson:"AuthorizationToView" ` // pinkker_prime, subscription | ambos o uno o ninguno
 }
 
 type UpdateStreamInfo struct {
-	Date                     int64    `json:"date"`
-	Title                    string   `json:"title" validate:"min=5,max=70"`
-	Notification             string   `json:"notification" validate:"min=5,max=30"`
-	Category                 string   `json:"category" validate:"min=3"`
-	Tag                      []string `json:"tag" `
-	Idiom                    string   `json:"idiom"`
-	ThumbnailURL             string   `json:"ThumbnailURL"`
-	StreamThumbnailPermanent bool     `json:"StreamThumbnailPermanent"`
+	Date                     int64           `json:"date"`
+	Title                    string          `json:"title" validate:"min=5,max=70"`
+	Notification             string          `json:"notification" validate:"min=5,max=30"`
+	Category                 string          `json:"category" validate:"min=3"`
+	Tag                      []string        `json:"tag" `
+	Idiom                    string          `json:"idiom"`
+	ThumbnailURL             string          `json:"ThumbnailURL"`
+	StreamThumbnailPermanent bool            `json:"StreamThumbnailPermanent"`
+	AuthorizationToView      map[string]bool `json:"AuthorizationToView" bson:"AuthorizationToView" validate:"authMap"`
 }
 
 func (u *UpdateStreamInfo) Validate() error {
 	validate := validator.New()
-	return validate.Struct(u)
+
+	// Registrar la validación personalizada para AuthorizationToView
+	validate.RegisterValidation("authMap", validateAuthToView)
+
+	// Si AuthorizationToView está vacío, inicializarlo con valores predeterminados
+	if len(u.AuthorizationToView) == 0 {
+		u.AuthorizationToView = map[string]bool{
+			"pinkker_prime": false,
+			"subscription":  false,
+		}
+	}
+
+	// Validar el struct
+	if err := validate.Struct(u); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Validación personalizada para AuthorizationToView
+func validateAuthToView(fl validator.FieldLevel) bool {
+	// Obtener el valor del campo AuthorizationToView como mapa
+	authValues, ok := fl.Field().Interface().(map[string]bool)
+	if !ok {
+		return false // No es un mapa, falla la validación
+	}
+
+	// Valores permitidos
+	allowedKeys := map[string]bool{
+		"pinkker_prime": true,
+		"subscription":  true,
+	}
+
+	// Validar las claves del mapa
+	for key := range authValues {
+		if !allowedKeys[key] {
+			return false // Clave no permitida
+		}
+	}
+
+	// Si pasa todas las validaciones
+	return true
 }
 
 type UpdateModChat struct {

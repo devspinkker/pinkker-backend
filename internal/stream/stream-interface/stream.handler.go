@@ -639,3 +639,29 @@ func (s *StreamHandler) GetCategoria(c *fiber.Ctx) error {
 		"data":    Categorias,
 	})
 }
+
+func (s *StreamHandler) ValidateStreamAccess(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	idUser, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+
+	type idStreamer struct {
+		IdStreamer primitive.ObjectID `json:"idStreamer" query:"idStreamer"`
+	}
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var StreamerReq idStreamer
+	if err := c.QueryParser(&StreamerReq); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	// Actualizar la categoría
+	s.StreamServise.ValidateStreamAccess(idUser, StreamerReq.IdStreamer)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}

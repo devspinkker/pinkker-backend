@@ -2859,5 +2859,3 @@ func (r *UserRepository) SaveNotification(userID primitive.ObjectID, notificatio
 
 	return nil
 }
-
-// get notificaciones

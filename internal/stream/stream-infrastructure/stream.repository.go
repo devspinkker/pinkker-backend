@@ -5,6 +5,7 @@ import (
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
+	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"context"
 	"encoding/json"
@@ -1047,6 +1048,7 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 			"StartDate":                updateInfo.Date,
 			"ImageCategorie":           categoriaImgUpdate.Img,
 			"StreamThumbnailPermanent": updateInfo.StreamThumbnailPermanent,
+			"AuthorizationToView":      updateInfo.AuthorizationToView,
 		},
 	}
 	if updateInfo.StreamThumbnailPermanent {
@@ -1079,6 +1081,7 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 	r.PublishAction(previousStream.ID.Hex()+"action", notification)
 	return nil
 }
+
 func (r *StreamRepository) UpdateModChat(updateInfo streamdomain.UpdateModChat, id primitive.ObjectID) error {
 	userFilter := bson.M{"_id": id}
 	var user userdomain.GetUser
@@ -1198,4 +1201,67 @@ func (r *StreamRepository) GetCategia(cate string) (streamdomain.Categoria, erro
 	var FindStreamsById streamdomain.Categoria
 	errCollStreams := GoMongoDBCollCategorias.FindOne(context.Background(), Find).Decode(&FindStreamsById)
 	return FindStreamsById, errCollStreams
+}
+
+func (r *StreamRepository) ValidateStreamAccess(idUser, idStreamer primitive.ObjectID) (bool, error) {
+	// Obtener la información del streamer
+	filterUser := bson.D{
+		{Key: "_id", Value: idUser},
+	}
+
+	stream, err := r.GetStreamById(idStreamer)
+	if err != nil {
+		return false, fmt.Errorf("error al obtener el stream del streamer: %v", err)
+	}
+
+	// Validar si el stream requiere autorización
+	authToView := stream.AuthorizationToView
+	if !authToView["pinkker_prime"] && !authToView["subscription"] {
+		// Si no requiere autorización, permitir acceso
+		return true, nil
+	}
+
+	// Obtener al usuario que intenta acceder
+	user, err := r.getUser(filterUser)
+	if err != nil {
+		return false, fmt.Errorf("error al obtener al usuario: %v", err)
+	}
+
+	// Validar acceso según las reglas de autorización
+	// 1. Validar si el usuario tiene Pinkker Prime activo
+	if authToView["pinkker_prime"] {
+		if time.Now().After(user.PinkkerPrime.SubscriptionEnd) {
+			return false, fmt.Errorf("el usuario no tiene Pinkker Prime activo")
+		}
+	}
+
+	// 2. Validar si el usuario tiene una suscripción válida
+	if authToView["subscription"] {
+		subscription, err := r.getSubscriptionByUserIDs(idUser, idStreamer)
+		if err != nil {
+			return false, fmt.Errorf("error al obtener la suscripción: %v", err)
+		}
+		if time.Now().After(subscription.SubscriptionEnd) {
+			return false, fmt.Errorf("la suscripción del usuario ha expirado")
+		}
+	}
+
+	// Si cumple con todas las condiciones
+	return true, nil
+}
+func (r *StreamRepository) getSubscriptionByUserIDs(sourceUserID, destUserID primitive.ObjectID) (subscriptiondomain.Subscription, error) {
+	collection := r.mongoClient.Database("PINKKER-BACKEND").Collection("Subscriptions")
+
+	var subscription subscriptiondomain.Subscription
+	filter := bson.M{
+		"sourceUserID":      sourceUserID,
+		"destinationUserID": destUserID,
+	}
+
+	err := collection.FindOne(context.Background(), filter).Decode(&subscription)
+	if err != nil {
+		return subscription, err
+	}
+
+	return subscription, nil
 }
