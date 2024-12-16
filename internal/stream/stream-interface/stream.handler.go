@@ -5,6 +5,7 @@ import (
 	streamapplication "PINKKER-BACKEND/internal/stream/stream-application"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	"PINKKER-BACKEND/pkg/helpers"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -472,7 +473,15 @@ func (s *StreamHandler) UpdateStreamInfo(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
-
+	AuthorizationToView := c.FormValue("AuthorizationToView")
+	var authToView map[string]bool
+	if err := json.Unmarshal([]byte(AuthorizationToView), &authToView); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Error deserializando AuthorizationToView",
+			"error":   err.Error(),
+		})
+	}
+	requestBody.AuthorizationToView = authToView
 	if err := requestBody.Validate(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": err.Error(),
