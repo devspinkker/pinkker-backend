@@ -1052,8 +1052,13 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 		},
 	}
 	if updateInfo.StreamThumbnailPermanent {
-		update["$set"].(bson.M)["StreamThumbnail"] = updateInfo.ThumbnailURL
+		if updateInfo.ThumbnailURL != "" {
+			update["$set"].(bson.M)["StreamThumbnail"] = updateInfo.ThumbnailURL
+		} else {
+			update["$set"].(bson.M)["StreamThumbnailPermanent"] = false
+		}
 	}
+
 	if _, err := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams").UpdateOne(context.Background(), streamFilter, update); err != nil {
 		return err
 	}
