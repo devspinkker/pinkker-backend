@@ -667,10 +667,19 @@ func (s *StreamHandler) ValidateStreamAccess(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
-	// Actualizar la categoría
-	s.StreamServise.ValidateStreamAccess(idUser, StreamerReq.IdStreamer)
+	validation, err := s.StreamServise.ValidateStreamAccess(idUser, StreamerReq.IdStreamer)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	if validation {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "valid",
+		})
+	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "ok",
+		"message": "invalid",
 	})
 }
