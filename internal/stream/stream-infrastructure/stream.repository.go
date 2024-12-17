@@ -1032,6 +1032,7 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 	}
 	categoriaImgUpdateFilter := bson.M{"Name": updateInfo.Category}
 	var categoriaImgUpdate streamdomain.Categoria
+
 	dbColeccionCategorias := db.Collection("Categorias")
 	err := dbColeccionCategorias.FindOne(context.Background(), categoriaImgUpdateFilter).Decode(&categoriaImgUpdate)
 	if err != nil {
