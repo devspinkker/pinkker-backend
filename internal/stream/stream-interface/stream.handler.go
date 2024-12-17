@@ -667,6 +667,11 @@ func (s *StreamHandler) ValidateStreamAccess(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
+	if idUser == StreamerReq.IdStreamer {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "valid",
+		})
+	}
 	validation, err := s.StreamServise.ValidateStreamAccess(idUser, StreamerReq.IdStreamer)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
