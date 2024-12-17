@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -947,11 +948,12 @@ func (h *UserHandler) NotifyActivityFeed(room, user, Avatar string, id primitive
 	}
 
 	notification := map[string]interface{}{
-		"Type":        "follow",
-		"Nameuser":    user,
-		"Avatar":      Avatar,
-		"IdUser":      id,
-		"IsFollowing": IsFollowing,
+		"type":       "follow",
+		"nameuser":   user,
+		"avatar":     Avatar,
+		"idUser":     id,
+		"isFollowed": IsFollowing,
+		"timestamp":  time.Now(),
 	}
 
 	for _, client := range clients {

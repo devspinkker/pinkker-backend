@@ -5,6 +5,7 @@ import (
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	"PINKKER-BACKEND/pkg/helpers"
 	"fmt"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -100,11 +101,12 @@ func (h *SubscriptionHandler) NotifyActivityFeed(room, user, Avatar, text string
 	}
 
 	notification := map[string]interface{}{
-		"Type":        "Suscribirse",
-		"Nameuser":    user,
+		"type":        "Suscribirse",
+		"nameuser":    user,
 		"Text":        text,
-		"Avatar":      Avatar,
-		"IsFollowing": IsFollowing,
+		"avatar":      Avatar,
+		"isFollowing": IsFollowing,
+		"timestamp":   time.Now(),
 	}
 
 	for _, client := range clients {

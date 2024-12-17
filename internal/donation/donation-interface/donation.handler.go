@@ -6,6 +6,7 @@ import (
 	"PINKKER-BACKEND/pkg/helpers"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -104,13 +105,14 @@ func (d *DonationHandler) NotifyActivityFeed(room, user, Avatar string, Pixeles 
 	}
 
 	notification := map[string]interface{}{
-		"Type":        "DonatePixels",
-		"Nameuser":    user,
-		"Text":        text,
-		"Avatar":      Avatar,
-		"Pixeles":     Pixeles,
-		"IdUser":      id,
-		"IsFollowing": IsFollowing,
+		"type":       "DonatePixels",
+		"nameuser":   user,
+		"Text":       text,
+		"avatar":     Avatar,
+		"Pixeles":    Pixeles,
+		"idUser":     id,
+		"isFollowed": IsFollowing,
+		"timestamp":  time.Now(),
 	}
 
 	for _, client := range clients {

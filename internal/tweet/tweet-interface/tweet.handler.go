@@ -6,6 +6,7 @@ import (
 	"PINKKER-BACKEND/pkg/helpers"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -145,10 +146,11 @@ func (th *TweetHandler) NotifyActivityFeed(room, user, Avatar string, id primiti
 	}
 
 	notification := map[string]interface{}{
-		"Type":     "LikePost",
-		"Nameuser": user,
-		"Avatar":   Avatar,
-		"IdUser":   id,
+		"type":      "LikePost",
+		"nameuser":  user,
+		"avatar":    Avatar,
+		"idUser":    id,
+		"timestamp": time.Now(),
 	}
 
 	for _, client := range clients {

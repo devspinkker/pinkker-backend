@@ -106,9 +106,9 @@ func (r *NotificationsRepository) GetRecentNotifications(userID primitive.Object
 	notificationsColl := db.Collection("Notifications")
 	usersColl := db.Collection("Users")
 
-	// Obtener la lista de usuarios seguidos
 	var user struct {
-		Following map[string]interface{} `bson:"Following"`
+		Following      map[string]interface{} `bson:"Following"`
+		LastConnection primitive.DateTime     `bson:"LastConnection"`
 	}
 	err := usersColl.FindOne(context.Background(), bson.M{"_id": userID}).Decode(&user)
 	if err != nil {
@@ -131,13 +131,14 @@ func (r *NotificationsRepository) GetRecentNotifications(userID primitive.Object
 
 	skip := (page - 1) * limit
 
+	lastConnection := user.LastConnection
 	// Pipeline de agregación
 	pipeline := bson.A{
 		bson.M{"$match": bson.M{"userId": userID}},
 		bson.M{"$unwind": "$notifications"},
 		bson.M{"$match": bson.M{
 			"$expr": bson.M{
-				"$gt": bson.A{"$notifications.timestamp", "$userInfo.LastConnection"},
+				"$gt": bson.A{"$notifications.timestamp", lastConnection}, // Usar el valor obtenido
 			},
 		}},
 		bson.M{"$sort": bson.M{"notifications.timestamp": -1}},
