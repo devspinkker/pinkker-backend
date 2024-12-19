@@ -987,12 +987,16 @@ func (r *StreamRepository) Update_thumbnail(cmt, image string) error {
 	}
 	filter := bson.D{
 		{Key: "StreamerID", Value: userCmt.ID},
-		{Key: "StreamThumbnailPermanent", Value: false},
+		{Key: "$or", Value: bson.A{
+			bson.D{{Key: "StreamThumbnailPermanent", Value: false}},                                  // Existe y es false
+			bson.D{{Key: "StreamThumbnailPermanent", Value: bson.D{{Key: "$exists", Value: false}}}}, // No existe
+		}},
 	}
 
 	update := bson.D{
 		{Key: "$set", Value: bson.D{
 			{Key: "StreamThumbnail", Value: image},
+			{Key: "StreamThumbnailPermanent", Value: false}, // Agregar si no existe
 		}},
 	}
 

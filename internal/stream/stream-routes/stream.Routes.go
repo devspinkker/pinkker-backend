@@ -6,6 +6,7 @@ import (
 	streaminterfaces "PINKKER-BACKEND/internal/stream/stream-interface"
 	"PINKKER-BACKEND/pkg/middleware"
 	"PINKKER-BACKEND/pkg/utils"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -58,6 +59,7 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 		defer func() {
 			chatService.RemoveClientFromRoom(roomID, client)
 			if err := c.Close(); err != nil {
+				fmt.Printf("Error closing websocket: %v\n", err)
 			}
 		}()
 
@@ -68,9 +70,13 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 					break
 				}
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseProtocolError) {
+					fmt.Printf("Unexpected websocket close: %v\n", err)
+				}
 				break
 			}
 		}
+
 	}))
 
 	// esto se tiene que mover a una carpeta especifica
