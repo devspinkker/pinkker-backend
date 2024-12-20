@@ -488,9 +488,6 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 			{Key: "as", Value: "UserInfo"},
 		}}},
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
-		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
-		}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
 			{Key: "Title", Value: 1},
@@ -504,10 +501,11 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
 			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
 		}}},
-		bson.D{{Key: "$limit", Value: 10}},
 		bson.D{{Key: "$sort", Value: bson.D{
-			{Key: "MaxViewers", Value: -1},
+			{Key: "StartOfStream", Value: -1}, // Más reciente primero
+			{Key: "MaxViewers", Value: -1},    // Más vistas primero si el tiempo es igual
 		}}},
+		bson.D{{Key: "$limit", Value: 10}},
 	}
 
 	opts := options.Aggregate()
