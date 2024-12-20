@@ -103,6 +103,12 @@ func (u *ClipService) GetClipsMostViewed(page int) ([]clipdomain.Clip, error) {
 	Clips, err := u.ClipRepository.GetClipsMostViewed(page)
 	return Clips, err
 }
+func (u *ClipService) GetClipsWeightedByDate(page int) ([]clipdomain.Clip, error) {
+
+	Clips, err := u.ClipRepository.GetClipsWeightedByDate(page)
+	return Clips, err
+}
+
 func (u *ClipService) GetClipsMostViewedLast48Hours(page int) ([]clipdomain.Clip, error) {
 
 	Clips, err := u.ClipRepository.GetClipsMostViewedLast48Hours(page)

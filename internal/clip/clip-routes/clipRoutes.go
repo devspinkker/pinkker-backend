@@ -23,7 +23,8 @@ func ClipRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Get("/clips/GetClipsByTitle", clipHandler.GetClipsByTitle)
 	App.Get("/clips/GetClipsNameUser", clipHandler.GetClipsNameUser)
 	App.Get("/clips/GetClipsCategory", clipHandler.GetClipsCategory)
-	App.Get("/clips/GetClipsMostViewed", clipHandler.GetClipsMostViewed)
+	App.Get("/clips/GetClipsWeightedByDate", clipHandler.GetClipsWeightedByDate)
+
 	App.Get("/clips/GetClipsByNameUserIDOrdenacion", clipHandler.GetClipsByNameUserIDOrdenación)
 
 	App.Get("/clips/GetClipsMostViewedLast48Hours", clipHandler.GetClipsMostViewedLast48Hours)

@@ -896,6 +896,68 @@ func (c *ClipRepository) GetClipsMostViewed(page int) ([]clipdomain.Clip, error)
 
 	return clips, nil
 }
+func (c *ClipRepository) GetClipsWeightedByDate(page int) ([]clipdomain.Clip, error) {
+	ctx := context.Background()
+	cacheKey := fmt.Sprintf("clips:weighted_by_date:page:%d", page)
+
+	// Intentar obtener el resultado de la caché de Redis
+	cachedClips, err := c.redisClient.Get(ctx, cacheKey).Result()
+	if err == nil {
+		// Si los clips están en la caché, los deserializamos y los devolvemos
+		var clips []clipdomain.Clip
+		if err := json.Unmarshal([]byte(cachedClips), &clips); err == nil {
+			return clips, nil
+		}
+	}
+
+	// Si no están en la caché o hay un error, consultamos en MongoDB
+	GoMongoDBColl := c.mongoClient.Database("PINKKER-BACKEND").Collection("Clips")
+
+	// Pipeline de agregación para calcular el peso
+	pipeline := mongo.Pipeline{
+		{{Key: "$addFields", Value: bson.M{
+			"weight": bson.M{
+				"$add": bson.A{
+					// Calcula el tiempo transcurrido en segundos
+					bson.M{"$subtract": bson.A{
+						time.Now().Unix(),
+						bson.M{"$divide": bson.A{bson.M{"$toLong": "$timestamps.createdAt"}, 1000}},
+					}},
+					// Ajusta el peso basado en vistas
+					bson.M{"$multiply": bson.A{"$Views", -1}},
+				},
+			},
+		}}},
+		{{Key: "$match", Value: bson.M{
+			"Type": bson.M{"$ne": "Ad"},
+		}}},
+		{{Key: "$sort", Value: bson.D{
+			{Key: "weight", Value: 1},
+		}}},
+		{{Key: "$skip", Value: int64((page - 1) * 10)}},
+		{{Key: "$limit", Value: 10}},
+	}
+
+	cursor, err := GoMongoDBColl.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var clips []clipdomain.Clip
+	if err := cursor.All(ctx, &clips); err != nil {
+		return nil, err
+	}
+
+	// Almacenar los resultados en Redis para futuras consultas
+	clipsData, err := json.Marshal(clips)
+	if err == nil {
+		// Cachear por 5 minutos
+		_ = c.redisClient.Set(ctx, cacheKey, clipsData, 5*time.Minute).Err()
+	}
+
+	return clips, nil
+}
 
 func (c *ClipRepository) GetClipsMostViewedLast48Hours(page int) ([]clipdomain.Clip, error) {
 	twoDaysAgo := time.Now().Add(-48 * time.Hour)
