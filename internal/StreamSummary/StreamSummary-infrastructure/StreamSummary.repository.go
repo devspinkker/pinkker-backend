@@ -489,7 +489,16 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 		}}},
 		bson.D{{Key: "$unwind", Value: "$UserInfo"}},
 		bson.D{{Key: "$addFields", Value: bson.D{
-			{Key: "UserInfo.Avatar", Value: "$UserInfo.Avatar"},
+			// Calcula el tiempo transcurrido en segundos desde el inicio del stream
+			{Key: "ElapsedSeconds", Value: bson.D{
+				{Key: "$subtract", Value: bson.A{time.Now().Unix(), "$StartOfStream"}},
+			}},
+			{Key: "Weight", Value: bson.D{
+				{Key: "$add", Value: bson.A{
+					bson.D{{Key: "$multiply", Value: bson.A{"$MaxViewers", 0.7}}},     // 70% peso a MaxViewers
+					bson.D{{Key: "$multiply", Value: bson.A{"$ElapsedSeconds", 0.3}}}, // 30% peso al tiempo
+				}},
+			}},
 		}}},
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
@@ -504,10 +513,10 @@ func (r *StreamSummaryRepository) GetTopVodsLast48Hours() ([]StreamSummarydomain
 			{Key: "UserInfo.FullName", Value: "$UserInfo.FullName"},
 			{Key: "UserInfo.NameUser", Value: "$UserInfo.NameUser"},
 		}}},
-		bson.D{{Key: "$limit", Value: 10}},
 		bson.D{{Key: "$sort", Value: bson.D{
-			{Key: "MaxViewers", Value: -1},
+			{Key: "Weight", Value: -1}, // Ordenar por peso (descendente)
 		}}},
+		bson.D{{Key: "$limit", Value: 10}},
 	}
 
 	opts := options.Aggregate()
