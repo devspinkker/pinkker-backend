@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -42,15 +41,15 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 		Pixeles      float64                  `bson:"Pixeles"`
 	}
 
-	CostToCreateCommunityStr := config.CostToCreateCommunity()
-	CostToCreateCommunity, err := strconv.ParseFloat(CostToCreateCommunityStr, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error converting PinkkerPrime cost to integer: %v", err)
-	}
+	// CostToCreateCommunityStr := config.CostToCreateCommunity()
+	// CostToCreateCommunity, err := strconv.ParseFloat(CostToCreateCommunityStr, 64)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("error converting PinkkerPrime cost to integer: %v", err)
+	// }
 
 	usersCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
 
-	err = usersCollection.FindOne(ctx, primitive.M{"_id": creatorID}).Decode(&user)
+	err := usersCollection.FindOne(ctx, primitive.M{"_id": creatorID}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}
@@ -61,9 +60,9 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 	}
 
 	// Verificar si el usuario tiene al menos 5000 pixeles
-	if user.Pixeles < CostToCreateCommunity {
-		return nil, fiber.NewError(fiber.StatusForbidden, "El usuario no tiene suficientes pixeles")
-	}
+	// if user.Pixeles < CostToCreateCommunity {
+	// 	return nil, fiber.NewError(fiber.StatusForbidden, "El usuario no tiene suficientes pixeles")
+	// }
 
 	// Verificar si ya existe una comunidad con el mismo nombre
 	communitiesCollection := repo.mongoClient.Database("PINKKER-BACKEND").Collection("communities")
@@ -113,14 +112,14 @@ func (repo *CommunitiesRepository) CreateCommunity(ctx context.Context, req comm
 		ctx,
 		primitive.M{"_id": creatorID},
 		primitive.M{
-			"$inc": primitive.M{"Pixeles": -CostToCreateCommunity},
+			// "$inc": primitive.M{"Pixeles": -CostToCreateCommunity},
 			"$addToSet": primitive.M{
 				"InCommunities":    communityID,
 				"OwnerCommunities": communityID,
 			},
 		},
 	)
-	repo.updatePinkkerProfitPerMonth(ctx, CostToCreateCommunity)
+	// repo.updatePinkkerProfitPerMonth(ctx, CostToCreateCommunity)
 	if err != nil {
 		return nil, err
 	}
