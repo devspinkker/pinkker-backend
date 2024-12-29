@@ -2,10 +2,14 @@ package helpers
 
 import (
 	"PINKKER-BACKEND/config"
+	"bytes"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"mime/multipart"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -85,7 +89,6 @@ func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan s
 	}
 }
 
-// ProcessImage guarda imágenes generales en el servidor local
 func ProcessImage(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
 	if fileHeader != nil {
 		file, err := fileHeader.Open()
@@ -238,4 +241,61 @@ func UploadVideo(filePath string) (string, error) {
 	}
 
 	return fmt.Sprintf("%s/videos/%s", config.MediaBaseURL(), fileName), nil
+}
+
+func ProcessImageCategorias(fileHeader *multipart.FileHeader, postImageChannel chan string, errChannel chan error) {
+	if fileHeader != nil {
+		file, err := fileHeader.Open()
+		if err != nil {
+			errChannel <- err
+			return
+		}
+		defer file.Close()
+
+		// Decodificar la imagen para validación y conversión a bytes
+		img, _, err := image.Decode(file)
+		if err != nil {
+			errChannel <- fmt.Errorf("error decoding image: %v", err)
+			return
+		}
+
+		// Convertir la imagen a un buffer JPEG temporal para que `cwebp` pueda procesarla
+		var buf bytes.Buffer
+		if err := jpeg.Encode(&buf, img, nil); err != nil {
+			errChannel <- fmt.Errorf("error encoding image to JPEG: %v", err)
+			return
+		}
+
+		// Ruta base de almacenamiento local
+		basePath := filepath.Join(config.BasePathUpload(), "images", "categories")
+		if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
+			errChannel <- fmt.Errorf("error creating directories: %v", err)
+			return
+		}
+
+		// Generar nombre de archivo con extensión .webp
+		fileName := sanitizeFileName(basePath, fileHeader.Filename)
+		outputFileName := strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".webp"
+		outputPath := filepath.Join(basePath, outputFileName)
+
+		// Crear archivo temporal para que `cwebp` lo procese
+		tempInputPath := filepath.Join(basePath, "temp_input.jpg")
+		if err := os.WriteFile(tempInputPath, buf.Bytes(), 0644); err != nil {
+			errChannel <- fmt.Errorf("error creating temporary input file: %v", err)
+			return
+		}
+		defer os.Remove(tempInputPath) // Eliminar archivo temporal después de usarlo
+
+		// Ejecutar `cwebp` para convertir el archivo a WebP
+		cmd := exec.Command("cwebp", tempInputPath, "-o", outputPath, "-q", "80") // -q: calidad (0-100)
+		if err := cmd.Run(); err != nil {
+			errChannel <- fmt.Errorf("error converting image to WebP: %v", err)
+			return
+		}
+
+		// Enviar la ruta generada al canal
+		postImageChannel <- fmt.Sprintf("%s/images/categories/%s", config.MediaBaseURL(), outputFileName)
+	} else {
+		postImageChannel <- ""
+	}
 }

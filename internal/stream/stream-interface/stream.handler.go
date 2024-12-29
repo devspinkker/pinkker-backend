@@ -75,7 +75,6 @@ func (s *StreamHandler) CategoriesUpdate(c *fiber.Ctx) error {
 			"message": "StatusBadRequest",
 		})
 	}
-	fmt.Println(requestBody)
 	fileHeader, err := c.FormFile("avatar")
 	if err == nil {
 		PostImageChanel := make(chan string)
