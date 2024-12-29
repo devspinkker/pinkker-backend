@@ -79,7 +79,7 @@ func (s *StreamHandler) CategoriesUpdate(c *fiber.Ctx) error {
 	if err == nil {
 		PostImageChanel := make(chan string)
 		errChanel := make(chan error)
-		go helpers.ProcessImage(fileHeader, PostImageChanel, errChanel)
+		go helpers.ProcessImageCategorias(fileHeader, PostImageChanel, errChanel)
 
 		select {
 		case avatarUrl := <-PostImageChanel:
