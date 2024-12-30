@@ -2,16 +2,22 @@ package helpers
 
 import (
 	"PINKKER-BACKEND/config"
+	"bytes"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"io/ioutil"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/discord/lilliput"
+	"github.com/chai2010/webp"
 	"github.com/google/uuid"
+	"github.com/nfnt/resize"
 )
 
 // sanitizeFileName reemplaza espacios y asegura que el nombre del archivo no se repita.
@@ -240,6 +246,7 @@ func UploadVideo(filePath string) (string, error) {
 
 	return fmt.Sprintf("%s/videos/%s", config.MediaBaseURL(), fileName), nil
 }
+
 func ProcessImageCategorias(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
 	if fileHeader == nil {
 		PostImageChanel <- ""
@@ -261,20 +268,37 @@ func ProcessImageCategorias(fileHeader *multipart.FileHeader, PostImageChanel ch
 		return
 	}
 
-	// Crear un decodificador con lilliput
-	decoder, err := lilliput.NewDecoder(inputBuf)
-	if err != nil {
-		errChanel <- fmt.Errorf("error decoding image: %v", err)
+	// Detectar el tipo de contenido para seleccionar el decodificador correcto
+	contentType := http.DetectContentType(inputBuf)
+
+	// Decodificar la imagen según el tipo detectado
+	var img image.Image
+	switch contentType {
+	case "image/jpeg":
+		img, err = jpeg.Decode(bytes.NewReader(inputBuf))
+		if err != nil {
+			errChanel <- fmt.Errorf("error decoding JPEG image: %v", err)
+			return
+		}
+	case "image/png":
+		img, err = png.Decode(bytes.NewReader(inputBuf))
+		if err != nil {
+			errChanel <- fmt.Errorf("error decoding PNG image: %v", err)
+			return
+		}
+	case "image/webp":
+		img, err = webp.Decode(bytes.NewReader(inputBuf))
+		if err != nil {
+			errChanel <- fmt.Errorf("error decoding WebP image: %v", err)
+			return
+		}
+	default:
+		errChanel <- fmt.Errorf("unsupported image format: %s", contentType)
 		return
 	}
-	defer decoder.Close()
 
-	// Crear operaciones de imagen con un buffer máximo de 8192x8192
-	ops := lilliput.NewImageOps(8192)
-	defer ops.Close()
-
-	// Crear un buffer para almacenar la imagen procesada
-	outputImg := make([]byte, 10*1024*1024) // 10MB
+	// Redimensionar la imagen a 172x216
+	img = resize.Resize(172, 216, img, resize.Lanczos3)
 
 	// Ruta base de almacenamiento local
 	basePath := filepath.Join(config.BasePathUpload(), "images", "categories")
@@ -288,23 +312,27 @@ func ProcessImageCategorias(fileHeader *multipart.FileHeader, PostImageChanel ch
 	outputFileName := strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".webp"
 	outputPath := filepath.Join(basePath, outputFileName)
 
-	// Opciones de transformación
-	opts := &lilliput.ImageOptions{
-		FileType:             ".webp",
-		Width:                0,                         // Mantener ancho original
-		Height:               0,                         // Mantener altura original
-		ResizeMethod:         lilliput.ImageOpsNoResize, // No redimensionar
-		NormalizeOrientation: true,
+	// Comprimir y ajustar la calidad para alcanzar el tamaño objetivo (~120 KB)
+	var quality int = 75
+	var outputImg []byte
+	for {
+		buffer := new(bytes.Buffer)
+		if err := webp.Encode(buffer, img, &webp.Options{Quality: float32(quality)}); err != nil {
+			errChanel <- fmt.Errorf("error encoding image to WebP: %v", err)
+			return
+		}
+		outputImg = buffer.Bytes()
+
+		// Si el tamaño es menor o igual a 120 KB o la calidad ya es mínima, termina
+		if len(outputImg) <= 120*1024 || quality <= 10 {
+			break
+		}
+
+		// Reducir la calidad en 5 puntos e intentar nuevamente
+		quality -= 5
 	}
 
-	// Transformar y codificar la imagen
-	outputImg, err = ops.Transform(decoder, opts, outputImg)
-	if err != nil {
-		errChanel <- fmt.Errorf("error transforming image: %v", err)
-		return
-	}
-
-	// Escribir el archivo procesado al disco
+	// Guardar la imagen WebP en el disco
 	if err := ioutil.WriteFile(outputPath, outputImg, 0644); err != nil {
 		errChanel <- fmt.Errorf("error writing file: %v", err)
 		return
