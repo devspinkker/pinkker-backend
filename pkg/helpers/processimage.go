@@ -2,17 +2,15 @@ package helpers
 
 import (
 	"PINKKER-BACKEND/config"
-	"bytes"
 	"errors"
 	"fmt"
-	"image"
-	"image/jpeg"
+	"io/ioutil"
 	"mime/multipart"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/discord/lilliput"
 	"github.com/google/uuid"
 )
 
@@ -141,7 +139,7 @@ func ProcessImageThumbnail(fileHeader *multipart.FileHeader, PostImageChanel cha
 		defer file.Close()
 
 		// Ruta base de almacenamiento local
-		basePath := filepath.Join(config.BasePathUpload(), "images", "Thumbnail")
+		basePath := filepath.Join(config.BasePathUpload(), "images", "categories")
 		if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
 			errChanel <- err
 			return
@@ -242,60 +240,76 @@ func UploadVideo(filePath string) (string, error) {
 
 	return fmt.Sprintf("%s/videos/%s", config.MediaBaseURL(), fileName), nil
 }
-
-func ProcessImageCategorias(fileHeader *multipart.FileHeader, postImageChannel chan string, errChannel chan error) {
-	if fileHeader != nil {
-		file, err := fileHeader.Open()
-		if err != nil {
-			errChannel <- err
-			return
-		}
-		defer file.Close()
-
-		// Decodificar la imagen para validación y conversión a bytes
-		img, _, err := image.Decode(file)
-		if err != nil {
-			errChannel <- fmt.Errorf("error decoding image: %v", err)
-			return
-		}
-
-		// Convertir la imagen a un buffer JPEG temporal para que `cwebp` pueda procesarla
-		var buf bytes.Buffer
-		if err := jpeg.Encode(&buf, img, nil); err != nil {
-			errChannel <- fmt.Errorf("error encoding image to JPEG: %v", err)
-			return
-		}
-
-		// Ruta base de almacenamiento local
-		basePath := filepath.Join(config.BasePathUpload(), "images", "categories")
-		if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
-			errChannel <- fmt.Errorf("error creating directories: %v", err)
-			return
-		}
-
-		// Generar nombre de archivo con extensión .webp
-		fileName := sanitizeFileName(basePath, fileHeader.Filename)
-		outputFileName := strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".webp"
-		outputPath := filepath.Join(basePath, outputFileName)
-
-		// Crear archivo temporal para que `cwebp` lo procese
-		tempInputPath := filepath.Join(basePath, "temp_input.jpg")
-		if err := os.WriteFile(tempInputPath, buf.Bytes(), 0644); err != nil {
-			errChannel <- fmt.Errorf("error creating temporary input file: %v", err)
-			return
-		}
-		defer os.Remove(tempInputPath) // Eliminar archivo temporal después de usarlo
-
-		// Ejecutar `cwebp` para convertir el archivo a WebP
-		cmd := exec.Command("cwebp", tempInputPath, "-o", outputPath, "-q", "80") // -q: calidad (0-100)
-		if err := cmd.Run(); err != nil {
-			errChannel <- fmt.Errorf("error converting image to WebP: %v", err)
-			return
-		}
-
-		// Enviar la ruta generada al canal
-		postImageChannel <- fmt.Sprintf("%s/images/categories/%s", config.MediaBaseURL(), outputFileName)
-	} else {
-		postImageChannel <- ""
+func ProcessImageCategorias(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
+	if fileHeader == nil {
+		PostImageChanel <- ""
+		return
 	}
+
+	// Abrir el archivo cargado
+	file, err := fileHeader.Open()
+	if err != nil {
+		errChanel <- fmt.Errorf("error opening file: %v", err)
+		return
+	}
+	defer file.Close()
+
+	// Leer los datos del archivo en memoria
+	inputBuf, err := ioutil.ReadAll(file)
+	if err != nil {
+		errChanel <- fmt.Errorf("error reading file: %v", err)
+		return
+	}
+
+	// Crear un decodificador con lilliput
+	decoder, err := lilliput.NewDecoder(inputBuf)
+	if err != nil {
+		errChanel <- fmt.Errorf("error decoding image: %v", err)
+		return
+	}
+	defer decoder.Close()
+
+	// Crear operaciones de imagen con un buffer máximo de 8192x8192
+	ops := lilliput.NewImageOps(8192)
+	defer ops.Close()
+
+	// Crear un buffer para almacenar la imagen procesada
+	outputImg := make([]byte, 10*1024*1024) // 10MB
+
+	// Ruta base de almacenamiento local
+	basePath := filepath.Join(config.BasePathUpload(), "images", "categories")
+	if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
+		errChanel <- fmt.Errorf("error creating directories: %v", err)
+		return
+	}
+
+	// Generar el nombre del archivo con extensión .webp
+	fileName := sanitizeFileName(basePath, fileHeader.Filename)
+	outputFileName := strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".webp"
+	outputPath := filepath.Join(basePath, outputFileName)
+
+	// Opciones de transformación
+	opts := &lilliput.ImageOptions{
+		FileType:             ".webp",
+		Width:                0,                         // Mantener ancho original
+		Height:               0,                         // Mantener altura original
+		ResizeMethod:         lilliput.ImageOpsNoResize, // No redimensionar
+		NormalizeOrientation: true,
+	}
+
+	// Transformar y codificar la imagen
+	outputImg, err = ops.Transform(decoder, opts, outputImg)
+	if err != nil {
+		errChanel <- fmt.Errorf("error transforming image: %v", err)
+		return
+	}
+
+	// Escribir el archivo procesado al disco
+	if err := ioutil.WriteFile(outputPath, outputImg, 0644); err != nil {
+		errChanel <- fmt.Errorf("error writing file: %v", err)
+		return
+	}
+
+	// Enviar la URL generada al canal
+	PostImageChanel <- fmt.Sprintf("%s/images/categories/%s", config.MediaBaseURL(), outputFileName)
 }

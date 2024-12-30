@@ -84,7 +84,8 @@ func (s *StreamHandler) CategoriesUpdate(c *fiber.Ctx) error {
 		select {
 		case avatarUrl := <-PostImageChanel:
 			requestBody.Img = avatarUrl
-		case <-errChanel:
+		case errrver := <-errChanel:
+			fmt.Println(errrver)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": "Error processing image",
 			})
