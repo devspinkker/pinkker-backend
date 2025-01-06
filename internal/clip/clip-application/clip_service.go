@@ -3,6 +3,8 @@ package clipapplication
 import (
 	clipdomain "PINKKER-BACKEND/internal/clip/clip-domain"
 	clipinfrastructure "PINKKER-BACKEND/internal/clip/clip-infrastructure"
+	"PINKKER-BACKEND/pkg/helpers"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -50,6 +52,13 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
+	imagePrevClip, err := helpers.CopyImageFromURL(CategorieStream.StreamThumbnail)
+	if err != nil {
+		fmt.Println(err)
+		imagePrevClip = CategorieStream.StreamThumbnail
+	}
+	fmt.Println(imagePrevClip)
+
 	clip := &clipdomain.Clip{
 
 		NameUserCreator:       nameUser,
@@ -60,7 +69,7 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		ClipTitle:             ClipTitle,
 		URL:                   outputFilePath,
 		Likes:                 []primitive.ObjectID{},
-		StreamThumbnail:       CategorieStream.StreamThumbnail,
+		StreamThumbnail:       imagePrevClip,
 		Category:              CategorieStream.StreamCategory,
 		Duration:              10,
 		Views:                 0,

@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
+	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -340,4 +341,47 @@ func ProcessImageCategorias(fileHeader *multipart.FileHeader, PostImageChanel ch
 
 	// Enviar la URL generada al canal
 	PostImageChanel <- fmt.Sprintf("%s/images/categories/%s", config.MediaBaseURL(), outputFileName)
+}
+func CopyImageFromURL(imageURL string) (string, error) {
+	// Descargar la imagen desde la URL
+	resp, err := http.Get(imageURL)
+	if err != nil {
+		return "", fmt.Errorf("error al descargar la imagen: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Verificar que el estado HTTP sea 200 OK
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("error: estado HTTP %d", resp.StatusCode)
+	}
+
+	// Crear la ruta de destino
+	basePath := filepath.Join(config.BasePathUpload(), "imagesClips")
+	if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
+		return "", fmt.Errorf("error al crear el directorio de destino: %v", err)
+	}
+
+	// Generar un nombre único para la imagen usando UUID
+	uniqueID := uuid.New().String()
+	ext := filepath.Ext(imageURL) // Obtener la extensión del archivo original
+	if ext == "" {
+		ext = ".jpg" // Si no tiene extensión, asignar ".jpg" por defecto
+	}
+	fileName := fmt.Sprintf("%s%s", uniqueID, ext)
+
+	// Crear el archivo en la ruta de destino
+	filePath := filepath.Join(basePath, fileName)
+	out, err := os.Create(filePath)
+	if err != nil {
+		return "", fmt.Errorf("error al crear el archivo: %v", err)
+	}
+	defer out.Close()
+
+	// Copiar el contenido de la imagen al archivo
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		return "", fmt.Errorf("error al guardar la imagen: %v", err)
+	}
+
+	// Devolver la URL local de la imagen
+	return fmt.Sprintf("%s/imagesClips/%s", config.MediaBaseURL(), fileName), nil
 }

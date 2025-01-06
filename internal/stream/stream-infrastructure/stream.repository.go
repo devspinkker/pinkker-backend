@@ -526,7 +526,6 @@ func (r *StreamRepository) CommercialInStreamSelectAdvertisements(StreamCategory
 
 func (r *StreamRepository) CategoriesUpdate(req streamdomain.CategoriesUpdate, idUser primitive.ObjectID) error {
 	db := r.mongoClient.Database("PINKKER-BACKEND")
-	fmt.Println(req.Name) // Imprimir el nombre para verificación
 	collection := db.Collection("Categorias")
 	collectionUsers := db.Collection("Users")
 	var User userdomain.User

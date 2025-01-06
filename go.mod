@@ -5,6 +5,7 @@ replace PINKKER-BACKEND => ./
 go 1.20
 
 require (
+	github.com/chai2010/webp v1.1.1
 	github.com/discord/lilliput v1.3.1
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/gofiber/fiber/v2 v2.48.0
@@ -13,6 +14,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mdp/qrterminal/v3 v3.2.0
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/pquerna/otp v1.4.0
 	github.com/redis/go-redis/v9 v9.0.5
 	github.com/resend/resend-go/v2 v2.5.0
