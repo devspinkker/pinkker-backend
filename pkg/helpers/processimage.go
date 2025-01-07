@@ -3,6 +3,7 @@ package helpers
 import (
 	"PINKKER-BACKEND/config"
 	"bytes"
+	"errors"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -42,202 +43,202 @@ func sanitizeFileName(basePath, originalName string) string {
 	return finalName
 }
 
-// func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error, nameUser, typeEmote string) {
-// 	if fileHeader == nil {
-// 		PostImageChanel <- ""
-// 		return
-// 	}
+func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error, nameUser, typeEmote string) {
+	if fileHeader == nil {
+		PostImageChanel <- ""
+		return
+	}
 
-// 	// Abrir el archivo cargado
-// 	file, err := fileHeader.Open()
-// 	if err != nil {
-// 		errChanel <- fmt.Errorf("error opening file: %v", err)
-// 		return
-// 	}
-// 	defer file.Close()
+	// Abrir el archivo cargado
+	file, err := fileHeader.Open()
+	if err != nil {
+		errChanel <- fmt.Errorf("error opening file: %v", err)
+		return
+	}
+	defer file.Close()
 
-// 	// Leer los datos del archivo en memoria
-// 	inputBuf, err := ioutil.ReadAll(file)
-// 	if err != nil {
-// 		errChanel <- fmt.Errorf("error reading file: %v", err)
-// 		return
-// 	}
+	// Leer los datos del archivo en memoria
+	inputBuf, err := ioutil.ReadAll(file)
+	if err != nil {
+		errChanel <- fmt.Errorf("error reading file: %v", err)
+		return
+	}
 
-// 	// Verificar el tamaño del archivo
-// 	fileSize := fileHeader.Size
-// 	if fileSize > 1<<20 { // 1 MB
-// 		errChanel <- errors.New("el tamaño de la imagen excede 1MB")
-// 		return
-// 	}
+	// Verificar el tamaño del archivo
+	fileSize := fileHeader.Size
+	if fileSize > 1<<20 { // 1 MB
+		errChanel <- errors.New("el tamaño de la imagen excede 1MB")
+		return
+	}
 
-// 	// Detectar el tipo de contenido para seleccionar el decodificador correcto
-// 	contentType := http.DetectContentType(inputBuf)
+	// Detectar el tipo de contenido para seleccionar el decodificador correcto
+	contentType := http.DetectContentType(inputBuf)
 
-// 	// Decodificar la imagen según el tipo detectado
-// 	var img image.Image
-// 	switch contentType {
-// 	case "image/jpeg":
-// 		img, err = jpeg.Decode(bytes.NewReader(inputBuf))
-// 		if err != nil {
-// 			errChanel <- fmt.Errorf("error decoding JPEG image: %v", err)
-// 			return
-// 		}
-// 	case "image/png":
-// 		img, err = png.Decode(bytes.NewReader(inputBuf))
-// 		if err != nil {
-// 			errChanel <- fmt.Errorf("error decoding PNG image: %v", err)
-// 			return
-// 		}
-// 	case "image/webp":
-// 		img, err = webp.Decode(bytes.NewReader(inputBuf))
-// 		if err != nil {
-// 			errChanel <- fmt.Errorf("error decoding WebP image: %v", err)
-// 			return
-// 		}
-// 	default:
-// 		errChanel <- fmt.Errorf("unsupported image format: %s", contentType)
-// 		return
-// 	}
+	// Decodificar la imagen según el tipo detectado
+	var img image.Image
+	switch contentType {
+	case "image/jpeg":
+		img, err = jpeg.Decode(bytes.NewReader(inputBuf))
+		if err != nil {
+			errChanel <- fmt.Errorf("error decoding JPEG image: %v", err)
+			return
+		}
+	case "image/png":
+		img, err = png.Decode(bytes.NewReader(inputBuf))
+		if err != nil {
+			errChanel <- fmt.Errorf("error decoding PNG image: %v", err)
+			return
+		}
+	case "image/webp":
+		img, err = webp.Decode(bytes.NewReader(inputBuf))
+		if err != nil {
+			errChanel <- fmt.Errorf("error decoding WebP image: %v", err)
+			return
+		}
+	default:
+		errChanel <- fmt.Errorf("unsupported image format: %s", contentType)
+		return
+	}
 
-// 	// Redimensionar la imagen (ajusta las dimensiones según tus necesidades)
-// 	img = resize.Resize(128, 128, img, resize.Lanczos3) // Aquí puedes cambiar las dimensiones
+	// Redimensionar la imagen (ajusta las dimensiones según tus necesidades)
+	img = resize.Resize(128, 128, img, resize.Lanczos3) // Aquí puedes cambiar las dimensiones
 
-// 	// Definir la ruta de almacenamiento local
-// 	basePath := filepath.Join(config.BasePathUpload(), "emotes", typeEmote)
-// 	if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
-// 		errChanel <- fmt.Errorf("error creating directories: %v", err)
-// 		return
-// 	}
+	// Definir la ruta de almacenamiento local
+	basePath := filepath.Join(config.BasePathUpload(), "emotes", typeEmote)
+	if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
+		errChanel <- fmt.Errorf("error creating directories: %v", err)
+		return
+	}
 
-// 	// Sanitizar el nombre del archivo
-// 	fileName := sanitizeFileName(basePath, fileHeader.Filename)
-// 	outputFileName := strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".webp" // Cambio a WebP
-// 	outputPath := filepath.Join(basePath, outputFileName)
+	// Sanitizar el nombre del archivo
+	fileName := sanitizeFileName(basePath, fileHeader.Filename)
+	outputFileName := strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".webp" // Cambio a WebP
+	outputPath := filepath.Join(basePath, outputFileName)
 
-// 	// Comprimir y ajustar la calidad para alcanzar el tamaño objetivo (~120 KB)
-// 	var quality int = 75
-// 	var outputImg []byte
-// 	for {
-// 		buffer := new(bytes.Buffer)
-// 		if err := webp.Encode(buffer, img, &webp.Options{Quality: float32(quality)}); err != nil {
-// 			errChanel <- fmt.Errorf("error encoding image to WebP: %v", err)
-// 			return
-// 		}
-// 		outputImg = buffer.Bytes()
+	// Comprimir y ajustar la calidad para alcanzar el tamaño objetivo (~120 KB)
+	var quality int = 75
+	var outputImg []byte
+	for {
+		buffer := new(bytes.Buffer)
+		if err := webp.Encode(buffer, img, &webp.Options{Quality: float32(quality)}); err != nil {
+			errChanel <- fmt.Errorf("error encoding image to WebP: %v", err)
+			return
+		}
+		outputImg = buffer.Bytes()
 
-// 		// Si el tamaño es menor o igual a 120 KB o la calidad ya es mínima, termina
-// 		if len(outputImg) <= 33*1024 || quality <= 10 {
-// 			break
-// 		}
+		// Si el tamaño es menor o igual a 120 KB o la calidad ya es mínima, termina
+		if len(outputImg) <= 33*1024 || quality <= 10 {
+			break
+		}
 
-// 		// Reducir la calidad en 5 puntos e intentar nuevamente
-// 		quality -= 5
-// 	}
+		// Reducir la calidad en 5 puntos e intentar nuevamente
+		quality -= 5
+	}
 
-// 	// Guardar la imagen WebP en el disco
-// 	if err := ioutil.WriteFile(outputPath, outputImg, 0644); err != nil {
-// 		errChanel <- fmt.Errorf("error writing file: %v", err)
-// 		return
-// 	}
+	// Guardar la imagen WebP en el disco
+	if err := ioutil.WriteFile(outputPath, outputImg, 0644); err != nil {
+		errChanel <- fmt.Errorf("error writing file: %v", err)
+		return
+	}
 
-// 	// Enviar la URL generada al canal
-// 	PostImageChanel <- fmt.Sprintf("%s/emotes/%s/%s", config.MediaBaseURL(), typeEmote, outputFileName)
-// }
+	// Enviar la URL generada al canal
+	PostImageChanel <- fmt.Sprintf("%s/emotes/%s/%s", config.MediaBaseURL(), typeEmote, outputFileName)
+}
 
-// func ProcessImage(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
-// 	if fileHeader == nil {
-// 		PostImageChanel <- ""
-// 		return
-// 	}
+func ProcessImage(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
+	if fileHeader == nil {
+		PostImageChanel <- ""
+		return
+	}
 
-// 	// Abrir el archivo cargado
-// 	file, err := fileHeader.Open()
-// 	if err != nil {
-// 		errChanel <- fmt.Errorf("error opening file: %v", err)
-// 		return
-// 	}
-// 	defer file.Close()
+	// Abrir el archivo cargado
+	file, err := fileHeader.Open()
+	if err != nil {
+		errChanel <- fmt.Errorf("error opening file: %v", err)
+		return
+	}
+	defer file.Close()
 
-// 	// Leer los datos del archivo en memoria
-// 	inputBuf, err := ioutil.ReadAll(file)
-// 	if err != nil {
-// 		errChanel <- fmt.Errorf("error reading file: %v", err)
-// 		return
-// 	}
+	// Leer los datos del archivo en memoria
+	inputBuf, err := ioutil.ReadAll(file)
+	if err != nil {
+		errChanel <- fmt.Errorf("error reading file: %v", err)
+		return
+	}
 
-// 	// Detectar el tipo de contenido para seleccionar el decodificador correcto
-// 	contentType := http.DetectContentType(inputBuf)
+	// Detectar el tipo de contenido para seleccionar el decodificador correcto
+	contentType := http.DetectContentType(inputBuf)
 
-// 	// Decodificar la imagen según el tipo detectado
-// 	var img image.Image
-// 	switch contentType {
-// 	case "image/jpeg":
-// 		img, err = jpeg.Decode(bytes.NewReader(inputBuf))
-// 		if err != nil {
-// 			errChanel <- fmt.Errorf("error decoding JPEG image: %v", err)
-// 			return
-// 		}
-// 	case "image/png":
-// 		img, err = png.Decode(bytes.NewReader(inputBuf))
-// 		if err != nil {
-// 			errChanel <- fmt.Errorf("error decoding PNG image: %v", err)
-// 			return
-// 		}
-// 	case "image/webp":
-// 		img, err = webp.Decode(bytes.NewReader(inputBuf))
-// 		if err != nil {
-// 			errChanel <- fmt.Errorf("error decoding WebP image: %v", err)
-// 			return
-// 		}
-// 	default:
-// 		errChanel <- fmt.Errorf("unsupported image format: %s", contentType)
-// 		return
-// 	}
+	// Decodificar la imagen según el tipo detectado
+	var img image.Image
+	switch contentType {
+	case "image/jpeg":
+		img, err = jpeg.Decode(bytes.NewReader(inputBuf))
+		if err != nil {
+			errChanel <- fmt.Errorf("error decoding JPEG image: %v", err)
+			return
+		}
+	case "image/png":
+		img, err = png.Decode(bytes.NewReader(inputBuf))
+		if err != nil {
+			errChanel <- fmt.Errorf("error decoding PNG image: %v", err)
+			return
+		}
+	case "image/webp":
+		img, err = webp.Decode(bytes.NewReader(inputBuf))
+		if err != nil {
+			errChanel <- fmt.Errorf("error decoding WebP image: %v", err)
+			return
+		}
+	default:
+		errChanel <- fmt.Errorf("unsupported image format: %s", contentType)
+		return
+	}
 
-// 	// Redimensionar la imagen (ajusta las dimensiones según tus necesidades)
-// 	img = resize.Resize(172, 216, img, resize.Lanczos3)
+	// Redimensionar la imagen (ajusta las dimensiones según tus necesidades)
+	img = resize.Resize(172, 216, img, resize.Lanczos3)
 
-// 	// Ruta base de almacenamiento local
-// 	basePath := filepath.Join(config.BasePathUpload(), "images")
-// 	if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
-// 		errChanel <- fmt.Errorf("error creating directories: %v", err)
-// 		return
-// 	}
+	// Ruta base de almacenamiento local
+	basePath := filepath.Join(config.BasePathUpload(), "images")
+	if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
+		errChanel <- fmt.Errorf("error creating directories: %v", err)
+		return
+	}
 
-// 	// Generar el nombre del archivo con extensión .webp
-// 	fileName := sanitizeFileName(basePath, fileHeader.Filename)
-// 	outputFileName := strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".webp"
-// 	outputPath := filepath.Join(basePath, outputFileName)
+	// Generar el nombre del archivo con extensión .webp
+	fileName := sanitizeFileName(basePath, fileHeader.Filename)
+	outputFileName := strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".webp"
+	outputPath := filepath.Join(basePath, outputFileName)
 
-// 	// Comprimir y ajustar la calidad para alcanzar el tamaño objetivo (~120 KB)
-// 	var quality int = 75
-// 	var outputImg []byte
-// 	for {
-// 		buffer := new(bytes.Buffer)
-// 		if err := webp.Encode(buffer, img, &webp.Options{Quality: float32(quality)}); err != nil {
-// 			errChanel <- fmt.Errorf("error encoding image to WebP: %v", err)
-// 			return
-// 		}
-// 		outputImg = buffer.Bytes()
+	// Comprimir y ajustar la calidad para alcanzar el tamaño objetivo (~120 KB)
+	var quality int = 75
+	var outputImg []byte
+	for {
+		buffer := new(bytes.Buffer)
+		if err := webp.Encode(buffer, img, &webp.Options{Quality: float32(quality)}); err != nil {
+			errChanel <- fmt.Errorf("error encoding image to WebP: %v", err)
+			return
+		}
+		outputImg = buffer.Bytes()
 
-// 		// Si el tamaño es menor o igual a 120 KB o la calidad ya es mínima, termina
-// 		if len(outputImg) <= 120*1024 || quality <= 10 {
-// 			break
-// 		}
+		// Si el tamaño es menor o igual a 120 KB o la calidad ya es mínima, termina
+		if len(outputImg) <= 120*1024 || quality <= 10 {
+			break
+		}
 
-// 		// Reducir la calidad en 5 puntos e intentar nuevamente
-// 		quality -= 5
-// 	}
+		// Reducir la calidad en 5 puntos e intentar nuevamente
+		quality -= 5
+	}
 
-// 	// Guardar la imagen WebP en el disco
-// 	if err := ioutil.WriteFile(outputPath, outputImg, 0644); err != nil {
-// 		errChanel <- fmt.Errorf("error writing file: %v", err)
-// 		return
-// 	}
+	// Guardar la imagen WebP en el disco
+	if err := ioutil.WriteFile(outputPath, outputImg, 0644); err != nil {
+		errChanel <- fmt.Errorf("error writing file: %v", err)
+		return
+	}
 
-// 	// Enviar la URL generada al canal
-// 	PostImageChanel <- fmt.Sprintf("%s/images/%s", config.MediaBaseURL(), outputFileName)
-// }
+	// Enviar la URL generada al canal
+	PostImageChanel <- fmt.Sprintf("%s/images/%s", config.MediaBaseURL(), outputFileName)
+}
 
 func ProcessImageThumbnail(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
 	if fileHeader == nil {
@@ -539,101 +540,4 @@ func CopyImageFromURL(imageURL string) (string, error) {
 
 	// Devolver la URL local de la imagen
 	return fmt.Sprintf("%s/imagesClips/%s", config.MediaBaseURL(), fileName), nil
-}
-
-func ProcessImageEmotes(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error, typeEmote string) {
-	ProcessImageGeneric(fileHeader, PostImageChanel, errChanel, config.BasePathUpload(), "emotes/"+typeEmote, 128, 128, 33)
-}
-func ProcessImage(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error) {
-	ProcessImageGeneric(fileHeader, PostImageChanel, errChanel, config.BasePathUpload(), "images", 172, 216, 120)
-}
-
-func ProcessImageGeneric(fileHeader *multipart.FileHeader, PostImageChanel chan string, errChanel chan error, baseDir, subDir string, width, height uint, maxSizeKB int) {
-	if fileHeader == nil {
-		PostImageChanel <- ""
-		return
-	}
-
-	// Abrir el archivo cargado
-	file, err := fileHeader.Open()
-	if err != nil {
-		errChanel <- fmt.Errorf("error opening file: %v", err)
-		return
-	}
-	defer file.Close()
-
-	// Leer los datos del archivo en memoria
-	inputBuf, err := ioutil.ReadAll(file)
-	if err != nil {
-		errChanel <- fmt.Errorf("error reading file: %v", err)
-		return
-	}
-
-	// Verificar el tamaño del archivo
-	if fileHeader.Size > int64(maxSizeKB<<10) {
-		errChanel <- fmt.Errorf("el tamaño de la imagen excede %d KB", maxSizeKB)
-		return
-	}
-
-	// Detectar el tipo de contenido
-	contentType := http.DetectContentType(inputBuf)
-
-	// Decodificar la imagen según el tipo detectado
-	var img image.Image
-	switch contentType {
-	case "image/jpeg":
-		img, err = jpeg.Decode(bytes.NewReader(inputBuf))
-	case "image/png":
-		img, err = png.Decode(bytes.NewReader(inputBuf))
-	case "image/webp":
-		img, err = webp.Decode(bytes.NewReader(inputBuf))
-	default:
-		errChanel <- fmt.Errorf("unsupported image format: %s", contentType)
-		return
-	}
-	if err != nil {
-		errChanel <- fmt.Errorf("error decoding image: %v", err)
-		return
-	}
-
-	// Redimensionar la imagen
-	img = resize.Resize(width, height, img, resize.Lanczos3)
-
-	// Definir la ruta de almacenamiento local
-	outputDir := filepath.Join(baseDir, subDir)
-	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
-		errChanel <- fmt.Errorf("error creating directories: %v", err)
-		return
-	}
-
-	// Generar el nombre del archivo de salida
-	fileName := sanitizeFileName(outputDir, fileHeader.Filename)
-	outputFileName := strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".webp"
-	outputPath := filepath.Join(outputDir, outputFileName)
-
-	// Comprimir y ajustar la calidad
-	var quality int = 75
-	var outputImg []byte
-	for {
-		buffer := new(bytes.Buffer)
-		if err := webp.Encode(buffer, img, &webp.Options{Quality: float32(quality)}); err != nil {
-			errChanel <- fmt.Errorf("error encoding image to WebP: %v", err)
-			return
-		}
-		outputImg = buffer.Bytes()
-
-		if len(outputImg) <= maxSizeKB<<10 || quality <= 10 {
-			break
-		}
-		quality -= 5
-	}
-
-	// Guardar la imagen en el disco
-	if err := ioutil.WriteFile(outputPath, outputImg, 0644); err != nil {
-		errChanel <- fmt.Errorf("error writing file: %v", err)
-		return
-	}
-
-	// Enviar la URL generada al canal
-	PostImageChanel <- fmt.Sprintf("%s/%s/%s", config.MediaBaseURL(), subDir, outputFileName)
 }
