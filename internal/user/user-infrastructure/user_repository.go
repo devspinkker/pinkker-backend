@@ -844,7 +844,7 @@ func (u *UserRepository) CreateStreamUser(user *domain.User, id primitive.Object
 		StreamerID:         id,
 		Streamer:           user.NameUser,
 		StreamTitle:        "Your Title",
-		StreamCategory:     "Just Chatting",
+		StreamCategory:     "IRL",
 		ImageCategorie:     "https://res.cloudinary.com/dcj8krp42/image/upload/v1712604659/categorias/just_chatting_zb4sb4.jpg",
 		StreamNotification: user.NameUser + " is live!",
 		StreamerAvatar:     user.Avatar,
