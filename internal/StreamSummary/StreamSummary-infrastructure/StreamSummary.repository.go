@@ -610,6 +610,7 @@ func (r *StreamSummaryRepository) GetStreamSummariesByStreamerIDLast30Days(strea
 			{Key: "StreamCategory", Value: 1},
 			{Key: "UserInfo", Value: "$UserInfo"},
 		}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "StartOfStream", Value: -1}}}}, // Orden descendente
 		bson.D{{Key: "$limit", Value: 20}},
 	}
 

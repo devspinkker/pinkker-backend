@@ -30,10 +30,10 @@ type Chat struct {
 	CreatedAt   time.Time            `bson:"created_at"`
 	LastMessage time.Time            `bson:"LastMessage"`
 	NotifyA     primitive.ObjectID   `bson:"NotifyA"`
-	StatusUser1 string               `bson:"status_user1"`
+	StatusUser1 string               `bson:"status_user1"` // estado en el que esta el chat desde el usuario 1s
 	StatusUser2 string               `bson:"status_user2"`
 	Blocked     struct {
-		BlockedByUser1 bool `bson:"blocked_by_user1"`
+		BlockedByUser1 bool `bson:"blocked_by_user1"` // el usuario 1 bloqua
 		BlockedByUser2 bool `bson:"blocked_by_user2"`
 	} `bson:"blocked"`
 }

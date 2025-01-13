@@ -352,16 +352,17 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 			"messages": "Bad Request",
 		})
 	}
-	fmt.Println(newUser)
 
 	if err := newUser.ValidateUser(); err != nil {
 		fmt.Println(newUser)
+		fmt.Println("no entiendo 2")
 
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad Request",
 			"error":   err.Error(),
 		})
 	}
+	fmt.Println("333")
 
 	// password
 	passwordHashChan := make(chan string)
@@ -381,7 +382,12 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 				case avatarUrl := <-PostImageChanel:
 					userDomaion := h.userService.UserDomaionUpdata(&newUser, avatarUrl, passwordHash)
 					code, err := h.userService.SaveUserRedis(userDomaion)
+					fmt.Println("no entiendo 2")
+
 					if err != nil {
+						fmt.Println("no entiendo 3")
+						fmt.Println(err)
+
 						return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 							"message": "Internal Server Error",
 							"err":     err,
@@ -389,6 +395,9 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 					}
 					err = helpers.ResendConfirmMail(code, userDomaion.Email)
 					if err != nil {
+						fmt.Println("queeee aaaa hereee")
+						fmt.Println(err.Error())
+
 						return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 							"message": "Internal Server Error",
 							"err":     err,
