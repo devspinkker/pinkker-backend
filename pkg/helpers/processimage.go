@@ -291,7 +291,7 @@ func ProcessImageThumbnail(fileHeader *multipart.FileHeader, PostImageChanel cha
 	}
 
 	// Redimensionar la imagen (puedes ajustar las dimensiones según tus necesidades)
-	// img = resize.Resize(172, 216, img, resize.Lanczos3)
+	img = resize.Resize(260, 150, img, resize.Lanczos3)
 
 	// Ruta base de almacenamiento local
 	basePath := filepath.Join(config.BasePathUpload(), "images", "Thumbnail")
