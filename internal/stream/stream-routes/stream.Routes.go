@@ -7,6 +7,7 @@ import (
 	"PINKKER-BACKEND/pkg/middleware"
 	"PINKKER-BACKEND/pkg/utils"
 	"fmt"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
@@ -55,7 +56,6 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 		client := &utils.Client{Connection: c}
 		chatService.AddClientToRoom(roomID, client)
 
-		// Asegurar cierre correcto de recursos
 		defer func() {
 			chatService.RemoveClientFromRoom(roomID, client)
 			if err := c.Close(); err != nil {
@@ -63,7 +63,9 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 			}
 		}()
 
-		// Bucle para leer mensajes
+		// Establecer timeout de lectura
+		c.SetReadDeadline(time.Now().Add(60 * time.Second)) // Timeout de 60 segundos
+
 		for {
 			_, _, err := c.ReadMessage()
 			if err != nil {
@@ -72,11 +74,13 @@ func StreamsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.
 				}
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure, websocket.CloseProtocolError) {
 					fmt.Printf("Unexpected websocket close: %v\n", err)
+					break
 				}
+				// Manejo de error por timeout o cierre abrupto
+				fmt.Printf("Websocket read error: %v\n", err)
 				break
 			}
 		}
-
 	}))
 
 	// esto se tiene que mover a una carpeta especifica
