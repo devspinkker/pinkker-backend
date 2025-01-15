@@ -376,6 +376,7 @@ func (u *UserService) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source str
 	if source != "ig" || source != "fb" {
 		fmt.Println(source)
 		return nil
+
 	}
 	return u.roomRepository.UpdatePinkkerProfitPerMonthRegisterLinkReferent(source)
 }
