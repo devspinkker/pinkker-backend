@@ -2866,6 +2866,7 @@ func (r *UserRepository) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source 
 	currentTime := time.Now()
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
+	currentDay := helpers.GetDayOfMonth(currentTime) // Por ejemplo, "15"
 
 	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
 	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
@@ -2880,30 +2881,29 @@ func (r *UserRepository) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source 
 	// Paso 1: Inserta el documento si no existe, inicializando valores básicos
 	_, err := GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
 		"$setOnInsert": bson.M{
-			"timestamp":         currentTime,
-			"days":              bson.M{}, // Inicializa el mapa de días vacío
-			"userRegistrations": bson.M{}, // Inicializa el mapa de registros por fuente vacío
+			"timestamp":          currentTime,
+			"days." + currentDay: PinkkerProfitPerMonthdomain.NewDefaultDay(),
 		},
 	}, options.Update().SetUpsert(true))
 	if err != nil {
 		return err
 	}
 
-	// Paso 2: Asegura que 'userRegistrations' sea un mapa si no existe
-	monthlyEnsureUserRegistrations := bson.M{
+	// Paso 2: Inicializa 'days.currentDay.userRegistrations' si no existe
+	monthlyUpdateEnsureDay := bson.M{
 		"$set": bson.M{
-			"userRegistrations": bson.M{}, // Inicializa como objeto si está ausente o es null
+			"days." + currentDay + ".userRegistrations": bson.M{}, // Asegura que sea un mapa vacío si no existe
 		},
 	}
-	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyEnsureUserRegistrations)
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdateEnsureDay)
 	if err != nil {
 		return err
 	}
 
-	// Paso 3: Incrementa el conteo de registros por la fuente proporcionada
+	// Paso 3: Incrementa el conteo de registros por fuente
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
-			"userRegistrations." + source: 1, // Incrementa en 1 el registro para la fuente dada
+			"days." + currentDay + ".userRegistrations." + source: 1, // Incrementa el registro por la fuente dada
 		},
 	}
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)

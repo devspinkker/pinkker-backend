@@ -21,11 +21,10 @@ type Day struct {
 
 // Estructura para el resumen mensual, que contiene los datos por día.
 type PinkkerProfitPerMonth struct {
-	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Timestamp         time.Time          `json:"timestamp" bson:"timestamp"`
-	Days              map[string]Day     `json:"days" bson:"days"`
-	UserRegistrations map[string]Day     `json:"UserRegistrations" bson:"UserRegistrations"`
-	Total             float64            `json:"total" bson:"total"`
+	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Timestamp time.Time          `json:"timestamp" bson:"timestamp"`
+	Days      map[string]Day     `json:"days" bson:"days"`
+	Total     float64            `json:"total" bson:"total"`
 }
 
 func NewDefaultDay() Day {
