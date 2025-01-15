@@ -2867,7 +2867,7 @@ func (r *UserRepository) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source 
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
 	currentDay := helpers.GetDayOfMonth(currentTime) // Por ejemplo, "15"
-
+	fmt.Println("llega")
 	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
 	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
 
@@ -2892,7 +2892,7 @@ func (r *UserRepository) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source 
 	// Paso 2: Inicializa 'days.currentDay.userRegistrations' si no existe
 	monthlyUpdateEnsureDay := bson.M{
 		"$set": bson.M{
-			"days." + currentDay + ".userRegistrations": bson.M{}, // Asegura que sea un mapa vacío si no existe
+			"days." + currentDay + ".UserRegistrations": bson.M{}, // Asegura que sea un mapa vacío si no existe
 		},
 	}
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdateEnsureDay)
@@ -2903,7 +2903,7 @@ func (r *UserRepository) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source 
 	// Paso 3: Incrementa el conteo de registros por fuente
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
-			"days." + currentDay + ".userRegistrations." + source: 1, // Incrementa el registro por la fuente dada
+			"days." + currentDay + ".UserRegistrations." + source: 1, // Incrementa el registro por la fuente dada
 		},
 	}
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)

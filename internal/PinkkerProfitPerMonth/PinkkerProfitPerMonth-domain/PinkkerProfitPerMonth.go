@@ -8,15 +8,16 @@ import (
 
 // Estructura para almacenar los datos de cada día.
 type Day struct {
-	Impressions            int     `json:"impressions" bson:"impressions"`
-	Clicks                 int     `json:"clicks" bson:"clicks"`
-	Pixeles                float64 `json:"pixels" bson:"pixeles"`
-	PinkkerPrime           float64 `json:"PinkkerPrime" bson:"pinkkerPrime"`
-	CommunityBuy           float64 `json:"communityBuy" bson:"communityBuy"`
-	PaidCommunities        float64 `json:"PaidCommunities" bson:"PaidCommunities"`
-	CommissionsSuscripcion float64 `json:"CommissionsSuscripcion" bson:"CommissionsSuscripcion"`
-	CommissionsDonation    float64 `json:"CommissionsDonation" bson:"CommissionsDonation"`
-	CommissionsCommunity   float64 `json:"CommissionsCommunity" bson:"CommissionsCommunity"`
+	Impressions            int            `json:"impressions" bson:"impressions"`
+	Clicks                 int            `json:"clicks" bson:"clicks"`
+	Pixeles                float64        `json:"pixels" bson:"pixeles"`
+	PinkkerPrime           float64        `json:"PinkkerPrime" bson:"pinkkerPrime"`
+	CommunityBuy           float64        `json:"communityBuy" bson:"communityBuy"`
+	PaidCommunities        float64        `json:"PaidCommunities" bson:"PaidCommunities"`
+	CommissionsSuscripcion float64        `json:"CommissionsSuscripcion" bson:"CommissionsSuscripcion"`
+	CommissionsDonation    float64        `json:"CommissionsDonation" bson:"CommissionsDonation"`
+	CommissionsCommunity   float64        `json:"CommissionsCommunity" bson:"CommissionsCommunity"`
+	UserRegistrations      map[string]int `json:"UserRegistrations" bson:"UserRegistrations"`
 }
 
 // Estructura para el resumen mensual, que contiene los datos por día.
@@ -38,5 +39,6 @@ func NewDefaultDay() Day {
 		CommissionsSuscripcion: 0,
 		CommissionsDonation:    0,
 		CommissionsCommunity:   0,
+		UserRegistrations:      map[string]int{},
 	}
 }
