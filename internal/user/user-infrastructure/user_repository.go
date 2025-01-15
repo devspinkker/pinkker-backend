@@ -2889,7 +2889,18 @@ func (r *UserRepository) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source 
 		return err
 	}
 
-	// Paso 2: Incrementa el conteo de registros por la fuente proporcionada
+	// Paso 2: Asegura que 'userRegistrations' sea un mapa si no existe
+	monthlyEnsureUserRegistrations := bson.M{
+		"$set": bson.M{
+			"userRegistrations": bson.M{}, // Inicializa como objeto si está ausente o es null
+		},
+	}
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyEnsureUserRegistrations)
+	if err != nil {
+		return err
+	}
+
+	// Paso 3: Incrementa el conteo de registros por la fuente proporcionada
 	monthlyUpdate := bson.M{
 		"$inc": bson.M{
 			"userRegistrations." + source: 1, // Incrementa en 1 el registro para la fuente dada
