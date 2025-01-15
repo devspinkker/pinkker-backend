@@ -2867,7 +2867,6 @@ func (r *UserRepository) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source 
 	currentMonth := int(currentTime.Month())
 	currentYear := currentTime.Year()
 	currentDay := helpers.GetDayOfMonth(currentTime) // Por ejemplo, "15"
-	fmt.Println("llega")
 	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
 	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
 
@@ -2891,10 +2890,11 @@ func (r *UserRepository) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source 
 
 	// Paso 2: Inicializa 'days.currentDay.userRegistrations' si no existe
 	monthlyUpdateEnsureDay := bson.M{
-		"$set": bson.M{
-			"days." + currentDay + ".UserRegistrations": bson.M{}, // Asegura que sea un mapa vacío si no existe
+		"$setOnInsert": bson.M{
+			"days." + currentDay + ".UserRegistrations": bson.M{}, // Solo lo inicializa si no existe
 		},
 	}
+
 	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdateEnsureDay)
 	if err != nil {
 		return err
