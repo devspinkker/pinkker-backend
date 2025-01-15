@@ -371,3 +371,9 @@ func (u *UserService) SaveNotification(userID primitive.ObjectID, notification n
 	err := u.roomRepository.SaveNotification(userID, notification)
 	return err
 }
+func (u *UserService) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source string) error {
+	if source != "ig" || source != "fb" {
+		return nil
+	}
+	return u.roomRepository.UpdatePinkkerProfitPerMonthRegisterLinkReferent(source)
+}

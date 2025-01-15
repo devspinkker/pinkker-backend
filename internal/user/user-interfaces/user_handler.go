@@ -362,7 +362,6 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 			"error":   err.Error(),
 		})
 	}
-	fmt.Println("333")
 
 	// password
 	passwordHashChan := make(chan string)
@@ -425,7 +424,8 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 }
 
 type ReqCodeInRedisSignup struct {
-	Code string `json:"code"`
+	Code     string `json:"code"`
+	Referral string `json:"referral"`
 }
 
 func (h *UserHandler) SaveUserCodeConfirm(c *fiber.Ctx) error {
@@ -462,6 +462,15 @@ func (h *UserHandler) SaveUserCodeConfirm(c *fiber.Ctx) error {
 			"data":    err.Error(),
 		})
 	}
+
+	err = h.userService.UpdatePinkkerProfitPerMonthRegisterLinkReferent(newUser.Referral)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "token error",
+			"data":    err.Error(),
+		})
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message":         "token",
 		"data":            tokenRequest,

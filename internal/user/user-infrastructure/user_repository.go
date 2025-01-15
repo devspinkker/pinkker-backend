@@ -2859,3 +2859,46 @@ func (r *UserRepository) SaveNotification(userID primitive.ObjectID, notificatio
 
 	return nil
 }
+func (r *UserRepository) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source string) error {
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollMonthly := GoMongoDB.Collection("PinkkerProfitPerMonth")
+	ctx := context.Background()
+	currentTime := time.Now()
+	currentMonth := int(currentTime.Month())
+	currentYear := currentTime.Year()
+
+	startOfMonth := time.Date(currentYear, time.Month(currentMonth), 1, 0, 0, 0, 0, time.UTC)
+	startOfNextMonth := time.Date(currentYear, time.Month(currentMonth+1), 1, 0, 0, 0, 0, time.UTC)
+
+	monthlyFilter := bson.M{
+		"timestamp": bson.M{
+			"$gte": startOfMonth,
+			"$lt":  startOfNextMonth,
+		},
+	}
+
+	// Paso 1: Inserta el documento si no existe, inicializando valores básicos
+	_, err := GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, bson.M{
+		"$setOnInsert": bson.M{
+			"timestamp":         currentTime,
+			"days":              bson.M{}, // Inicializa el mapa de días vacío
+			"userRegistrations": bson.M{}, // Inicializa el mapa de registros por fuente vacío
+		},
+	}, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+
+	// Paso 2: Incrementa el conteo de registros por la fuente proporcionada
+	monthlyUpdate := bson.M{
+		"$inc": bson.M{
+			"userRegistrations." + source: 1, // Incrementa en 1 el registro para la fuente dada
+		},
+	}
+	_, err = GoMongoDBCollMonthly.UpdateOne(ctx, monthlyFilter, monthlyUpdate)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
