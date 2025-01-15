@@ -354,8 +354,6 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 	}
 
 	if err := newUser.ValidateUser(); err != nil {
-		fmt.Println(newUser)
-		fmt.Println("no entiendo 2")
 
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad Request",
@@ -381,11 +379,8 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 				case avatarUrl := <-PostImageChanel:
 					userDomaion := h.userService.UserDomaionUpdata(&newUser, avatarUrl, passwordHash)
 					code, err := h.userService.SaveUserRedis(userDomaion)
-					fmt.Println("no entiendo 2")
 
 					if err != nil {
-						fmt.Println("no entiendo 3")
-						fmt.Println(err)
 
 						return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 							"message": "Internal Server Error",
@@ -394,8 +389,6 @@ func (h *UserHandler) SignupSaveUserRedis(c *fiber.Ctx) error {
 					}
 					err = helpers.ResendConfirmMail(code, userDomaion.Email)
 					if err != nil {
-						fmt.Println("queeee aaaa hereee")
-						fmt.Println(err.Error())
 
 						return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 							"message": "Internal Server Error",
@@ -949,7 +942,6 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 	Notification := helpers.CreateNotification("Follow", nameUser, avatar, "", 0, IdUserTokenP)
 	err = h.userService.SaveNotification(IdUser, Notification)
 	if err != nil {
-		fmt.Println(err)
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"message": "ok",
 			"data":    "SaveNotification error",
