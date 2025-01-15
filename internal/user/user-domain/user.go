@@ -346,6 +346,7 @@ type Google_callback_Complete_Profile_And_Username struct {
 	Sex        string    `json:"sex,omitempty"`
 	Situation  string    `json:"situation,omitempty"`
 	ZodiacSign string    `json:"zodiacSign,omitempty"`
+	Referral   string    `json:"referral"`
 }
 
 func (u *Google_callback_Complete_Profile_And_Username) ValidateUser() error {

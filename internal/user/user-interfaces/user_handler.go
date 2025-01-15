@@ -1263,6 +1263,14 @@ func (h *UserHandler) Google_callback_Complete_Profile_And_Username(c *fiber.Ctx
 			"data":    err.Error(),
 		})
 	}
+	err = h.userService.UpdatePinkkerProfitPerMonthRegisterLinkReferent(req.Referral)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "token error",
+			"data":    err.Error(),
+		})
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message":         "token",
 		"data":            tokenRequest,
