@@ -13,6 +13,7 @@ import (
 	"PINKKER-BACKEND/pkg/authGoogleAuthenticator"
 	"PINKKER-BACKEND/pkg/helpers"
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -373,6 +374,7 @@ func (u *UserService) SaveNotification(userID primitive.ObjectID, notification n
 }
 func (u *UserService) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source string) error {
 	if source != "ig" || source != "fb" {
+		fmt.Println(source)
 		return nil
 	}
 	return u.roomRepository.UpdatePinkkerProfitPerMonthRegisterLinkReferent(source)
