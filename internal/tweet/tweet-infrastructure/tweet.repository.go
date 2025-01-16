@@ -1154,7 +1154,7 @@ func (t *TweetRepository) GetFollowedUsers(idValueObj primitive.ObjectID) (userd
 	err := GoMongoDBCollTweets.FindOne(context.Background(), filter).Decode(&user)
 	return user, err
 }
-func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, error) {
+func (t *TweetRepository) GetPost(page int) ([]tweetdomain.GetPostcommunitiesRandom, error) {
 	GoMongoDBCollTweets := t.mongoClient.Database("PINKKER-BACKEND").Collection("Post")
 
 	skip := (page - 1) * 10
@@ -1189,6 +1189,15 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 		{{Key: "$addFields", Value: bson.D{
 			{Key: "LikesCount", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$LikesInfo.LikesCount", 0}}}},
 		}}},
+		// Unimos la información de la comunidad
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "communities"},
+			{Key: "localField", Value: "communityID"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "CommunityInfo"},
+		}}},
+		{{Key: "$unwind", Value: "$CommunityInfo"}},
+
 		{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},
 			{Key: "Status", Value: "$Status"},
@@ -1205,6 +1214,8 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 			{Key: "UserInfo.Avatar", Value: 1},
 			{Key: "UserInfo.NameUser", Value: 1},
 			{Key: "UserInfo.Online", Value: 1},
+			{Key: "CommunityInfo.CommunityName", Value: 1},
+			{Key: "CommunityInfo._id", Value: 1},
 			{Key: "IsLikedByID", Value: "$IsLikedByID"},
 		}}},
 	}
@@ -1216,9 +1227,9 @@ func (t *TweetRepository) GetPost(page int) ([]tweetdomain.TweetGetFollowReq, er
 	}
 	defer cursor.Close(context.Background())
 
-	var tweetsWithUserInfo []tweetdomain.TweetGetFollowReq
+	var tweetsWithUserInfo []tweetdomain.GetPostcommunitiesRandom
 	for cursor.Next(context.Background()) {
-		var tweetWithUserInfo tweetdomain.TweetGetFollowReq
+		var tweetWithUserInfo tweetdomain.GetPostcommunitiesRandom
 		if err := cursor.Decode(&tweetWithUserInfo); err != nil {
 			return nil, err
 		}
