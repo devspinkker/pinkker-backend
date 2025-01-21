@@ -47,7 +47,6 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 	if err != nil {
 		return &clipdomain.Clip{}, err
 	}
-
 	UrlsClipFormate, err := u.UrlsGenerateClips(CategorieStream.ID, TsUrls)
 	urls, m3u8Content, err := u.GenerateCustomM3U8(UrlsClipFormate)
 	if err != nil {
@@ -90,6 +89,7 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		Timestamps:            timeStamps,
 		IdOfTheUsersWhoViewed: []primitive.ObjectID{},
 		Type:                  "clip",
+		M3U8Content:           m3u8Content, // Guardamos el contenido del m3u8 en el documento
 	}
 	clip, err = u.ClipRepository.SaveClip(clip)
 	return clip, err

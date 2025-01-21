@@ -1770,17 +1770,33 @@ func (r *ClipRepository) GetCurrentStreamSummary(streamID primitive.ObjectID) (S
 func (r *ClipRepository) GenerateStreamURLs(streamSummary StreamSummarydomain.StreamSummary, tsIndexes []string) ([]string, error) {
 	var urls []string
 
-	// Filtrar y construir URLs para todos los valores válidos
+	fmt.Println("tsIndexes inicial:", tsIndexes)
+
+	// Asegurarte de que StreamDocumentID sea válido
+	streamID := streamSummary.StreamDocumentID.Hex()
+	if streamID == "" {
+		return nil, fmt.Errorf("StreamDocumentID is empty")
+	}
+
 	for _, ts := range tsIndexes {
-		if strings.HasPrefix(ts, "index") && strings.HasSuffix(ts, ".ts") {
-			url := fmt.Sprintf("https://www.pinkker.tv/8002/stream/vod/%s/%s", streamSummary.StreamDocumentID.Hex(), ts)
+		// Verificar si es una URL válida con formato completo
+		if strings.HasPrefix(ts, "http") && strings.HasSuffix(ts, ".ts") {
+			// Si la URL ya es completa, simplemente agregarla
+			urls = append(urls, ts)
+		} else if strings.HasPrefix(ts, "index") && strings.HasSuffix(ts, ".ts") {
+			// Construir la URL solo si es un segmento relativo (sin dominio)
+			url := fmt.Sprintf("stream/vod/%s/%s", streamID, ts)
 			urls = append(urls, url)
+		} else {
+			fmt.Println("URL inválida o mal formada:", ts)
 		}
 	}
 
 	if len(urls) == 0 {
+		fmt.Println("No se encontraron URLs válidas:", urls)
 		return nil, fmt.Errorf("no valid ts indexes found")
 	}
 
+	fmt.Println("URLs generadas:", urls)
 	return urls, nil
 }

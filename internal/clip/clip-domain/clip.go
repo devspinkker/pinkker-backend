@@ -33,6 +33,8 @@ type Clip struct {
 		UpdatedAt time.Time `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
 	} `json:"timestamps,omitempty" bson:"timestamps,omitempty"`
 	IdOfTheUsersWhoViewed []primitive.ObjectID `json:"IdOfTheUsersWhoViewed" bson:"IdOfTheUsersWhoViewed"`
+	M3U8Content           string               `json:"m3u8Content" bson:"m3u8Content"` // Campo para almacenar el m3u8
+
 }
 type ClipCategoryInfo struct {
 	Category string `bson:"Category"`
@@ -61,6 +63,8 @@ type GetClip struct {
 	Type          string             `json:"Type" bson:"Type"`
 	CommentsCount int                `json:"CommentsCount" bson:"CommentsCount"`
 	AdId          primitive.ObjectID `json:"AdId" bson:"AdId"`
+	M3U8Content   string             `json:"m3u8Content" bson:"m3u8Content"` // Campo para almacenar el m3u8
+
 }
 
 type ClipRequest struct {
