@@ -227,6 +227,7 @@ func (c *ClipRepository) GetClipsByTitle(title string, limit int) ([]clipdomain.
 			{Key: "cover", Value: 1},
 			{Key: "Comments", Value: 1},
 			{Key: "timestamps", Value: 1},
+			{Key: "m3u8Content", Value: 1},
 		}}},
 	}
 
@@ -416,6 +417,7 @@ func (c *ClipRepository) getRelevantClips(ctx context.Context, clipsDB *mongo.Co
 			{Key: "cover", Value: 1},
 			{Key: "Comments", Value: 1},
 			{Key: "timestamps", Value: 1},
+			{Key: "m3u8Content", Value: 1},
 		}}},
 	}
 
@@ -488,6 +490,7 @@ func (c *ClipRepository) getRandomClips(ctx context.Context, excludeFilter bson.
 			{Key: "cover", Value: 1},
 			{Key: "Comments", Value: 1},
 			{Key: "timestamps", Value: 1},
+			{Key: "m3u8Content", Value: 1},
 		}}},
 	}
 
@@ -649,6 +652,7 @@ func (c *ClipRepository) FindClipById(IdClip primitive.ObjectID) (clipdomain.Get
 			{Key: "Comments", Value: 1},
 			{Key: "timestamps", Value: 1},
 			{Key: "Type", Value: 1},
+			{Key: "m3u8Content", Value: 1},
 		}}},
 	}
 
@@ -706,6 +710,7 @@ func (c *ClipRepository) GetClipIdLogueado(IdClip, idValueObj primitive.ObjectID
 			{Key: "cover", Value: 1},
 			{Key: "Comments", Value: 1},
 			{Key: "timestamps", Value: 1},
+			{Key: "m3u8Content", Value: 1},
 		}}},
 	}
 
@@ -804,6 +809,7 @@ func (c *ClipRepository) GetClipsNameUser(page int, GetClipsNameUser string) ([]
 			{Key: "cover", Value: 1},
 			{Key: "Comments", Value: 1},
 			{Key: "timestamps", Value: 1},
+			{Key: "m3u8Content", Value: 1},
 		}}},
 	}
 
@@ -1773,20 +1779,36 @@ func (r *ClipRepository) GenerateStreamURLs(streamSummary StreamSummarydomain.St
 	fmt.Println("tsIndexes inicial:", tsIndexes)
 
 	// Asegurarte de que StreamDocumentID sea válido
-	streamID := streamSummary.StreamDocumentID.Hex()
+	streamID := streamSummary.ID.Hex()
 	if streamID == "" {
 		return nil, fmt.Errorf("StreamDocumentID is empty")
 	}
 
+	var baseURL string
+
 	for _, ts := range tsIndexes {
 		// Verificar si es una URL válida con formato completo
 		if strings.HasPrefix(ts, "http") && strings.HasSuffix(ts, ".ts") {
-			// Si la URL ya es completa, simplemente agregarla
-			urls = append(urls, ts)
+			// Extraer baseURL de la primera URL válida encontrada
+			if baseURL == "" {
+				parts := strings.Split(ts, "/stream/")
+				if len(parts) > 1 {
+					baseURL = parts[0]
+				}
+			}
+			// Extraer solo el nombre del archivo indexX.ts
+			segments := strings.Split(ts, "/")
+			filename := segments[len(segments)-1]
+			updatedURL := fmt.Sprintf("%s/stream/vod/%s/%s", baseURL, streamID, filename)
+			urls = append(urls, updatedURL)
 		} else if strings.HasPrefix(ts, "index") && strings.HasSuffix(ts, ".ts") {
-			// Construir la URL solo si es un segmento relativo (sin dominio)
-			url := fmt.Sprintf("stream/vod/%s/%s", streamID, ts)
-			urls = append(urls, url)
+			// Construir la URL con la baseURL obtenida
+			if baseURL != "" {
+				url := fmt.Sprintf("%s/stream/vod/%s/%s", baseURL, streamID, ts)
+				urls = append(urls, url)
+			} else {
+				fmt.Println("No baseURL found for segment:", ts)
+			}
 		} else {
 			fmt.Println("URL inválida o mal formada:", ts)
 		}

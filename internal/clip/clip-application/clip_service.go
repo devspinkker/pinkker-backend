@@ -89,7 +89,8 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		Timestamps:            timeStamps,
 		IdOfTheUsersWhoViewed: []primitive.ObjectID{},
 		Type:                  "clip",
-		M3U8Content:           m3u8Content, // Guardamos el contenido del m3u8 en el documento
+		// necesitas apuntar bien porque no lo haces en el m3u8,
+		M3U8Content: m3u8Content, // Guardamos el contenido del m3u8 en el documento
 	}
 	clip, err = u.ClipRepository.SaveClip(clip)
 	return clip, err
