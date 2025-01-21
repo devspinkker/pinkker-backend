@@ -4,6 +4,7 @@ package clipinfrastructure
 import (
 	"PINKKER-BACKEND/config"
 	PinkkerProfitPerMonthdomain "PINKKER-BACKEND/internal/PinkkerProfitPerMonth/PinkkerProfitPerMonth-domain"
+	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
 	clipdomain "PINKKER-BACKEND/internal/clip/clip-domain"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	userdomain "PINKKER-BACKEND/internal/user/user-domain"
@@ -15,6 +16,7 @@ import (
 	"log"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -1730,4 +1732,55 @@ func (r *ClipRepository) updatePinkkerProfitPerMonth(ctx context.Context) error 
 	}
 
 	return nil
+}
+func (r *ClipRepository) GetCurrentStreamSummary(streamID primitive.ObjectID) (StreamSummarydomain.StreamSummary, error) {
+	var streamSummary StreamSummarydomain.StreamSummary
+
+	// Obtener el Stream actual
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollStreams := GoMongoDB.Collection("Streams")
+	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
+
+	filterStream := bson.M{"_id": streamID}
+	var stream streamdomain.Stream
+
+	err := GoMongoDBCollStreams.FindOne(context.Background(), filterStream).Decode(&stream)
+	if err != nil {
+		return streamSummary, fmt.Errorf("error fetching stream: %v", err)
+	}
+
+	// Buscar el resumen del stream más cercano a su StartDate
+	filterSummary := bson.M{
+		"StreamerID": stream.StreamerID,
+		"StartOfStream": bson.M{
+			"$lte": stream.StartDate, // Buscar los resúmenes que comenzaron antes o en el mismo momento
+		},
+	}
+
+	options := options.FindOne().SetSort(bson.D{{Key: "StartOfStream", Value: -1}}) // Ordenar de más reciente a más antiguo
+
+	err = GoMongoDBCollStreamSummary.FindOne(context.Background(), filterSummary, options).Decode(&streamSummary)
+	if err != nil {
+		return streamSummary, fmt.Errorf("error fetching stream summary: %v", err)
+	}
+
+	return streamSummary, nil
+}
+
+func (r *ClipRepository) GenerateStreamURLs(streamSummary StreamSummarydomain.StreamSummary, tsIndexes []string) ([]string, error) {
+	var urls []string
+
+	// Filtrar y construir URLs para todos los valores válidos
+	for _, ts := range tsIndexes {
+		if strings.HasPrefix(ts, "index") && strings.HasSuffix(ts, ".ts") {
+			url := fmt.Sprintf("https://www.pinkker.tv/8002/stream/vod/%s/%s", streamSummary.StreamDocumentID.Hex(), ts)
+			urls = append(urls, url)
+		}
+	}
+
+	if len(urls) == 0 {
+		return nil, fmt.Errorf("no valid ts indexes found")
+	}
+
+	return urls, nil
 }

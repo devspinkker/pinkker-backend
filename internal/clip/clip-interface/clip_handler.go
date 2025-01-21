@@ -1,23 +1,15 @@
 package clipinterface
 
 import (
-	"PINKKER-BACKEND/config"
 	clipapplication "PINKKER-BACKEND/internal/clip/clip-application"
 	clipdomain "PINKKER-BACKEND/internal/clip/clip-domain"
-	"PINKKER-BACKEND/pkg/helpers"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -331,98 +323,97 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 	ClipTitle := clipRequest.ClipTitle
 	totalKey := clipRequest.TotalKey
 
-	currentDir, err := os.Getwd()
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Error al crear directorio de video",
-			"data":    err.Error(),
-		})
-	}
+	// currentDir, err := os.Getwd()
+	// if err != nil {
+	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+	// 		"message": "Error al crear directorio de video",
+	// 		"data":    err.Error(),
+	// 	})
+	// }
 
-	baseDir := filepath.Join(currentDir, "clips_recortes")
-	videoDir := filepath.Join(baseDir, uuid.NewString())
-	concatenatedFilePath := filepath.Join(videoDir, "input.ts")
-	outputFilePath := filepath.Join(videoDir, "output.mp4")
+	// baseDir := filepath.Join(currentDir, "clips_recortes")
+	// videoDir := filepath.Join(baseDir, uuid.NewString())
+	// concatenatedFilePath := filepath.Join(videoDir, "input.ts")
+	// outputFilePath := filepath.Join(videoDir, "output.mp4")
 
-	if err := os.MkdirAll(videoDir, os.ModePerm); err != nil {
-		return c.Status(fiber.StatusInsufficientStorage).JSON(fiber.Map{
-			"message": "Error al crear directorio de video",
-			"data":    err.Error(),
-		})
-	}
+	// if err := os.MkdirAll(videoDir, os.ModePerm); err != nil {
+	// 	return c.Status(fiber.StatusInsufficientStorage).JSON(fiber.Map{
+	// 		"message": "Error al crear directorio de video",
+	// 		"data":    err.Error(),
+	// 	})
+	// }
 
-	// Obtener los datos de video
-	videoData := clipRequest.TsUrls
-	if len(videoData) == 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "No video data provided",
-		})
-	}
+	// // Obtener los datos de video
+	// videoData := clipRequest.TsUrls
+	// if len(videoData) == 0 {
+	// 	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+	// 		"message": "No video data provided",
+	// 	})
+	// }
 
-	// Descargar y concatenar segmentos .ts
-	concatenatedFile, err := os.Create(concatenatedFilePath)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Error al crear archivo concatenado",
-			"data":    err.Error(),
-		})
-	}
-	defer concatenatedFile.Close()
+	// // Descargar y concatenar segmentos .ts
+	// concatenatedFile, err := os.Create(concatenatedFilePath)
+	// if err != nil {
+	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+	// 		"message": "Error al crear archivo concatenado",
+	// 		"data":    err.Error(),
+	// 	})
+	// }
+	// defer concatenatedFile.Close()
 
-	for _, tsURL := range videoData {
-		resp, err := http.Get(tsURL)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": "Error al descargar segmento de video",
-				"data":    err.Error(),
-			})
-		}
-		defer resp.Body.Close()
+	// for _, tsURL := range videoData {
+	// 	resp, err := http.Get(tsURL)
+	// 	if err != nil {
+	// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+	// 			"message": "Error al descargar segmento de video",
+	// 			"data":    err.Error(),
+	// 		})
+	// 	}
+	// 	defer resp.Body.Close()
 
-		_, err = io.Copy(concatenatedFile, resp.Body)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": "Error al escribir segmento de video",
-				"data":    err.Error(),
-			})
-		}
-	}
+	// 	_, err = io.Copy(concatenatedFile, resp.Body)
+	// 	if err != nil {
+	// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+	// 			"message": "Error al escribir segmento de video",
+	// 			"data":    err.Error(),
+	// 		})
+	// 	}
+	// }
 
-	defer func() {
-		if _, err := os.Stat(videoDir); err == nil {
-			err := os.RemoveAll(videoDir)
-			if err != nil {
-				fmt.Println("Error removing directory:", err.Error())
-			}
-		} else if !os.IsNotExist(err) {
-			fmt.Println("Error checking directory:", err.Error())
-		}
-	}()
+	// defer func() {
+	// 	if _, err := os.Stat(videoDir); err == nil {
+	// 		err := os.RemoveAll(videoDir)
+	// 		if err != nil {
+	// 			fmt.Println("Error removing directory:", err.Error())
+	// 		}
+	// 	} else if !os.IsNotExist(err) {
+	// 		fmt.Println("Error checking directory:", err.Error())
+	// 	}
+	// }()
 
 	// Convertir el archivo .ts concatenado a .mp4 usando FFmpeg
-	FFmpegPath := config.FFmpegPath()
+	// FFmpegPath := config.FFmpegPath()
+	// cmd := exec.Command(
+	// 	FFmpegPath,
+	// 	"-i", concatenatedFilePath,
+	// 	"-t", "70",
+	// 	"-c:v", "libx264",
+	// 	"-c:a", "aac",
+	// 	"-strict", "experimental",
+	// 	"-b:a", "192k",
+	// 	"-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+	// 	"-y", // overwrite output files without asking
+	// 	outputFilePath,
+	// )
+	// _, err = cmd.CombinedOutput()
+	// if err != nil {
+	// 	return c.Status(fiber.StatusInsufficientStorage).JSON(fiber.Map{
+	// 		"message": "Error al recortar el video",
+	// 		"data":    err.Error(),
+	// 	})
+	// }
 
-	cmd := exec.Command(
-		FFmpegPath,
-		"-i", concatenatedFilePath,
-		"-t", "70",
-		"-c:v", "libx264",
-		"-c:a", "aac",
-		"-strict", "experimental",
-		"-b:a", "192k",
-		"-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-		"-y", // overwrite output files without asking
-		outputFilePath,
-	)
-	_, err = cmd.CombinedOutput()
-	if err != nil {
-		return c.Status(fiber.StatusInsufficientStorage).JSON(fiber.Map{
-			"message": "Error al recortar el video",
-			"data":    err.Error(),
-		})
-	}
-
-	clipCreated, err := clip.ClipService.CreateClip(idValueObj, totalKey, nameUser, ClipTitle, outputFilePath)
+	clipCreated, err := clip.ClipService.CreateClip(idValueObj, totalKey, nameUser, ClipTitle, clipRequest.TsUrls)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "StatusInternalServerError",
@@ -430,22 +421,22 @@ func (clip *ClipHandler) CreateClips(c *fiber.Ctx) error {
 		})
 	}
 
-	cloudinaryResponse, err := helpers.UploadVideo(outputFilePath)
-	if err != nil {
-		fmt.Printf("Error al subir el video a Cloudinary: %v\n", err)
-	}
+	// cloudinaryResponse, err := helpers.UploadVideo(outputFilePath)
+	// if err != nil {
+	// 	fmt.Printf("Error al subir el video a Cloudinary: %v\n", err)
+	// }
 
-	go func() {
-		clip.ClipService.UpdateClip(clipCreated, cloudinaryResponse)
-		if _, err := os.Stat(videoDir); err == nil {
-			err := os.RemoveAll(videoDir)
-			if err != nil {
-				fmt.Println("Error removing directory:", err.Error())
-			}
-		} else if !os.IsNotExist(err) {
-			fmt.Println("Error checking directory:", err.Error())
-		}
-	}()
+	// go func() {
+	// 	clip.ClipService.UpdateClip(clipCreated, cloudinaryResponse)
+	// 	if _, err := os.Stat(videoDir); err == nil {
+	// 		err := os.RemoveAll(videoDir)
+	// 		if err != nil {
+	// 			fmt.Println("Error removing directory:", err.Error())
+	// 		}
+	// 	} else if !os.IsNotExist(err) {
+	// 		fmt.Println("Error checking directory:", err.Error())
+	// 	}
+	// }()
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message": "StatusCreated",

@@ -5,6 +5,8 @@ import (
 	clipinfrastructure "PINKKER-BACKEND/internal/clip/clip-infrastructure"
 	"PINKKER-BACKEND/pkg/helpers"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -35,13 +37,25 @@ func (u *ClipService) TimeOutClipCreate(idClip primitive.ObjectID) error {
 	return err
 }
 
-func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, nameUser string, ClipTitle string, outputFilePath string) (*clipdomain.Clip, error) {
+func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, nameUser string, ClipTitle string, TsUrls []string) (*clipdomain.Clip, error) {
 	user, err := u.ClipRepository.FindUser(totalKey)
 	if err != nil {
 		return &clipdomain.Clip{}, err
 	}
 
 	CategorieStream, err := u.ClipRepository.FindCategorieStream(user.ID)
+	if err != nil {
+		return &clipdomain.Clip{}, err
+	}
+
+	UrlsClipFormate, err := u.UrlsGenerateClips(CategorieStream.ID, TsUrls)
+	urls, m3u8Content, err := u.GenerateCustomM3U8(UrlsClipFormate)
+	if err != nil {
+		return &clipdomain.Clip{}, err
+	}
+
+	fmt.Println("TS URLs:\n", urls)
+	fmt.Println("M3U8 Content:\n", m3u8Content)
 	if err != nil {
 		return &clipdomain.Clip{}, err
 	}
@@ -57,17 +71,15 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 		fmt.Println(err)
 		imagePrevClip = CategorieStream.StreamThumbnail
 	}
-	fmt.Println(imagePrevClip)
 
 	clip := &clipdomain.Clip{
-
 		NameUserCreator:       nameUser,
 		IDCreator:             idCreator,
 		NameUser:              user.NameUser,
 		UserID:                user.ID,
 		Avatar:                user.Avatar,
 		ClipTitle:             ClipTitle,
-		URL:                   outputFilePath,
+		URL:                   urls,
 		Likes:                 []primitive.ObjectID{},
 		StreamThumbnail:       imagePrevClip,
 		Category:              CategorieStream.StreamCategory,
@@ -82,6 +94,7 @@ func (u *ClipService) CreateClip(idCreator primitive.ObjectID, totalKey string, 
 	clip, err = u.ClipRepository.SaveClip(clip)
 	return clip, err
 }
+
 func (u *ClipService) UpdateClip(clipUpdate *clipdomain.Clip, ulrClip string) {
 	u.ClipRepository.UpdateClip(clipUpdate.ID, ulrClip)
 }
@@ -198,3 +211,46 @@ func (u *ClipService) GetClipTheAd(clips []clipdomain.GetClip) (clipdomain.GetCl
 
 // 	return nil
 // }
+
+func (u *ClipService) UrlsGenerateClips(streamID primitive.ObjectID, tsIndexes []string) ([]string, error) {
+
+	Summary, err := u.ClipRepository.GetCurrentStreamSummary(streamID)
+	if err != nil {
+		return []string{}, err
+	}
+	return u.ClipRepository.GenerateStreamURLs(Summary, tsIndexes)
+}
+
+func (r *ClipService) GenerateCustomM3U8(tsURLs []string) (string, string, error) {
+	if len(tsURLs) == 0 {
+		return "", "", fmt.Errorf("no TS URLs provided")
+	}
+
+	// Construir el contenido del archivo M3U8
+	var m3u8Content strings.Builder
+	m3u8Content.WriteString("#EXTM3U\n")
+	m3u8Content.WriteString("#EXT-X-VERSION:3\n")
+	m3u8Content.WriteString("#EXT-X-TARGETDURATION:10\n") // Ajustar duración estimada por segmento
+	m3u8Content.WriteString(fmt.Sprintf("#EXT-X-MEDIA-SEQUENCE:%d\n", extractSequenceNumber(tsURLs[0])))
+
+	for _, url := range tsURLs {
+		m3u8Content.WriteString("#EXTINF:10.0,\n") // Duración por segmento
+		m3u8Content.WriteString(url + "\n")
+	}
+
+	m3u8Content.WriteString("#EXT-X-ENDLIST\n")
+
+	// Unir las URLs en un string para referencia
+	urlList := strings.Join(tsURLs, ",")
+
+	return urlList, m3u8Content.String(), nil
+}
+
+// Función auxiliar para extraer el número de secuencia de una URL
+func extractSequenceNumber(tsURL string) int {
+	// Asume que el archivo tiene un formato como "index123.ts"
+	baseName := filepath.Base(tsURL)
+	var seqNum int
+	fmt.Sscanf(baseName, "index%d.ts", &seqNum)
+	return seqNum
+}

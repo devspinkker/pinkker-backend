@@ -21,6 +21,7 @@ type Clip struct {
 	Avatar          string               `json:"Avatar" bson:"Avatar"`
 	ClipTitle       string               `json:"clipTitle" bson:"ClipTitle"`
 	URL             string               `json:"url" bson:"url"`
+	URLS            []string             `json:"urls" bson:"urls"`
 	Likes           []primitive.ObjectID `json:"likes" bson:"Likes"`
 	Duration        int                  `json:"duration" bson:"duration"`
 	Views           int                  `json:"views" bson:"views"`
