@@ -517,12 +517,12 @@ func (s *StreamSummaryHandler) AWeekOfStreaming(c *fiber.Ctx) error {
 }
 func (s *StreamSummaryHandler) GetCurrentStreamSummaryForToken(c *fiber.Ctx) error {
 
-	type request struct {
-		Key string `json:"key"`
+	type ReqGetUserBykey struct {
+		Key string `json:"key" query:"key"`
 	}
 
-	var requestBody request
-	if err := c.BodyParser(&requestBody); err != nil {
+	var requestBody ReqGetUserBykey
+	if err := c.QueryParser(&requestBody); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Invalid request body",
 		})
