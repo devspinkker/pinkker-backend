@@ -1739,8 +1739,8 @@ func (r *ClipRepository) updatePinkkerProfitPerMonth(ctx context.Context) error 
 
 	return nil
 }
-func (r *ClipRepository) GetCurrentStreamSummary(streamID primitive.ObjectID) (StreamSummarydomain.StreamSummary, error) {
-	var streamSummary StreamSummarydomain.StreamSummary
+func (r *ClipRepository) GetCurrentStreamSummary(streamID primitive.ObjectID) (StreamSummarydomain.StreamSummaryGet, error) {
+	var streamSummary StreamSummarydomain.StreamSummaryGet
 
 	// Obtener el Stream actual
 	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
@@ -1759,7 +1759,7 @@ func (r *ClipRepository) GetCurrentStreamSummary(streamID primitive.ObjectID) (S
 	filterSummary := bson.M{
 		"StreamerID": stream.StreamerID,
 		"StartOfStream": bson.M{
-			"$lte": stream.StartDate, // Buscar los resúmenes que comenzaron antes o en el mismo momento
+			"$lte": time.Now(),
 		},
 	}
 
@@ -1773,7 +1773,7 @@ func (r *ClipRepository) GetCurrentStreamSummary(streamID primitive.ObjectID) (S
 	return streamSummary, nil
 }
 
-func (r *ClipRepository) GenerateStreamURLs(streamSummary StreamSummarydomain.StreamSummary, tsIndexes []string) ([]string, error) {
+func (r *ClipRepository) GenerateStreamURLs(streamSummary StreamSummarydomain.StreamSummaryGet, tsIndexes []string) ([]string, error) {
 	var urls []string
 
 	fmt.Println("tsIndexes inicial:", tsIndexes)

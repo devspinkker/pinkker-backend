@@ -1065,3 +1065,49 @@ func (r *StreamSummaryRepository) AWeekOfStreaming(StreamerID primitive.ObjectID
 
 	return summaries, nil
 }
+
+func (r *StreamSummaryRepository) GetCurrentStreamSummaryForToken(streamKey string) (StreamSummarydomain.StreamSummaryGet, error) {
+	var streamSummary StreamSummarydomain.StreamSummaryGet
+
+	GoMongoDB := r.mongoClient.Database("PINKKER-BACKEND")
+	GoMongoDBCollSUser := GoMongoDB.Collection("Users")
+	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
+
+	filterStream := bson.M{"KeyTransmission": streamKey}
+
+	var result struct {
+		KeyTransmission string `bson:"KeyTransmission"`
+		Id              string `bson:"_id"`
+	}
+
+	err := GoMongoDBCollSUser.FindOne(context.TODO(), filterStream, options.FindOne().SetProjection(bson.M{"KeyTransmission": 1, "_id": 1})).Decode(&result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			log.Fatal(err)
+		} else {
+			log.Fatal(err)
+		}
+	}
+
+	err = GoMongoDBCollSUser.FindOne(context.Background(), filterStream).Decode(&result)
+	if err != nil {
+		return streamSummary, errors.New("error fetching stream: ")
+	}
+
+	// Buscar el resumen del stream más cercano a su StartDate
+	filterSummary := bson.M{
+		"StreamerID": result.Id,
+		"StartOfStream": bson.M{
+			"$lte": time.Now(),
+		},
+	}
+
+	options := options.FindOne().SetSort(bson.D{{Key: "StartOfStream", Value: -1}}) // Ordenar de más reciente a más antiguo
+
+	err = GoMongoDBCollStreamSummary.FindOne(context.Background(), filterSummary, options).Decode(&streamSummary)
+	if err != nil {
+		return streamSummary, errors.New("error fetching stream summary")
+	}
+
+	return streamSummary, nil
+}

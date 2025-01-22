@@ -41,5 +41,6 @@ func StreamSummaryRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *
 
 	App.Get("/streamers/DeleteStreamSummaryByIDAndStreamerID", middleware.UseExtractor(), StreamSummary.DeleteStreamSummaryByIDAndStreamerID)
 	App.Get("/streamers/UpdateStreamSummaryByIDAndStreamerID", middleware.UseExtractor(), StreamSummary.UpdateStreamSummaryByIDAndStreamerID)
+	App.Get("/StreamSummary/GetCurrentStreamSummaryForToken", StreamSummary.GetCurrentStreamSummaryForToken)
 
 }

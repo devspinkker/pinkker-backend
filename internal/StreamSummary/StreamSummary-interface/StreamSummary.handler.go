@@ -515,3 +515,28 @@ func (s *StreamSummaryHandler) AWeekOfStreaming(c *fiber.Ctx) error {
 		"data":    LastWeekStreamSummaries,
 	})
 }
+func (s *StreamSummaryHandler) GetCurrentStreamSummaryForToken(c *fiber.Ctx) error {
+
+	type request struct {
+		Key string `json:"key"`
+	}
+
+	var requestBody request
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid request body",
+		})
+	}
+
+	LastSixStreamSummaries, err := s.StreamSummaryServise.GetCurrentStreamSummaryForToken(requestBody.Key)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"data":    LastSixStreamSummaries,
+	})
+}

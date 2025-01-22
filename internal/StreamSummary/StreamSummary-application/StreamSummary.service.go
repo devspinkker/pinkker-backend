@@ -89,3 +89,6 @@ func (s *StreamSummaryService) GetTopVodsLast48Hours() ([]StreamSummarydomain.St
 	GetStreamSummaryByID, err := s.StreamSummaryRepository.GetTopVodsLast48Hours()
 	return GetStreamSummaryByID, err
 }
+func (s *StreamSummaryService) GetCurrentStreamSummaryForToken(streamKey string) (StreamSummarydomain.StreamSummaryGet, error) {
+	return s.StreamSummaryRepository.GetCurrentStreamSummaryForToken(streamKey)
+}
