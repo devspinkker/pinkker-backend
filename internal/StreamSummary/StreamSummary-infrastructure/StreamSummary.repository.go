@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -1073,25 +1074,35 @@ func (r *StreamSummaryRepository) GetCurrentStreamSummaryForToken(streamKey stri
 	GoMongoDBCollSUser := GoMongoDB.Collection("Users")
 	GoMongoDBCollStreamSummary := GoMongoDB.Collection("StreamSummary")
 
-	filterStream := bson.M{"KeyTransmission": streamKey}
+	filterStream := bson.M{"KeyTransmission": "live" + streamKey}
+	fmt.Println(streamKey)
 
 	var result struct {
-		KeyTransmission string `bson:"KeyTransmission"`
-		Id              string `bson:"_id"`
+		KeyTransmission string             `bson:"KeyTransmission"`
+		Id              primitive.ObjectID `bson:"_id"`
 	}
 
-	err := GoMongoDBCollSUser.FindOne(context.TODO(), filterStream, options.FindOne().SetProjection(bson.M{"KeyTransmission": 1, "_id": 1})).Decode(&result)
+	// Buscar usuario con el streamKey
+	err := GoMongoDBCollSUser.FindOne(
+		context.TODO(),
+		filterStream,
+		options.FindOne().SetProjection(bson.M{"KeyTransmission": 1, "_id": 1}),
+	).Decode(&result)
+
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			log.Fatal(err)
-		} else {
-			log.Fatal(err)
+			fmt.Println("No se encontró ningún usuario con esa clave de transmisión")
+			return streamSummary, errors.New("no user found with given stream key")
 		}
+		fmt.Println("Error al buscar el usuario:", err)
+		return streamSummary, err
 	}
 
-	err = GoMongoDBCollSUser.FindOne(context.Background(), filterStream).Decode(&result)
-	if err != nil {
-		return streamSummary, errors.New("error fetching stream: ")
+	fmt.Println("Resultado de la consulta del usuario:", result)
+
+	// Validar si el ID del usuario es válido
+	if result.Id.IsZero() {
+		return streamSummary, errors.New("invalid user ID")
 	}
 
 	// Buscar el resumen del stream más cercano a su StartDate
@@ -1102,12 +1113,62 @@ func (r *StreamSummaryRepository) GetCurrentStreamSummaryForToken(streamKey stri
 		},
 	}
 
-	options := options.FindOne().SetSort(bson.D{{Key: "StartOfStream", Value: -1}}) // Ordenar de más reciente a más antiguo
+	findOptions := options.FindOne().SetSort(bson.D{{Key: "StartOfStream", Value: -1}}) // Ordenar de más reciente a más antiguo
 
-	err = GoMongoDBCollStreamSummary.FindOne(context.Background(), filterSummary, options).Decode(&streamSummary)
+	err = GoMongoDBCollStreamSummary.FindOne(context.Background(), filterSummary, findOptions).Decode(&streamSummary)
 	if err != nil {
-		return streamSummary, errors.New("error fetching stream summary")
+		if err == mongo.ErrNoDocuments {
+			fmt.Println("No se encontró ningún resumen de stream para el usuario.")
+			return streamSummary, errors.New("no stream summary found")
+		}
+		fmt.Println("Error al buscar el resumen de stream:", err)
+		return streamSummary, err
 	}
+
+	fmt.Println("Resumen de stream encontrado:", streamSummary)
+
+	return streamSummary, nil
+}
+
+func (r *StreamSummaryRepository) CacheStreamSummary(streamKey string, summary StreamSummarydomain.StreamSummaryGet) error {
+	key := "live:" + streamKey
+
+	// Convertir a JSON para almacenar en Redis
+	data, err := json.Marshal(summary)
+	if err != nil {
+		return err
+	}
+
+	// Guardar en Redis con expiración de 1 minuto
+	err = r.redisClient.Set(context.TODO(), key, data, 1*time.Minute).Err()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (r *StreamSummaryRepository) GetStreamSummaryWithCache(streamKey string) (StreamSummarydomain.StreamSummaryGet, error) {
+	var streamSummary StreamSummarydomain.StreamSummaryGet
+	key := "live:" + streamKey
+
+	// Intentar obtener desde Redis
+	data, err := r.redisClient.Get(context.TODO(), key).Result()
+	if err == nil {
+		// Si existe en Redis, deserializar y devolver
+		err = json.Unmarshal([]byte(data), &streamSummary)
+		if err == nil {
+			return streamSummary, nil
+		}
+	}
+
+	// Si no está en Redis, obtener desde MongoDB
+	streamSummary, err = r.GetCurrentStreamSummaryForToken(streamKey)
+	if err != nil {
+		return streamSummary, errors.New("error fetching stream summary from MongoDB")
+	}
+
+	// Guardar en Redis para futuras consultas
+	_ = r.CacheStreamSummary(streamKey, streamSummary)
 
 	return streamSummary, nil
 }

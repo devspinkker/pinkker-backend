@@ -13,7 +13,6 @@ import (
 	"PINKKER-BACKEND/pkg/jwt"
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -528,7 +527,9 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 	}
 	token, err := jwt.CreateToken(user)
 	if err != nil {
-		log.Fatal("Login,CreateTokenError", err)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "CreateTokenError",
+		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message":         "token",

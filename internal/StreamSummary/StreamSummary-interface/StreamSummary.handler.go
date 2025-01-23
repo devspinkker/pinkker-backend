@@ -3,6 +3,7 @@ package StreamSummaryinterfaces
 import (
 	StreamSummaryapplication "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-application"
 	StreamSummarydomain "PINKKER-BACKEND/internal/StreamSummary/StreamSummary-domain"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -516,25 +517,32 @@ func (s *StreamSummaryHandler) AWeekOfStreaming(c *fiber.Ctx) error {
 	})
 }
 func (s *StreamSummaryHandler) GetCurrentStreamSummaryForToken(c *fiber.Ctx) error {
+	fmt.Println("AAA")
 
 	type ReqGetUserBykey struct {
 		Key string `json:"key" query:"key"`
 	}
-
 	var requestBody ReqGetUserBykey
+
+	// Usar QueryParser para leer el parámetro 'key' de la URL
 	if err := c.QueryParser(&requestBody); err != nil {
+		fmt.Println("AAA222")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Invalid request body",
 		})
 	}
+	fmt.Println("2222333")
 
+	// Llamar al servicio para obtener los resúmenes de stream utilizando la clave
 	LastSixStreamSummaries, err := s.StreamSummaryServise.GetCurrentStreamSummaryForToken(requestBody.Key)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
 	}
+	fmt.Println("22223$$$")
 
+	// Retornar la respuesta con los datos obtenidos
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "ok",
 		"data":    LastSixStreamSummaries,
