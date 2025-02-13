@@ -55,17 +55,17 @@ func main() {
 	})
 	// users
 	userroutes.UserRoutes(app, redisClient, newMongoDB)
-	// tweet
+
 	tweetroutes.TweetdRoutes(app, redisClient, newMongoDB)
-	// donation
+
 	donationroutes.DonatioRoutes(app, redisClient, newMongoDB)
-	// streams
+
 	streamroutes.StreamsRoutes(app, redisClient, newMongoDB)
-	// clips
+
 	cliproutes.ClipRoutes(app, redisClient, newMongoDB)
-	//subs
+
 	subscriptionroutes.SubsRoutes(app, redisClient, newMongoDB)
-	//StreamSummary
+
 	StreamSummaryroutes.StreamSummaryRoutes(app, redisClient, newMongoDB)
 
 	withdrawroutes.Withdrawroutes(app, redisClient, newMongoDB)

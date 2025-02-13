@@ -1133,13 +1133,11 @@ func (r *StreamSummaryRepository) GetCurrentStreamSummaryForToken(streamKey stri
 func (r *StreamSummaryRepository) CacheStreamSummary(streamKey string, summary StreamSummarydomain.StreamSummaryGet) error {
 	key := "live:" + streamKey
 
-	// Convertir a JSON para almacenar en Redis
 	data, err := json.Marshal(summary)
 	if err != nil {
 		return err
 	}
 
-	// Guardar en Redis con expiración de 1 minuto
 	err = r.redisClient.Set(context.TODO(), key, data, 1*time.Minute).Err()
 	if err != nil {
 		return err
@@ -1151,23 +1149,19 @@ func (r *StreamSummaryRepository) GetStreamSummaryWithCache(streamKey string) (S
 	var streamSummary StreamSummarydomain.StreamSummaryGet
 	key := "live:" + streamKey
 
-	// Intentar obtener desde Redis
 	data, err := r.redisClient.Get(context.TODO(), key).Result()
 	if err == nil {
-		// Si existe en Redis, deserializar y devolver
 		err = json.Unmarshal([]byte(data), &streamSummary)
 		if err == nil {
 			return streamSummary, nil
 		}
 	}
 
-	// Si no está en Redis, obtener desde MongoDB
 	streamSummary, err = r.GetCurrentStreamSummaryForToken(streamKey)
 	if err != nil {
 		return streamSummary, errors.New("error fetching stream summary from MongoDB")
 	}
 
-	// Guardar en Redis para futuras consultas
 	_ = r.CacheStreamSummary(streamKey, streamSummary)
 
 	return streamSummary, nil

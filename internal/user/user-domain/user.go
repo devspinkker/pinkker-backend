@@ -417,3 +417,9 @@ type UserInfo struct { // ROOMS
 	StreamerChannelOwner bool
 	LastMessage          time.Time
 }
+
+// Follower representa un seguidor con su ID y la información asociada.
+type Follower struct {
+	ID         primitive.ObjectID `json:"id" bson:"id"`
+	FollowInfo FollowInfo         `json:"followInfo" bson:"followInfo"`
+}

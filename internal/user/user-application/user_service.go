@@ -377,3 +377,7 @@ func (u *UserService) UpdatePinkkerProfitPerMonthRegisterLinkReferent(source str
 	}
 	return u.roomRepository.UpdatePinkkerProfitPerMonthRegisterLinkReferent(source)
 }
+func (u *UserService) GetFollowersPaginated(id primitive.ObjectID, page int) ([]userdomain.Follower, error) {
+	context := context.Background()
+	return u.roomRepository.GetFollowersPaginated(context, id, page)
+}

@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -39,6 +40,53 @@ func NewUserRepository(redisClient *redis.Client, mongoClient *mongo.Client) *Us
 		redisClient: redisClient,
 		mongoClient: mongoClient,
 	}
+}
+
+// GetFollowersPaginated recupera de la base de datos los followers de un usuario y los devuelve paginados de a 6000.
+// El parámetro 'page' es el número de página (empezando en 0).
+func (u *UserRepository) GetFollowersPaginated(ctx context.Context, userID primitive.ObjectID, page int) ([]userdomain.Follower, error) {
+	// Validar el parámetro de página.
+	if page < 0 {
+		return nil, errors.New("el número de página debe ser un entero no negativo")
+	}
+
+	// Obtener el documento del usuario, proyectando solo el campo Followers.
+	collection := u.mongoClient.Database("PINKKER-BACKEND").Collection("Users")
+	var result struct {
+		Followers map[primitive.ObjectID]userdomain.FollowInfo `bson:"Followers"`
+	}
+	err := collection.FindOne(ctx, bson.M{"_id": userID}, options.FindOne().SetProjection(bson.M{"Followers": 1})).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convertir el mapa de followers a un slice para facilitar la paginación.
+	var followers []userdomain.Follower
+	for id, info := range result.Followers {
+		followers = append(followers, userdomain.Follower{
+			ID:         id,
+			FollowInfo: info,
+		})
+	}
+
+	// Opcional: Ordenar los followers por la fecha de inicio del seguimiento (campo Since).
+	sort.Slice(followers, func(i, j int) bool {
+		return followers[i].FollowInfo.Since.Before(followers[j].FollowInfo.Since)
+	})
+
+	// Aplicar paginación: 6000 elementos por página.
+	const pageSize = 6000
+	start := page * pageSize
+	if start >= len(followers) {
+		// No hay más resultados.
+		return []userdomain.Follower{}, nil
+	}
+	end := start + pageSize
+	if end > len(followers) {
+		end = len(followers)
+	}
+
+	return followers[start:end], nil
 }
 func (u *UserRepository) PurchasePinkkerPrime(userID primitive.ObjectID) (bool, error) {
 	PinkkerPrimeCostStr := config.PinkkerPrimeCost()

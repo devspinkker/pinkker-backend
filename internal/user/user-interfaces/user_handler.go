@@ -1603,3 +1603,48 @@ func (h *UserHandler) AcceptOrDeleteAdvertisement(c *fiber.Ctx) error {
 	})
 
 }
+
+// GetFollowersPaginated recupera los seguidores de un usuario de forma paginada.
+// Se espera que el ID del usuario se pase como parámetro de ruta ("id") y la página a través de la query (parámetro "page").
+// El método devuelve los seguidores en páginas de 6000 elementos.
+func (h *UserHandler) GetFollowersPaginated(c *fiber.Ctx) error {
+	// Obtener el ID del usuario desde los parámetros de ruta.
+	idParam := c.Params("id")
+	if idParam == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "User ID is required",
+		})
+	}
+	userID, err := primitive.ObjectIDFromHex(idParam)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid user ID",
+			"data":    err.Error(),
+		})
+	}
+
+	// Obtener el número de página desde la query; si no se especifica, se toma 0 por defecto.
+	pageStr := c.Query("page", "0")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid page number",
+			"data":    err.Error(),
+		})
+	}
+
+	// Llamar al servicio de usuario para obtener los seguidores paginados.
+	followers, err := h.userService.GetFollowersPaginated(userID, page)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error retrieving followers",
+			"data":    err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":   "StatusOK",
+		"followers": followers,
+		"page":      page,
+	})
+}
