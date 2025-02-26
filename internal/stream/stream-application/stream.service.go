@@ -5,6 +5,7 @@ import (
 	"PINKKER-BACKEND/internal/advertisements/advertisements"
 	streamdomain "PINKKER-BACKEND/internal/stream/stream-domain"
 	streaminfrastructure "PINKKER-BACKEND/internal/stream/stream-infrastructure"
+	userdomain "PINKKER-BACKEND/internal/user/user-domain"
 	"PINKKER-BACKEND/pkg/utils"
 
 	"github.com/gofiber/websocket/v2"
@@ -110,7 +111,14 @@ func (s *StreamService) UpdateStreamInfo(data streamdomain.UpdateStreamInfo, id 
 	err := s.StreamRepository.UpdateStreamInfo(data, id)
 	return err
 }
-
+func (s *StreamService) UpdateAntiqueStreamDuration(data streamdomain.UpdateAntiqueStreamDuration, id primitive.ObjectID) error {
+	err := s.StreamRepository.UpdateAntiqueStreamDuration(id, data)
+	return err
+}
+func (s *StreamService) UpdateChatRulesStream(data streamdomain.ChatRulesReq, id primitive.ObjectID) error {
+	err := s.StreamRepository.UpdateChatRulesStream(id, data)
+	return err
+}
 func (s *StreamService) UpdateModChat(data streamdomain.UpdateModChat, id primitive.ObjectID) error {
 	err := s.StreamRepository.UpdateModChat(data, id)
 	return err
@@ -136,4 +144,7 @@ func (s *StreamService) GetCategoria(Cate string) (streamdomain.Categoria, error
 
 func (s *StreamService) ValidateStreamAccess(idUser, idStreamer primitive.ObjectID) (bool, error) {
 	return s.StreamRepository.ValidateStreamAccess(idUser, idStreamer)
+}
+func (s *StreamService) GetInfoUserInRoomBaneados(nameuser string, nameUserToken string) ([]*userdomain.UserInfo, error) {
+	return s.StreamRepository.GetInfoUsersInRoom(nameuser, nameUserToken)
 }

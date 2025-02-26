@@ -550,6 +550,70 @@ func (s *StreamHandler) UpdateModChat(c *fiber.Ctx) error {
 		"message": "ok",
 	})
 }
+func (s *StreamHandler) UpdateAntiqueStreamDate(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var requestBody streamdomain.UpdateAntiqueStreamDuration
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+	if err := requestBody.Validate(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	if err := s.StreamServise.UpdateAntiqueStreamDuration(requestBody, IdUserTokenP); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
+func (s *StreamHandler) UpdateChatRulesStream(c *fiber.Ctx) error {
+	IdUserToken := c.Context().UserValue("_id").(string)
+	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
+
+	if errinObjectID != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+		})
+	}
+	var requestBody streamdomain.ChatRulesReq
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+	if err := requestBody.Validate(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	if err := s.StreamServise.UpdateChatRulesStream(requestBody, IdUserTokenP); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+	})
+}
 func (s *StreamHandler) UpdateModChatSlowMode(c *fiber.Ctx) error {
 	IdUserToken := c.Context().UserValue("_id").(string)
 	IdUserTokenP, errinObjectID := primitive.ObjectIDFromHex(IdUserToken)
@@ -687,5 +751,32 @@ func (s *StreamHandler) ValidateStreamAccess(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "invalid",
+	})
+}
+func (s *StreamHandler) GetInfoUserInRoomBaneados(c *fiber.Ctx) error {
+	nameUser := c.Context().UserValue("nameUser").(string)
+	var requestBody streamdomain.GetInfoUserInRoomBaneados
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "StatusBadRequest",
+			"data":    err.Error(),
+		})
+	}
+	if err := requestBody.Validate(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	fmt.Println(nameUser)
+	users, err := s.StreamServise.GetInfoUserInRoomBaneados(requestBody.NameUser, nameUser)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "StatusInternalServerError",
+			"data":    err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "ok",
+		"users":   users,
 	})
 }

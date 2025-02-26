@@ -170,6 +170,23 @@ type ReqGetUserByNameUser struct {
 	Stream   *streamdomain.Stream `json:"stream"`
 	UserInfo *UserInfo            `json:"UserInfo"`
 }
+type UserInfo struct { // ROOMS
+	Room                 primitive.ObjectID `json:"Room" bson:"Room"`
+	NameUser             string             `json:"NameUser" bson:"NameUser"` // <-- Agregado
+	Color                string             `json:"Color" bson:"Color"`
+	Vip                  bool               `json:"Vip" bson:"Vip"`
+	Verified             bool               `json:"Verified" bson:"Verified"`
+	Moderator            bool               `json:"Moderator" bson:"Moderator"`
+	Subscription         primitive.ObjectID `json:"Subscription" bson:"Subscription"`
+	SubscriptionInfo     SubscriptionInfo   `json:"SubscriptionInfo" bson:"SubscriptionInfo"`
+	Baneado              bool               `json:"Baneado" bson:"Baneado"`
+	TimeOut              time.Time          `json:"TimeOut" bson:"TimeOut"`
+	EmblemasChat         map[string]string  `json:"EmblemasChat" bson:"EmblemasChat"`
+	Identidad            string             `json:"Identidad" bson:"Identidad"`
+	Following            FollowInfo         `json:"Following" bson:"Following"`
+	StreamerChannelOwner bool               `json:"StreamerChannelOwner" bson:"StreamerChannelOwner"`
+	LastMessage          time.Time          `json:"LastMessage" bson:"LastMessage"`
+}
 
 func nameUserValidator(fl validator.FieldLevel) bool {
 	nameUser := fl.Field().String()
@@ -400,22 +417,6 @@ type SubscriptionInfo struct {
 	MonthsSubscribed     int                `bson:"MonthsSubscribed"`
 	Notified             bool               `bson:"Notified"`
 	Text                 string             `bson:"Text"`
-}
-type UserInfo struct { // ROOMS
-	Room                 primitive.ObjectID
-	Color                string
-	Vip                  bool
-	Verified             bool
-	Moderator            bool
-	Subscription         primitive.ObjectID
-	SubscriptionInfo     SubscriptionInfo
-	Baneado              bool
-	TimeOut              time.Time
-	EmblemasChat         map[string]string
-	Identidad            string
-	Following            FollowInfo
-	StreamerChannelOwner bool
-	LastMessage          time.Time
 }
 
 // Follower representa un seguidor con su ID y la información asociada.

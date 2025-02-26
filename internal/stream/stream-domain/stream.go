@@ -32,6 +32,8 @@ type Stream struct {
 	TotalTimeOnline          float64            `json:"TotalTimeOnline" bson:"TotalTimeOnline"`
 	RecommendationScore      float64            `json:"RecommendationScore" bson:"RecommendationScore"`
 	AuthorizationToView      map[string]bool    `json:"AuthorizationToView" bson:"AuthorizationToView" ` // pinkker_prime, subscription | ambos o uno o ninguno
+	AntiqueStreamDuration    int64              `json:"AntiqueStreamDuration" bson:"AntiqueStreamDuration"`
+	ChatRules                string             `json:"ChatRules" bson:"ChatRules"`
 }
 
 type UpdateStreamInfo struct {
@@ -66,6 +68,34 @@ func (u *UpdateStreamInfo) Validate() error {
 	}
 
 	return nil
+}
+
+type ChatRulesReq struct {
+	Rules string `json:"Rules" validate:"required"`
+}
+
+func (u *ChatRulesReq) Validate() error {
+	validate := validator.New()
+	return validate.Struct(u)
+}
+
+type GetInfoUserInRoomBaneados struct {
+	NameUser string `json:"NameUser" validate:"required"`
+}
+
+func (u *GetInfoUserInRoomBaneados) Validate() error {
+	validate := validator.New()
+	return validate.Struct(u)
+}
+
+type UpdateAntiqueStreamDuration struct {
+	Duration int64 `json:"duration" validate:"required,min=0,max=15552000"` // 10 segundos(10s) a 6 meses (15552000s)
+}
+
+// validar que UpdateAntiqueStreamDuration cumpla con la interfaz de validación
+func (u *UpdateAntiqueStreamDuration) Validate() error {
+	validate := validator.New()
+	return validate.Struct(u)
 }
 
 // Validación personalizada para AuthorizationToView

@@ -702,17 +702,6 @@ func (r *StreamRepository) RedisDeleteKey(key string) error {
 	return nil
 }
 
-// get stream by name user
-func (r *StreamRepository) GetStreamByNameUser(nameUser string) (*streamdomain.Stream, error) {
-	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
-	FindStreamInDb := bson.D{
-		{Key: "Streamer", Value: nameUser},
-	}
-	var FindStreamsByStreamer *streamdomain.Stream
-	errCollStreams := GoMongoDBCollStreams.FindOne(context.Background(), FindStreamInDb).Decode(&FindStreamsByStreamer)
-	return FindStreamsByStreamer, errCollStreams
-}
-
 // get streams by Categorie
 func (r *StreamRepository) GetStreamsByCategory(Categorie string, page int) ([]streamdomain.Stream, error) {
 	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
@@ -1090,7 +1079,65 @@ func (r *StreamRepository) UpdateStreamInfo(updateInfo streamdomain.UpdateStream
 	r.PublishAction(previousStream.ID.Hex()+"action", notification)
 	return nil
 }
+func (r *StreamRepository) UpdateAntiqueStreamDuration(streamID primitive.ObjectID, newDuration streamdomain.UpdateAntiqueStreamDuration) error {
+	ctx := context.Background()
+	db := r.mongoClient.Database("PINKKER-BACKEND")
 
+	// Verificar si el stream existe
+	var stream streamdomain.Stream
+	if err := db.Collection("Streams").FindOne(ctx, bson.M{"StreamerID": streamID}).Decode(&stream); err != nil {
+		return err
+	}
+
+	// Actualizar solo el campo AntiqueStreamDuration (en segundos)
+	filter := bson.M{"StreamerID": streamID}
+	update := bson.M{
+		"$set": bson.M{
+			"AntiqueStreamDuration": newDuration.Duration,
+		},
+	}
+	if _, err := db.Collection("Streams").UpdateOne(ctx, filter, update); err != nil {
+		return err
+	}
+
+	// Borrar caché en Redis
+	cacheKey := streamID.Hex() + "AntiqueStreamDuration"
+	_, err := r.redisClient.Del(ctx, cacheKey).Result()
+	if err != nil {
+		fmt.Println("Error al eliminar caché de Redis:", err)
+	}
+
+	return nil
+}
+func (r *StreamRepository) UpdateChatRulesStream(streamID primitive.ObjectID, RulesReq streamdomain.ChatRulesReq) error {
+	ctx := context.Background()
+	db := r.mongoClient.Database("PINKKER-BACKEND")
+
+	// Verificar si el stream existe
+	var stream streamdomain.Stream
+	if err := db.Collection("Streams").FindOne(ctx, bson.M{"StreamerID": streamID}).Decode(&stream); err != nil {
+		return err
+	}
+
+	filter := bson.M{"StreamerID": streamID}
+	update := bson.M{
+		"$set": bson.M{
+			"ChatRules": RulesReq.Rules,
+		},
+	}
+	if _, err := db.Collection("Streams").UpdateOne(ctx, filter, update); err != nil {
+		return err
+	}
+
+	// Borrar caché en Redis
+	cacheKey := streamID.Hex() + "ChatRules"
+	_, err := r.redisClient.Del(ctx, cacheKey).Result()
+	if err != nil {
+		fmt.Println("Error al eliminar caché de Redis:", err)
+	}
+
+	return nil
+}
 func (r *StreamRepository) UpdateModChat(updateInfo streamdomain.UpdateModChat, id primitive.ObjectID) error {
 	userFilter := bson.M{"_id": id}
 	var user userdomain.GetUser
@@ -1273,4 +1320,119 @@ func (r *StreamRepository) getSubscriptionByUserIDs(sourceUserID, destUserID pri
 	}
 
 	return subscription, nil
+}
+func (r *StreamRepository) GetInfoUsersInRoom(nameUser string, nameuserToken string) ([]*userdomain.UserInfo, error) {
+	stream, err := r.GetStreamByNameUser(nameuserToken)
+	if err != nil {
+		return nil, err
+	}
+	database := r.mongoClient.Database("PINKKER-BACKEND")
+
+	// Se utiliza un filtro con regex para NameUser y se requiere que Baneado sea true
+	filter := bson.D{
+		{Key: "NameUser", Value: bson.D{
+			{Key: "$regex", Value: nameUser},
+			{Key: "$options", Value: "i"},
+		}},
+		{Key: "Rooms.Baneado", Value: true},
+		{Key: "Rooms.Room", Value: stream.ID},
+	}
+
+	pipeline := mongo.Pipeline{
+		// Stage 1: Filtrar por el usuario (NameUser con regex), que esté baneado y que en Rooms tenga el stream.ID
+		{{
+			Key: "$match", Value: filter,
+		}},
+		// Stage 2: Desempaquetar el array "Rooms"
+		{{
+			Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$Rooms"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			},
+		}},
+		// Stage 3: Volver a filtrar por el room correcto
+		{{
+			Key: "$match", Value: bson.D{
+				{Key: "Rooms.Room", Value: stream.ID},
+			},
+		}},
+		// Stage 4: Agregar el campo "NameUser" al subdocumento Rooms para conservarlo
+		{{
+			Key: "$addFields", Value: bson.D{
+				{Key: "Rooms.NameUser", Value: "$NameUser"},
+			},
+		}},
+		// Stage 5: Reemplazar la raíz por el contenido de Rooms (que ahora incluye NameUser)
+		{{
+			Key: "$replaceRoot", Value: bson.D{
+				{Key: "newRoot", Value: "$Rooms"},
+			},
+		}},
+		// Stage 6: Limitar a 10 resultados
+		{{
+			Key: "$limit", Value: 10,
+		}},
+	}
+
+	cursor, err := database.Collection("UserInformationInAllRooms").Aggregate(context.Background(), pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.Background())
+
+	var users []*userdomain.UserInfo
+	for cursor.Next(context.Background()) {
+		var user *userdomain.UserInfo
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(users) == 0 {
+		return nil, fmt.Errorf("no se encontraron usuarios para %s en la sala %s", nameUser, stream.ID.Hex())
+	}
+
+	return users, nil
+}
+
+func (r *StreamRepository) GetStreamByNameUser(nameUser string) (*streamdomain.Stream, error) {
+	ctx := context.Background()
+	cacheKey := "stream:" + nameUser
+
+	// Intentar buscar en Redis primero
+	cachedStream, err := r.redisClient.Get(ctx, cacheKey).Result()
+	if err == nil {
+		// Si encontramos el stream en la caché, lo deserializamos y lo devolvemos
+		var stream streamdomain.Stream
+		if err := json.Unmarshal([]byte(cachedStream), &stream); err == nil {
+			return &stream, nil
+		}
+	}
+
+	// Si no está en la caché o hay un error, consultamos en la base de datos
+	GoMongoDBCollStreams := r.mongoClient.Database("PINKKER-BACKEND").Collection("Streams")
+	FindStreamInDb := bson.D{
+		{Key: "Streamer", Value: nameUser},
+	}
+	var FindStreamsByStreamer streamdomain.Stream
+	errCollStreams := GoMongoDBCollStreams.FindOne(ctx, FindStreamInDb).Decode(&FindStreamsByStreamer)
+	if errCollStreams != nil {
+		return nil, errCollStreams
+	}
+
+	// Serializamos el resultado y lo almacenamos en Redis
+	streamData, err := json.Marshal(FindStreamsByStreamer)
+	if err == nil {
+		err = r.redisClient.Set(ctx, cacheKey, streamData, 5*time.Minute).Err()
+		if err != nil {
+			return &FindStreamsByStreamer, errors.New("user not found")
+		}
+	}
+
+	return &FindStreamsByStreamer, nil
 }
