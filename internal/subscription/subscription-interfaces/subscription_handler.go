@@ -4,20 +4,25 @@ import (
 	subscriptionapplication "PINKKER-BACKEND/internal/subscription/subscription-application"
 	subscriptiondomain "PINKKER-BACKEND/internal/subscription/subscription-domain"
 	"PINKKER-BACKEND/pkg/helpers"
+	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type SubscriptionHandler struct {
 	subscriptionService *subscriptionapplication.SubscriptionService
+	redisClient         *redis.Client
 }
 
-func NewSubscriptionHandler(Service *subscriptionapplication.SubscriptionService) *SubscriptionHandler {
+func NewSubscriptionHandler(Service *subscriptionapplication.SubscriptionService, redisClient *redis.Client) *SubscriptionHandler {
 	return &SubscriptionHandler{
 		subscriptionService: Service,
+		redisClient:         redisClient,
 	}
 }
 
@@ -94,12 +99,6 @@ func (h *SubscriptionHandler) Suscribirse(c *fiber.Ctx) error {
 	})
 }
 func (h *SubscriptionHandler) NotifyActivityFeed(room, user, Avatar, text string, IsFollowing bool) error {
-	clients, err := h.subscriptionService.GetWebSocketActivityFeed(room)
-	if err != nil {
-		return err
-
-	}
-
 	notification := map[string]interface{}{
 		"type":        "Suscribirse",
 		"nameuser":    user,
@@ -109,14 +108,13 @@ func (h *SubscriptionHandler) NotifyActivityFeed(room, user, Avatar, text string
 		"timestamp":   time.Now(),
 	}
 
-	for _, client := range clients {
-		err = client.WriteJSON(notification)
-		if err != nil {
-			return err
-		}
+	// Serializar la notificación a JSON
+	notificationJSON, err := json.Marshal(notification)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return h.redisClient.Publish(context.Background(), room, notificationJSON).Err()
 }
 func (h *SubscriptionHandler) NotifyActivityToChat(UserToken primitive.ObjectID, user string, text string, id primitive.ObjectID) error {
 

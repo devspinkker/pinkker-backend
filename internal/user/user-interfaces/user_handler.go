@@ -12,23 +12,27 @@ import (
 	"PINKKER-BACKEND/pkg/helpers"
 	"PINKKER-BACKEND/pkg/jwt"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UserHandler struct {
 	userService *application.UserService
+	redisClient *redis.Client
 }
 
-func NewUserHandler(chatService *application.UserService) *UserHandler {
+func NewUserHandler(chatService *application.UserService, redisClient *redis.Client) *UserHandler {
 	return &UserHandler{
 		userService: chatService,
+		redisClient: redisClient,
 	}
 }
 func (h *UserHandler) GenerateTOTPKey(c *fiber.Ctx) error {
@@ -953,10 +957,6 @@ func (h *UserHandler) Follow(c *fiber.Ctx) error {
 	})
 }
 func (h *UserHandler) NotifyActivityFeed(room, user, Avatar string, id primitive.ObjectID, IsFollowing bool) error {
-	clients, err := h.userService.GetWebSocketActivityFeed(room)
-	if err != nil {
-		return err
-	}
 
 	notification := map[string]interface{}{
 		"type":       "follow",
@@ -967,14 +967,14 @@ func (h *UserHandler) NotifyActivityFeed(room, user, Avatar string, id primitive
 		"timestamp":  time.Now(),
 	}
 
-	for _, client := range clients {
-		err = client.WriteJSON(notification)
-		if err != nil {
-			return err
-		}
+	notificationJSON, err := json.Marshal(notification)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	// Publicar el mensaje en el canal de Redis asociado a la sala
+	// En este ejemplo, usamos el nombre de la sala como canal.
+	return h.redisClient.Publish(context.Background(), room, notificationJSON).Err()
 }
 func (h *UserHandler) Unfollow(c *fiber.Ctx) error {
 

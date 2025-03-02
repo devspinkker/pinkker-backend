@@ -4,21 +4,26 @@ import (
 	tweetapplication "PINKKER-BACKEND/internal/tweet/tweet-application"
 	tweetdomain "PINKKER-BACKEND/internal/tweet/tweet-domain"
 	"PINKKER-BACKEND/pkg/helpers"
+	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type TweetHandler struct {
 	TweetServise *tweetapplication.TweetService
+	redisClient  *redis.Client
 }
 
-func NewTweetService(TweetServise *tweetapplication.TweetService) *TweetHandler {
+func NewTweetService(TweetServise *tweetapplication.TweetService, redisClient *redis.Client) *TweetHandler {
 	return &TweetHandler{
 		TweetServise: TweetServise,
+		redisClient:  redisClient,
 	}
 }
 
@@ -140,10 +145,6 @@ func (th *TweetHandler) PostLike(c *fiber.Ctx) error {
 	})
 }
 func (th *TweetHandler) NotifyActivityFeed(room, user, Avatar string, id primitive.ObjectID) error {
-	clients, err := th.TweetServise.GetWebSocketActivityFeed(room)
-	if err != nil {
-		return err
-	}
 
 	notification := map[string]interface{}{
 		"type":      "LikePost",
@@ -152,15 +153,12 @@ func (th *TweetHandler) NotifyActivityFeed(room, user, Avatar string, id primiti
 		"idUser":    id,
 		"timestamp": time.Now(),
 	}
-
-	for _, client := range clients {
-		err = client.WriteJSON(notification)
-		if err != nil {
-			return err
-		}
+	// Serializar la notificación a JSON
+	notificationJSON, err := json.Marshal(notification)
+	if err != nil {
+		return err
 	}
-
-	return nil
+	return th.redisClient.Publish(context.Background(), room, notificationJSON).Err()
 }
 func (th *TweetHandler) PostDislike(c *fiber.Ctx) error {
 	var idTweetReq IDTweet

@@ -15,7 +15,7 @@ func TweetdRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.C
 
 	tweetRepository := tweetinfrastructure.NewTweetRepository(redisClient, newMongoDB)
 	tweetService := tweetapplication.NewTweetService(tweetRepository)
-	tweetHandler := tweetinterfaces.NewTweetService(tweetService)
+	tweetHandler := tweetinterfaces.NewTweetService(tweetService, redisClient)
 
 	App.Post("/post/postCreate", middleware.UseExtractor(), tweetHandler.CreatePost)
 	App.Post("/post/CommentPost", middleware.UseExtractor(), tweetHandler.CommentPost)

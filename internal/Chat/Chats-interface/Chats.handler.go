@@ -5,21 +5,27 @@ import (
 	Chatsapplication "PINKKER-BACKEND/internal/Chat/Chats-application"
 	"PINKKER-BACKEND/pkg/jwt"
 	"PINKKER-BACKEND/pkg/utils"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ChatsHandler struct {
-	Service *Chatsapplication.ChatsService
+	Service     *Chatsapplication.ChatsService
+	redisClient *redis.Client
 }
 
-func NewChatsHandler(service *Chatsapplication.ChatsService) *ChatsHandler {
-	return &ChatsHandler{Service: service}
+func NewChatsHandler(service *Chatsapplication.ChatsService, redisClient *redis.Client) *ChatsHandler {
+	return &ChatsHandler{
+		Service:     service,
+		redisClient: redisClient,
+	}
 }
 
 func (h *ChatsHandler) UpdateUserStatus(c *fiber.Ctx) error {
@@ -307,20 +313,16 @@ func (h *ChatsHandler) WebSocketHandler(c *websocket.Conn) {
 }
 
 func (h *ChatsHandler) NotifyActivityFeed(room string, id primitive.ObjectID) error {
-	clients, err := h.Service.GetWebSocketActivityFeed(room)
-	if err != nil {
-		return err
-	}
+
 	notification := map[string]interface{}{
 		"Type":   "message",
 		"UserId": id,
 	}
-	for _, client := range clients {
-		err = client.WriteJSON(notification)
-		if err != nil {
-			return err
-		}
+	// Serializar la notificación a JSON
+	notificationJSON, err := json.Marshal(notification)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return h.redisClient.Publish(context.Background(), room, notificationJSON).Err()
 }

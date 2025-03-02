@@ -15,7 +15,7 @@ func SubsRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 
 	userRepository := subscriptioninfrastructure.NewSubscriptionRepository(redisClient, newMongoDB)
 	userService := subscriptionapplication.NewChatService(userRepository)
-	UserHandler := subscriptioninterfaces.NewSubscriptionHandler(userService)
+	UserHandler := subscriptioninterfaces.NewSubscriptionHandler(userService, redisClient)
 
 	App.Post("/Subs/suscribirse", middleware.UseExtractor(), middleware.TOTPAuthMiddleware(userRepository), UserHandler.Suscribirse)
 	App.Get("/Subs/GetSubsChat", UserHandler.GetSubsChat)

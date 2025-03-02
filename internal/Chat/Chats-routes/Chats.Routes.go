@@ -15,7 +15,7 @@ import (
 func ChatsRoutes(app *fiber.App, redisClient *redis.Client, mongoClient *mongo.Client) {
 	repository := Chatsinfrastructure.NewChatsRepository(redisClient, mongoClient)
 	service := Chatsapplication.NewChatsService(repository)
-	handler := Chatsinterface.NewChatsHandler(service)
+	handler := Chatsinterface.NewChatsHandler(service, redisClient)
 	app.Post("/chats/CreateChatOrGetChats", middleware.UseExtractor(), handler.CreateChatOrGetChats)
 	app.Post("/chats/send", middleware.UseExtractor(), handler.SendMessage)
 	app.Get("/chats/GetChatsByUserIDWithStatus", middleware.UseExtractor(), handler.GetChatsByUserIDWithStatus)

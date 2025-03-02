@@ -6,7 +6,7 @@ import (
 	interfaces "PINKKER-BACKEND/internal/user/user-interfaces"
 	"PINKKER-BACKEND/pkg/jwt"
 	"PINKKER-BACKEND/pkg/middleware"
-	"PINKKER-BACKEND/pkg/utils"
+	"context"
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,7 +20,7 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 
 	userRepository := infrastructure.NewUserRepository(redisClient, newMongoDB)
 	userService := application.NewChatService(userRepository)
-	UserHandler := interfaces.NewUserHandler(userService)
+	UserHandler := interfaces.NewUserHandler(userService, redisClient)
 
 	App.Post("/user/signupNotConfirmed", UserHandler.SignupSaveUserRedis)
 	App.Post("/user/SaveUserCodeConfirm", UserHandler.SaveUserCodeConfirm)
@@ -85,33 +85,32 @@ func UserRoutes(App *fiber.App, redisClient *redis.Client, newMongoDB *mongo.Cli
 	App.Get("/user/GetFollowersPaginated/:id", UserHandler.GetFollowersPaginated)
 
 	App.Get("/ws/notification/ActivityFeed/:user", websocket.New(func(c *websocket.Conn) {
-		user := c.Params("user") + "ActivityFeed"
-		chatService := utils.NewChatService()
-		client := &utils.Client{Connection: c}
+		// Construimos el nombre del canal (sala) a partir del parámetro
+		room := c.Params("user") + "ActivityFeed"
+		ctx := context.Background()
 
-		// Agregar cliente a la sala
-		chatService.AddClientToRoom(user, client)
-		defer func() {
-			// Eliminar cliente y cerrar conexión de forma segura
-			chatService.RemoveClientFromRoom(user, client)
-			if err := c.Close(); err != nil {
-				fmt.Printf("Error closing WebSocket connection: %v\n", err)
+		// Nos suscribimos al canal de Redis correspondiente a la sala
+		pubsub := redisClient.Subscribe(ctx, room)
+		defer pubsub.Close()
+		defer c.Close()
+
+		// Lanzamos una goroutine para escuchar mensajes de Redis y enviarlos por el WebSocket
+		go func() {
+			for msg := range pubsub.Channel() {
+				if err := c.WriteMessage(websocket.TextMessage, []byte(msg.Payload)); err != nil {
+					fmt.Printf("Error al enviar mensaje al WebSocket: %v\n", err)
+					return
+				}
 			}
 		}()
 
-		// Bucle para leer mensajes
+		// Bucle para mantener abierta la conexión WebSocket
 		for {
 			_, _, err := c.ReadMessage()
 			if err != nil {
-				// Manejo de errores esperados
-				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					break
-				}
-
+				// Se cierra la conexión al detectar un error o cierre por parte del cliente
 				break
 			}
-
-			// Aquí puedes manejar el mensaje si es necesario
 		}
 	}))
 

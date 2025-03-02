@@ -4,22 +4,27 @@ import (
 	donationdomain "PINKKER-BACKEND/internal/donation/donation"
 	donationapplication "PINKKER-BACKEND/internal/donation/donation-application"
 	"PINKKER-BACKEND/pkg/helpers"
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type DonationHandler struct {
-	VodServise *donationapplication.DonationService
+	VodServise  *donationapplication.DonationService
+	redisClient *redis.Client
 }
 
-func NewDonationService(VodServise *donationapplication.DonationService) *DonationHandler {
+func NewDonationService(VodServise *donationapplication.DonationService, redisClient *redis.Client) *DonationHandler {
 	return &DonationHandler{
-		VodServise: VodServise,
+		VodServise:  VodServise,
+		redisClient: redisClient,
 	}
 }
 
@@ -99,10 +104,6 @@ func (d *DonationHandler) Donate(c *fiber.Ctx) error {
 }
 
 func (d *DonationHandler) NotifyActivityFeed(room, user, Avatar string, Pixeles float64, text string, id primitive.ObjectID, IsFollowing bool) error {
-	clients, err := d.VodServise.GetWebSocketActivityFeed(room)
-	if err != nil {
-		return err
-	}
 
 	notification := map[string]interface{}{
 		"type":       "DonatePixels",
@@ -115,14 +116,15 @@ func (d *DonationHandler) NotifyActivityFeed(room, user, Avatar string, Pixeles 
 		"timestamp":  time.Now(),
 	}
 
-	for _, client := range clients {
-		err = client.WriteJSON(notification)
-		if err != nil {
-			return err
-		}
+	// Serializar la notificación a JSON
+	notificationJSON, err := json.Marshal(notification)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	// Publicar el mensaje en el canal de Redis asociado a la sala
+	// En este ejemplo, usamos el nombre de la sala como canal.
+	return d.redisClient.Publish(context.Background(), room, notificationJSON).Err()
 }
 
 func (d *DonationHandler) NotifyActivityToChat(idReq primitive.ObjectID, user string, Pixeles float64, text string) error {
